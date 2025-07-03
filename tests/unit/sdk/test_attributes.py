@@ -362,8 +362,16 @@ class TestAttributesIntegration:
         assert isinstance(session_attrs, dict)
 
         # Verify no key conflicts between different attribute types
-        all_keys = set(system_attrs.keys()) | set(global_attrs.keys()) | set(trace_attrs.keys()) | set(span_attrs.keys()) | set(session_attrs.keys())
-        assert len(all_keys) == len(system_attrs) + len(global_attrs) + len(trace_attrs) + len(span_attrs) + len(session_attrs)
+        all_keys = (
+            set(system_attrs.keys())
+            | set(global_attrs.keys())
+            | set(trace_attrs.keys())
+            | set(span_attrs.keys())
+            | set(session_attrs.keys())
+        )
+        assert len(all_keys) == len(system_attrs) + len(global_attrs) + len(trace_attrs) + len(span_attrs) + len(
+            session_attrs
+        )
 
     def test_attribute_types_consistency(self):
         """Test that all attributes return consistent types."""
@@ -376,6 +384,7 @@ class TestAttributesIntegration:
 
         # All dictionary values should be serializable
         import json
+
         try:
             json.dumps(get_system_resource_attributes())
             json.dumps(get_global_resource_attributes("test"))
@@ -383,4 +392,4 @@ class TestAttributesIntegration:
             json.dumps(get_span_attributes("test", "test"))
             json.dumps(get_session_end_attributes("test"))
         except (TypeError, ValueError) as e:
-            pytest.fail(f"Attributes are not JSON serializable: {e}") 
+            pytest.fail(f"Attributes are not JSON serializable: {e}")

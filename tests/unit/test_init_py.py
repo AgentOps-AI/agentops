@@ -13,8 +13,10 @@ def test_get_client_singleton():
 def test_get_client_thread_safety():
     # Should not create multiple clients in threads
     results = []
+
     def worker():
         results.append(agentops.get_client())
+
     threads = [threading.Thread(target=worker) for _ in range(5)]
     for t in threads:
         t.start()
@@ -32,8 +34,7 @@ def test_init_merges_tags(monkeypatch):
 
 
 def test_init_warns_on_deprecated_tags(monkeypatch):
-    with patch("agentops.get_client") as mock_get_client, \
-         patch("agentops.warn_deprecated_param") as mock_warn:
+    with patch("agentops.get_client") as mock_get_client, patch("agentops.warn_deprecated_param") as mock_warn:
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
         agentops.init(tags=["a"])
@@ -46,6 +47,7 @@ def test_init_jupyter_detection(monkeypatch):
         mock_get_client.return_value = mock_client
         # Simulate Jupyter by patching get_ipython
         import builtins
+
         builtins.get_ipython = lambda: type("Z", (), {"__name__": "ZMQInteractiveShell"})()
         agentops.init()
         del builtins.get_ipython
@@ -57,7 +59,8 @@ def test_init_jupyter_detection_nameerror():
         mock_get_client.return_value = mock_client
         # Simulate NameError when get_ipython() is called
         import builtins
-        original_get_ipython = getattr(builtins, 'get_ipython', None)
+
+        original_get_ipython = getattr(builtins, "get_ipython", None)
         builtins.get_ipython = lambda: None  # This will cause NameError
         try:
             agentops.init()
@@ -67,12 +70,11 @@ def test_init_jupyter_detection_nameerror():
             if original_get_ipython:
                 builtins.get_ipython = original_get_ipython
             else:
-                delattr(builtins, 'get_ipython')
+                delattr(builtins, "get_ipython")
 
 
 def test_configure_valid_and_invalid_params():
-    with patch("agentops.get_client") as mock_get_client, \
-         patch("agentops.logger") as mock_logger:
+    with patch("agentops.get_client") as mock_get_client, patch("agentops.logger") as mock_logger:
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
         # Valid param
@@ -86,6 +88,7 @@ def test_configure_valid_and_invalid_params():
 def test_record_sets_end_timestamp():
     class Dummy:
         end_timestamp = None
+
     with patch("agentops.helpers.time.get_ISO_time", return_value="now"):
         d = Dummy()
         agentops.record(d)
@@ -95,13 +98,13 @@ def test_record_sets_end_timestamp():
 def test_record_no_end_timestamp():
     class Dummy:
         pass
+
     d = Dummy()
     assert agentops.record(d) is d
 
 
 def test_update_trace_metadata_success():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
@@ -114,16 +117,14 @@ def test_update_trace_metadata_success():
 
 
 def test_update_trace_metadata_no_active_span():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span", return_value=None):
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span", return_value=None):
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
         assert not agentops.update_trace_metadata({"foo": "bar"})
 
 
 def test_update_trace_metadata_not_recording():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = False
         mock_get_span.return_value = mock_span
@@ -133,8 +134,7 @@ def test_update_trace_metadata_not_recording():
 
 
 def test_update_trace_metadata_invalid_type():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
@@ -146,8 +146,7 @@ def test_update_trace_metadata_invalid_type():
 
 
 def test_update_trace_metadata_list_type():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
@@ -160,15 +159,14 @@ def test_update_trace_metadata_list_type():
 
 
 def test_update_trace_metadata_extract_key_single_part():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # Test with a semantic convention that has only one part (len < 2)
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"SINGLE": "single_value"}
@@ -177,15 +175,14 @@ def test_update_trace_metadata_extract_key_single_part():
 
 
 def test_update_trace_metadata_skip_gen_ai_attributes():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # Test that gen_ai attributes are skipped
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"GEN_AI_ATTR": "gen_ai.something"}
@@ -194,8 +191,7 @@ def test_update_trace_metadata_skip_gen_ai_attributes():
 
 
 def test_update_trace_metadata_trace_id_conversion_error():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "child_span"  # Not a session span
@@ -203,16 +199,18 @@ def test_update_trace_metadata_trace_id_conversion_error():
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {"trace1": MagicMock()}
         mock_tracer.initialized = True
-        
+
         # This should handle the ValueError from int("invalid_hex", 16)
         result = agentops.update_trace_metadata({"foo": "bar"})
         assert result is True
 
 
 def test_update_trace_metadata_no_active_traces():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span", return_value=None), \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span", return_value=None),
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
         result = agentops.update_trace_metadata({"foo": "bar"})
@@ -221,9 +219,11 @@ def test_update_trace_metadata_no_active_traces():
 
 
 def test_update_trace_metadata_span_not_recording():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span") as mock_get_span,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_span = MagicMock()
         mock_span.is_recording.return_value = False
         mock_get_span.return_value = mock_span
@@ -235,48 +235,54 @@ def test_update_trace_metadata_span_not_recording():
 
 
 def test_update_trace_metadata_list_invalid_types():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span") as mock_get_span,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # List with invalid types (dict)
         result = agentops.update_trace_metadata({"foo": [{"invalid": "type"}]})
         mock_logger.warning.assert_called_with("No valid metadata attributes were updated")
 
 
 def test_update_trace_metadata_invalid_value_type():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span") as mock_get_span,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # Invalid value type (dict)
         result = agentops.update_trace_metadata({"foo": {"invalid": "type"}})
         mock_logger.warning.assert_called_with("No valid metadata attributes were updated")
 
 
 def test_update_trace_metadata_semantic_convention_mapping():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span") as mock_get_span,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # Test semantic convention mapping
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"TEST_ATTR": "agent.test_attribute"}
@@ -286,9 +292,11 @@ def test_update_trace_metadata_semantic_convention_mapping():
 
 
 def test_update_trace_metadata_exception_handling():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span") as mock_get_span,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
@@ -296,23 +304,25 @@ def test_update_trace_metadata_exception_handling():
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         result = agentops.update_trace_metadata({"foo": "bar"})
         assert result is False
         mock_logger.error.assert_called_with("Error updating trace metadata: Test error")
 
 
 def test_update_trace_metadata_no_valid_attributes():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span") as mock_get_span,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # All values are None
         result = agentops.update_trace_metadata({"foo": None, "bar": None})
         assert result is False
@@ -320,39 +330,43 @@ def test_update_trace_metadata_no_valid_attributes():
 
 
 def test_start_trace_auto_init_failure():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.init") as mock_init, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.init") as mock_init,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_tracer.initialized = False
         mock_init.side_effect = Exception("Init failed")
-        
+
         result = agentops.start_trace("test")
         assert result is None
-        mock_logger.error.assert_called_with("SDK auto-initialization failed during start_trace: Init failed. Cannot start trace.")
+        mock_logger.error.assert_called_with(
+            "SDK auto-initialization failed during start_trace: Init failed. Cannot start trace."
+        )
 
 
 def test_start_trace_auto_init_still_not_initialized():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.init") as mock_init, \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.init") as mock_init,
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_tracer.initialized = False
-        
+
         result = agentops.start_trace("test")
         assert result is None
         mock_logger.error.assert_called_with("SDK initialization failed. Cannot start trace.")
 
 
 def test_end_trace_not_initialized():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.logger") as mock_logger:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.logger") as mock_logger:
         mock_tracer.initialized = False
         agentops.end_trace()
         mock_logger.warning.assert_called_with("AgentOps SDK not initialized. Cannot end trace.")
 
 
 def test_update_trace_metadata_not_initialized():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.logger") as mock_logger:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.logger") as mock_logger:
         mock_tracer.initialized = False
         result = agentops.update_trace_metadata({"foo": "bar"})
         assert result is False
@@ -362,17 +376,45 @@ def test_update_trace_metadata_not_initialized():
 def test_all_exports_importable():
     # Just import all symbols to ensure they're present
     from agentops import (
-        init, configure, get_client, record, start_trace, end_trace, update_trace_metadata,
-        start_session, end_session, track_agent, track_tool, end_all_sessions, ToolEvent, ErrorEvent, ActionEvent, LLMEvent, Session,
-        trace, session, agent, task, workflow, operation, guardrail, tracer, tool, TraceState, SUCCESS, ERROR, UNSET, StatusCode
+        init,
+        configure,
+        get_client,
+        record,
+        start_trace,
+        end_trace,
+        update_trace_metadata,
+        start_session,
+        end_session,
+        track_agent,
+        track_tool,
+        end_all_sessions,
+        ToolEvent,
+        ErrorEvent,
+        ActionEvent,
+        LLMEvent,
+        Session,
+        trace,
+        session,
+        agent,
+        task,
+        workflow,
+        operation,
+        guardrail,
+        tracer,
+        tool,
+        TraceState,
+        SUCCESS,
+        ERROR,
+        UNSET,
+        StatusCode,
     )
+
     assert callable(init)
     assert callable(configure)
 
 
 def test_update_trace_metadata_use_current_span_when_no_parent_found():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "child_span"  # Not a session span
@@ -380,37 +422,38 @@ def test_update_trace_metadata_use_current_span_when_no_parent_found():
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {"trace1": MagicMock()}
         mock_tracer.initialized = True
-        
+
         # When no parent trace is found, should use current span
         result = agentops.update_trace_metadata({"foo": "bar"})
         assert result is True
 
 
 def test_update_trace_metadata_use_current_span_when_no_active_traces():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "child_span"  # Not a session span
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # When no active traces, should use current span
         result = agentops.update_trace_metadata({"foo": "bar"})
         assert result is True
 
 
 def test_update_trace_metadata_use_most_recent_trace():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span", return_value=None), \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span", return_value=None),
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_trace_context = MagicMock()
         mock_trace_context.span = MagicMock()
         mock_trace_context.span.is_recording.return_value = True
         mock_tracer.get_active_traces.return_value = {"trace1": mock_trace_context}
         mock_tracer.initialized = True
-        
+
         result = agentops.update_trace_metadata({"foo": "bar"})
         assert result is True
         mock_logger.debug.assert_called_with("Successfully updated 1 metadata attributes on trace")
@@ -430,9 +473,10 @@ def test_init_jupyter_detection_actual_nameerror():
         mock_get_client.return_value = mock_client
         # Actually remove get_ipython to trigger NameError
         import builtins
-        original_get_ipython = getattr(builtins, 'get_ipython', None)
-        if hasattr(builtins, 'get_ipython'):
-            delattr(builtins, 'get_ipython')
+
+        original_get_ipython = getattr(builtins, "get_ipython", None)
+        if hasattr(builtins, "get_ipython"):
+            delattr(builtins, "get_ipython")
         try:
             agentops.init()
         finally:
@@ -444,20 +488,20 @@ def test_end_trace_with_default_state():
     with patch("agentops.tracer") as mock_tracer:
         mock_tracer.initialized = True
         from agentops import TraceState
+
         agentops.end_trace()  # Should use default TraceState.SUCCESS
         mock_tracer.end_trace.assert_called_with(trace_context=None, end_state=TraceState.SUCCESS)
 
 
 def test_update_trace_metadata_extract_key_single_part_actual():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # Test with a semantic convention that has only one part (len < 2)
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"SINGLE": "single"}
@@ -466,15 +510,14 @@ def test_update_trace_metadata_extract_key_single_part_actual():
 
 
 def test_update_trace_metadata_skip_gen_ai_attributes_actual():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span") as mock_get_span:
+    with patch("agentops.tracer") as mock_tracer, patch("agentops.get_current_span") as mock_get_span:
         mock_span = MagicMock()
         mock_span.is_recording.return_value = True
         mock_span.name = "foo.SESSION"
         mock_get_span.return_value = mock_span
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        
+
         # Test that gen_ai attributes are actually skipped in the mapping
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"GEN_AI_ATTR": "gen_ai.something"}
@@ -483,11 +526,13 @@ def test_update_trace_metadata_skip_gen_ai_attributes_actual():
 
 
 def test_update_trace_metadata_no_active_traces_actual():
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.get_current_span", return_value=None), \
-         patch("agentops.logger") as mock_logger:
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.get_current_span", return_value=None),
+        patch("agentops.logger") as mock_logger,
+    ):
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
         result = agentops.update_trace_metadata({"foo": "bar"})
         assert result is False
-        mock_logger.warning.assert_called_with("No active trace found. Cannot update metadata.") 
+        mock_logger.warning.assert_called_with("No active trace found. Cannot update metadata.")

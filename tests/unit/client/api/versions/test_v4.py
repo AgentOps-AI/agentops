@@ -23,7 +23,7 @@ class TestV4Client:
         """Test preparing headers without custom headers."""
         with patch("agentops.client.api.versions.v4.get_agentops_version", return_value="1.2.3"):
             headers = self.client.prepare_headers()
-            
+
             assert headers["Authorization"] == "Bearer test_token"
             assert headers["User-Agent"] == "agentops-python/1.2.3"
 
@@ -32,7 +32,7 @@ class TestV4Client:
         with patch("agentops.client.api.versions.v4.get_agentops_version", return_value="1.2.3"):
             custom_headers = {"X-Custom-Header": "custom_value"}
             headers = self.client.prepare_headers(custom_headers)
-            
+
             assert headers["Authorization"] == "Bearer test_token"
             assert headers["User-Agent"] == "agentops-python/1.2.3"
             assert headers["X-Custom-Header"] == "custom_value"
@@ -41,7 +41,7 @@ class TestV4Client:
         """Test preparing headers when version is unknown."""
         with patch("agentops.client.api.versions.v4.get_agentops_version", return_value=None):
             headers = self.client.prepare_headers()
-            
+
             assert headers["Authorization"] == "Bearer test_token"
             assert headers["User-Agent"] == "agentops-python/unknown"
 
@@ -133,7 +133,7 @@ class TestV4Client:
             assert isinstance(result, dict)
             assert result["url"] == "http://example.com/log"
             assert result["size"] == 789
-            
+
             # Check that the post was called with the correct headers including Trace-Id
             call_args = self.client.post.call_args
             assert call_args[0][0] == "/v4/logs/upload/"
@@ -155,7 +155,7 @@ class TestV4Client:
             assert isinstance(result, dict)
             assert result["url"] == "http://example.com/log"
             assert result["size"] == 101
-            
+
             # Check that the post was called with the correct headers including Trace-Id
             call_args = self.client.post.call_args
             assert call_args[0][0] == "/v4/logs/upload/"
@@ -203,4 +203,4 @@ class TestV4Client:
 
         with patch.object(self.client, "post", return_value=mock_response):
             with pytest.raises(ApiServerException, match="Failed to process upload response"):
-                self.client.upload_logfile("log content", 123) 
+                self.client.upload_logfile("log content", 123)

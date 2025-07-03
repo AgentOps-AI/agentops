@@ -56,9 +56,11 @@ class TestBaseStreamWrapper:
         wrapper = BaseStreamWrapper(mock_stream, mock_span, extract_content)
 
         # Mock the token usage extraction to avoid type errors
-        with patch("agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response") as mock_extract:
+        with patch(
+            "agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response"
+        ) as mock_extract:
             mock_extract.return_value = Mock(prompt_tokens=None, completion_tokens=None)
-            
+
             with patch("time.time", return_value=100.0):
                 wrapper._process_chunk(Mock())
 
@@ -75,9 +77,11 @@ class TestBaseStreamWrapper:
         wrapper.first_token_time = 50.0
 
         # Mock the token usage extraction
-        with patch("agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response") as mock_extract:
+        with patch(
+            "agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response"
+        ) as mock_extract:
             mock_extract.return_value = Mock(prompt_tokens=None, completion_tokens=None)
-            
+
             wrapper._process_chunk(Mock())
 
         assert wrapper.chunks_received == 1
@@ -92,9 +96,11 @@ class TestBaseStreamWrapper:
         wrapper = BaseStreamWrapper(mock_stream, mock_span, extract_content, extract_attrs)
 
         # Mock the token usage extraction
-        with patch("agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response") as mock_extract:
+        with patch(
+            "agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response"
+        ) as mock_extract:
             mock_extract.return_value = Mock(prompt_tokens=None, completion_tokens=None)
-            
+
             wrapper._process_chunk(Mock())
 
         mock_span.set_attribute.assert_called_with("custom_key", "custom_value")
@@ -110,7 +116,9 @@ class TestBaseStreamWrapper:
         mock_chunk = Mock()
         mock_chunk.usage = {"prompt_tokens": 10, "completion_tokens": 5}
 
-        with patch("agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response") as mock_extract:
+        with patch(
+            "agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response"
+        ) as mock_extract:
             mock_usage = Mock()
             mock_usage.prompt_tokens = 10
             mock_usage.completion_tokens = 5
@@ -132,7 +140,9 @@ class TestBaseStreamWrapper:
         mock_chunk = Mock()
         mock_chunk.usage_metadata = {"prompt_tokens": 10, "completion_tokens": 5}
 
-        with patch("agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response") as mock_extract:
+        with patch(
+            "agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response"
+        ) as mock_extract:
             mock_usage = Mock()
             mock_usage.prompt_tokens = 10
             mock_usage.completion_tokens = 5
@@ -154,7 +164,9 @@ class TestBaseStreamWrapper:
         mock_chunk1 = Mock()
         mock_chunk2 = Mock()
 
-        with patch("agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response") as mock_extract:
+        with patch(
+            "agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response"
+        ) as mock_extract:
             mock_usage1 = Mock()
             mock_usage1.prompt_tokens = 10
             mock_usage1.completion_tokens = 3
@@ -199,7 +211,9 @@ class TestBaseStreamWrapper:
         extract_content = lambda x: "test"
         wrapper = BaseStreamWrapper(mock_stream, mock_span, extract_content)
 
-        with patch("agentops.instrumentation.common.span_management.safe_set_attribute", side_effect=Exception("Test error")):
+        with patch(
+            "agentops.instrumentation.common.span_management.safe_set_attribute", side_effect=Exception("Test error")
+        ):
             wrapper._finalize()
 
         mock_span.set_status.assert_called()
@@ -225,6 +239,7 @@ class TestSyncStreamWrapper:
 
     def test_iteration_with_exception(self):
         """Test iteration with exception handling."""
+
         def failing_stream():
             yield "chunk1"
             raise ValueError("Test error")
@@ -247,6 +262,7 @@ class TestAsyncStreamWrapper:
     @pytest.mark.asyncio
     async def test_async_iteration_success(self):
         """Test successful async iteration through stream."""
+
         async def async_stream():
             yield "chunk1"
             yield "chunk2"
@@ -268,6 +284,7 @@ class TestAsyncStreamWrapper:
     @pytest.mark.asyncio
     async def test_async_iteration_with_exception(self):
         """Test async iteration with exception handling."""
+
         async def failing_async_stream():
             yield "chunk1"
             raise ValueError("Test error")
@@ -564,4 +581,4 @@ class TestStreamingIntegration:
         assert wrapper.accumulated_content == ["Hello", " ", "World"]
         assert wrapper.chunks_received == 3
         mock_span.set_attribute.assert_any_call("streaming.final_content", "Hello World")
-        mock_span.set_attribute.assert_any_call("streaming.chunk_count", 3) 
+        mock_span.set_attribute.assert_any_call("streaming.chunk_count", 3)
