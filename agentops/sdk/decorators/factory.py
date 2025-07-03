@@ -58,7 +58,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                         try:
                             self._agentops_span_context_manager.__exit__(None, None, None)
                         except Exception:
-                            pass 
+                            pass
 
                 async def __aenter__(self) -> "WrappedClass":
                     if hasattr(self, "_agentops_active_span") and self._agentops_active_span is not None:
