@@ -70,7 +70,8 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 
 
 ```python
-from smolagents import LiteLLMModel, tool ,CodeAgent, ToolCallingAgent, DuckDuckGoSearchTool
+from smolagents import LiteLLMModel, tool, CodeAgent, ToolCallingAgent, DuckDuckGoSearchTool
+
 agentops.init(auto_start_session=False)
 tracer = agentops.start_trace(
     trace_name="Orchestrate a Multi-Agent System", tags=["smolagents", "example", "multi-agent", "agentops-example"]
