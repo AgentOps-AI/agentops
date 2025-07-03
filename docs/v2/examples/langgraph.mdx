@@ -68,12 +68,13 @@ def get_weather(location: str) -> str:
     # Simulated weather data
     weather_data = {
         "New York": "Sunny, 72°F",
-        "London": "Cloudy, 60°F", 
+        "London": "Cloudy, 60°F",
         "Tokyo": "Rainy, 65°F",
         "Paris": "Partly cloudy, 68°F",
-        "Sydney": "Clear, 75°F"
+        "Sydney": "Clear, 75°F",
     }
     return weather_data.get(location, f"Weather data not available for {location}")
+
 
 @tool
 def calculate(expression: str) -> str:
@@ -83,6 +84,7 @@ def calculate(expression: str) -> str:
         return f"The result is: {result}"
     except Exception as e:
         return f"Error calculating expression: {str(e)}"
+
 
 # Collect tools for binding to the model
 tools = [get_weather, calculate]
@@ -107,16 +109,18 @@ We'll create a model with tool binding and define the functions that will be our
 # Create model with tool binding
 model = ChatOpenAI(temperature=0, model="gpt-4o-mini").bind_tools(tools)
 
+
 def should_continue(state: AgentState) -> Literal["tools", "end"]:
     """Determine if we should continue to tools or end."""
     messages = state["messages"]
     last_message = messages[-1]
-    
+
     # If the LLM wants to use tools, continue to the tools node
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"
     # Otherwise, we're done
     return "end"
+
 
 def call_model(state: AgentState):
     """Call the language model."""
@@ -124,28 +128,24 @@ def call_model(state: AgentState):
     response = model.invoke(messages)
     return {"messages": [response]}
 
+
 def call_tools(state: AgentState):
     """Execute the tool calls requested by the model."""
     messages = state["messages"]
     last_message = messages[-1]
-    
+
     tool_messages = []
     for tool_call in last_message.tool_calls:
         tool_name = tool_call["name"]
         tool_args = tool_call["args"]
-        
+
         # Find and execute the requested tool
         for tool in tools:
             if tool.name == tool_name:
                 result = tool.invoke(tool_args)
-                tool_messages.append(
-                    ToolMessage(
-                        content=str(result),
-                        tool_call_id=tool_call["id"]
-                    )
-                )
+                tool_messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
                 break
-    
+
     return {"messages": tool_messages}
 ```
 
@@ -166,14 +166,7 @@ workflow.add_node("tools", call_tools)
 workflow.set_entry_point("agent")
 
 # Add conditional edges
-workflow.add_conditional_edges(
-    "agent",
-    should_continue,
-    {
-        "tools": "tools",
-        "end": END
-    }
-)
+workflow.add_conditional_edges("agent", should_continue, {"tools": "tools", "end": END})
 
 # Add edge from tools back to agent
 workflow.add_edge("tools", "agent")
