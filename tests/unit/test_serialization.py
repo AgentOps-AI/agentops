@@ -10,8 +10,11 @@ from typing import Dict
 import pytest
 
 from agentops.helpers.serialization import (
+    filter_unjsonable,
+    is_jsonable,
     model_to_dict,
     safe_serialize,
+    serialize_uuid,
 )
 
 
@@ -67,6 +70,165 @@ class ModelWithParse:
 
     def parse(self):
         return self.data
+
+
+class ModelWithoutDict:
+    """A class without __dict__ attribute."""
+    
+    __slots__ = ['value']
+    
+    def __init__(self, value: str):
+        self.value = value
+
+
+# Define test cases for is_jsonable
+class TestIsJsonable:
+    def test_jsonable_types(self):
+        """Test that jsonable types return True."""
+        jsonable_objects = [
+            "string",
+            "",
+            123,
+            123.45,
+            True,
+            False,
+            None,
+            [1, 2, 3],
+            {"key": "value"},
+            [],
+            {},
+        ]
+        
+        for obj in jsonable_objects:
+            assert is_jsonable(obj) is True
+
+    def test_unjsonable_types(self):
+        """Test that unjsonable types return False."""
+        unjsonable_objects = [
+            datetime.now(),
+            uuid.uuid4(),
+            Decimal("123.45"),
+            {1, 2, 3},  # set
+            SampleEnum.ONE,
+            lambda x: x,  # function
+            object(),  # generic object
+        ]
+        
+        for obj in unjsonable_objects:
+            assert is_jsonable(obj) is False
+
+    def test_circular_reference(self):
+        """Test that circular references are not jsonable."""
+        a = {}
+        b = {}
+        a['b'] = b
+        b['a'] = a
+        
+        # The current implementation doesn't handle ValueError from circular references
+        # So this will raise an exception instead of returning False
+        with pytest.raises(ValueError, match="Circular reference detected"):
+            is_jsonable(a)
+
+
+# Define test cases for filter_unjsonable
+class TestFilterUnjsonable:
+    def test_filter_simple_dict(self):
+        """Test filtering of simple dictionary."""
+        input_dict = {
+            "string": "value",
+            "number": 42,
+            "list": [1, 2, 3],
+            "dict": {"nested": "value"},
+            "uuid": uuid.uuid4(),
+            "datetime": datetime.now(),
+            "set": {1, 2, 3},
+        }
+        
+        result = filter_unjsonable(input_dict)
+        
+        # Check that jsonable values are preserved
+        assert result["string"] == "value"
+        assert result["number"] == 42
+        assert result["list"] == [1, 2, 3]
+        assert result["dict"] == {"nested": "value"}
+        
+        # Check that unjsonable values are converted to strings or empty strings
+        assert isinstance(result["uuid"], str)
+        assert result["datetime"] == ""
+        assert result["set"] == ""
+
+    def test_filter_nested_dict(self):
+        """Test filtering of nested dictionaries."""
+        input_dict = {
+            "level1": {
+                "level2": {
+                    "uuid": uuid.uuid4(),
+                    "string": "preserved",
+                    "datetime": datetime.now(),
+                }
+            },
+            "list_with_unjsonable": [
+                {"uuid": uuid.uuid4()},
+                "string",
+                datetime.now(),
+            ]
+        }
+        
+        result = filter_unjsonable(input_dict)
+        
+        # Check nested structure is preserved
+        assert result["level1"]["level2"]["string"] == "preserved"
+        assert isinstance(result["level1"]["level2"]["uuid"], str)
+        assert result["level1"]["level2"]["datetime"] == ""
+        
+        # Check list filtering
+        assert result["list_with_unjsonable"][1] == "string"
+        assert isinstance(result["list_with_unjsonable"][0]["uuid"], str)
+        assert result["list_with_unjsonable"][2] == ""
+
+    def test_filter_list(self):
+        """Test filtering of lists."""
+        input_list = [
+            "string",
+            42,
+            uuid.uuid4(),
+            datetime.now(),
+            [1, 2, uuid.uuid4()],
+            {"uuid": uuid.uuid4()},
+        ]
+        
+        result = filter_unjsonable(input_list)
+        
+        assert result[0] == "string"
+        assert result[1] == 42
+        assert isinstance(result[2], str)  # UUID converted to string
+        assert result[3] == ""  # datetime converted to empty string
+        assert isinstance(result[4][2], str)  # nested UUID converted to string
+        assert isinstance(result[5]["uuid"], str)  # nested UUID converted to string
+
+    def test_filter_empty_structures(self):
+        """Test filtering of empty structures."""
+        assert filter_unjsonable({}) == {}
+        assert filter_unjsonable([]) == []
+        assert filter_unjsonable({"empty": {}}) == {"empty": {}}
+
+
+# Define test cases for serialize_uuid
+class TestSerializeUuid:
+    def test_serialize_uuid(self):
+        """Test UUID serialization."""
+        test_uuid = uuid.uuid4()
+        result = serialize_uuid(test_uuid)
+        
+        assert isinstance(result, str)
+        assert result == str(test_uuid)
+        
+    def test_serialize_uuid_string(self):
+        """Test that UUID string representation is correct."""
+        test_uuid = uuid.UUID("00000000-0000-0000-0000-000000000001")
+        result = serialize_uuid(test_uuid)
+        
+        assert result == "00000000-0000-0000-0000-000000000001"
 
 
 # Define test cases for safe_serialize
@@ -187,6 +349,40 @@ class TestSafeSerialize:
         # The string is wrapped in quotes because it's serialized as a JSON string
         assert result == '"Unserializable object"'
 
+    def test_serialization_error_handling(self):
+        """Test handling of serialization errors."""
+        # Create an object that causes JSON serialization to fail
+        class BadObject:
+            def __init__(self):
+                self.recursive = None
+            
+            def __getitem__(self, key):
+                # This will cause infinite recursion during JSON serialization
+                return self.recursive
+            
+            def __str__(self):
+                return "BadObject representation"
+        
+        bad_obj = BadObject()
+        bad_obj.recursive = bad_obj
+        
+        result = safe_serialize(bad_obj)
+        assert result == '"BadObject representation"'
+
+    def test_value_error_handling(self):
+        """Test handling of ValueError during JSON serialization."""
+        # Create an object that causes a ValueError during JSON serialization
+        class ValueErrorObject:
+            def to_json(self):
+                raise ValueError("Cannot serialize this object")
+            
+            def __str__(self):
+                return "ValueErrorObject representation"
+        
+        obj = ValueErrorObject()
+        result = safe_serialize(obj)
+        assert result == "ValueErrorObject representation"
+
 
 class TestModelToDict:
     def test_none_returns_empty_dict(self):
@@ -218,3 +414,18 @@ class TestModelToDict:
         """Test fallback to __dict__."""
         simple_model = SimpleModel("test value")
         assert model_to_dict(simple_model) == {"value": "test value"}
+
+    def test_dict_fallback_exception_handling(self):
+        """Test exception handling in dict fallback."""
+        # Test with object that has no __dict__ attribute
+        model_without_dict = ModelWithoutDict("test value")
+        assert model_to_dict(model_without_dict) == {}
+        
+        # Test with object that raises exception when accessing __dict__
+        class BadModel:
+            @property
+            def __dict__(self):
+                raise AttributeError("No dict for you!")
+        
+        bad_model = BadModel()
+        assert model_to_dict(bad_model) == {}
