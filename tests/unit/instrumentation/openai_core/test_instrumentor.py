@@ -107,9 +107,9 @@ class TestOpenaiInstrumentor:
             instrumentor_obj._custom_wrap()
 
             # Verify wrap_function_wrapper was called for Response API methods
-            assert (
-                mock_wfw.call_count >= 2
-            ), f"Expected at least 2 calls to wrap_function_wrapper, got {mock_wfw.call_count}"
+            assert mock_wfw.call_count >= 2, (
+                f"Expected at least 2 calls to wrap_function_wrapper, got {mock_wfw.call_count}"
+            )
 
             # Find Response API calls
             response_api_calls = []
