@@ -15,7 +15,8 @@ from agentops.helpers.version import get_agentops_version
 class TokenFetcher(Protocol):
     """Protocol for token fetching functions"""
 
-    def __call__(self, api_key: str) -> str: ...
+    def __call__(self, api_key: str) -> str:
+        ...
 
 
 class BaseApiClient:
