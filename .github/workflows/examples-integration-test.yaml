@@ -1,0 +1,57 @@
+name: Examples Integration Test
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - 'examples/**/*.py'
+      - 'examples/**/*.ipynb'
+      - 'agentops/**/*.py'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'examples/**/*.py'
+      - 'examples/**/*.ipynb'
+      - 'agentops/**/*.py'
+
+jobs:
+  examples-integration-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        continue-on-error: true
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-suffix: uv-3.12-examples
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --group test --group dev
+
+      - name: Install additional dependencies for examples
+        run: |
+          uv add jupyter nbconvert requests
+
+      - name: Run examples integration test
+        timeout-minutes: 25
+        run: |
+          uv run python .github/scripts/run_examples_integration_test.py
