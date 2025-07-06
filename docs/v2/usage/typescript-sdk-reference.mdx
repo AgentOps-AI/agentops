@@ -1,0 +1,184 @@
+---
+title: "TypeScript SDK Reference"
+description: "Complete API reference for the AgentOps TypeScript SDK"
+---
+
+# TypeScript SDK Reference
+
+This reference documents the classes, interfaces, and functions available in the AgentOps TypeScript SDK. The SDK provides automatic instrumentation for AI agent frameworks with OpenTelemetry standards compliance.
+
+## Core Classes
+
+### `Client`
+
+The main SDK client class that handles initialization, configuration, and instrumentation management.
+
+#### `init(config?: Partial<Config>): Promise<void>`
+
+Initializes the AgentOps SDK with OpenTelemetry instrumentation.
+
+**Parameters**:
+- `config` (Partial<Config>, optional): Configuration object to override defaults
+
+**Configuration Options**:
+- `apiKey` (string, optional): API Key for AgentOps services. If not provided, reads from `AGENTOPS_API_KEY` environment variable
+- `apiEndpoint` (string, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'
+- `otlpEndpoint` (string, optional): OpenTelemetry endpoint. Defaults to 'https://otlp.agentops.ai'
+- `serviceName` (string, optional): Service name for telemetry. Defaults to 'agentops'
+- `logLevel` (LogLevel, optional): Log level ('debug' | 'info' | 'error'). Defaults to 'error'
+
+**Throws**: Error when API key is not provided via config or environment variable
+
+**Example**:
+```typescript
+import { agentops } from 'agentops';
+
+// Initialize with environment variable
+await agentops.init();
+
+// Initialize with custom configuration
+await agentops.init({
+  apiKey: 'your-api-key',
+  logLevel: 'debug'
+});
+```
+
+#### `initialized: boolean`
+
+Read-only property that returns true if the SDK has been successfully initialized.
+
+#### `shutdown(): Promise<void>`
+
+Shuts down the OpenTelemetry SDK and cleans up resources. Called automatically on process exit.
+
+## Interfaces
+
+### `Config`
+
+Configuration interface for the AgentOps client.
+
+```typescript
+interface Config {
+  apiEndpoint?: string;
+  otlpEndpoint?: string;
+  serviceName?: string;
+  apiKey?: string;
+  logLevel?: LogLevel;
+}
+```
+
+### `InstrumentorMetadata`
+
+Metadata interface for instrumentors.
+
+```typescript
+interface InstrumentorMetadata {
+  name: string;
+  version: string;
+  description: string;
+  targetLibrary: string;
+  targetVersions: string[];
+}
+```
+
+## Types
+
+### `LogLevel`
+
+```typescript
+type LogLevel = 'debug' | 'info' | 'error';
+```
+
+## Instrumentation
+
+### `InstrumentationBase`
+
+Abstract base class for creating custom instrumentors.
+
+**Example**:
+```typescript
+import { InstrumentationBase } from 'agentops';
+
+export class MyInstrumentation extends InstrumentationBase {
+  static readonly metadata: InstrumentorMetadata = {
+    name: 'my-instrumentation',
+    version: '1.0.0',
+    description: 'Custom instrumentation',
+    targetLibrary: 'my-library',
+    targetVersions: ['>=1.0.0']
+  };
+
+  protected setup(moduleExports: any): any {
+    // Instrumentation logic
+    return moduleExports;
+  }
+}
+```
+
+## Utility Functions
+
+### `getPackageVersion(): string`
+
+Returns the version of the AgentOps SDK package.
+
+### `safeSerialize(value: any): string`
+
+Safely serializes a value to JSON string, handling circular references.
+
+### `extractAttributesFromMapping(data: any, mapping: AttributeMap): AttributeMap`
+
+Extracts attributes from data using a mapping configuration.
+
+## Semantic Conventions
+
+The SDK exports semantic convention constants for consistent attribute naming:
+
+### Agent Attributes
+- `AGENT_NAME`: 'agent.name'
+- `AGENT_TYPE`: 'agent.type'
+- `AGENT_VERSION`: 'agent.version'
+- `AGENT_ID`: 'agent.id'
+
+### GenAI Attributes
+- `GEN_AI_REQUEST_MODEL`: 'gen_ai.request.model'
+- `GEN_AI_REQUEST_MAX_TOKENS`: 'gen_ai.request.max_tokens'
+- `GEN_AI_USAGE_INPUT_TOKENS`: 'gen_ai.usage.prompt_tokens'
+- `GEN_AI_USAGE_OUTPUT_TOKENS`: 'gen_ai.usage.completion_tokens'
+
+## Framework Support
+
+### OpenAI Agents
+
+The SDK provides first-class support for the OpenAI Agents framework with automatic instrumentation of:
+
+- Agent lifecycle events
+- LLM generation calls
+- Function/tool calls
+- Audio processing
+- Agent handoffs
+- Custom events
+
+Simply initialize AgentOps before using the OpenAI Agents SDK:
+
+```typescript
+import { agentops } from 'agentops';
+import { Agent, run } from '@openai/agents';
+
+await agentops.init();
+
+const agent = new Agent({
+  name: 'My Assistant',
+  instructions: 'You are a helpful assistant.',
+  tools: [/* your tools */],
+});
+
+const result = await run(agent, "Hello!");
+```
+
+## Debug Logging
+
+Enable detailed instrumentation logs:
+
+```bash
+DEBUG=agentops:* node your-app.js
+```

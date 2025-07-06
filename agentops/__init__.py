@@ -64,7 +64,6 @@ def record(event):
     """
     from agentops.helpers.time import get_ISO_time
 
-    # TODO: Manual timestamp assignment is a temporary fix; should use proper event lifecycle
     if event and hasattr(event, "end_timestamp"):
         event.end_timestamp = get_ISO_time()
 

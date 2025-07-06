@@ -8,7 +8,7 @@ description: "All functions and classes exposed in the top layer of the SDK"
 This reference documents the functions and classes available with `import agentops` for the Python SDK. The AgentOps SDK is designed for easy integration with your agent applications, offering both simple auto-instrumentation and more detailed manual tracing capabilities.
 
 <Note>
-This documentation covers the Python SDK. A TypeScript/JavaScript SDK is also available - see our [TypeScript SDK guide](/v2/usage/typescript-sdk) for details.
+This documentation covers the Python SDK. For TypeScript/JavaScript applications, see our [TypeScript SDK guide](/v2/usage/typescript-sdk) and [TypeScript SDK Reference](/v2/usage/typescript-sdk-reference).
 </Note>
 
 ## Core Functions
@@ -25,6 +25,7 @@ Initializes the AgentOps SDK and automatically starts tracking your application.
 - `endpoint` (str, optional): The endpoint for the AgentOps service. If not provided, will be read from the `AGENTOPS_API_ENDPOINT` environment variable. Defaults to 'https://api.agentops.ai'.
 - `app_url` (str, optional): The dashboard URL for the AgentOps app. If not provided, will be read from the `AGENTOPS_APP_URL` environment variable. Defaults to 'https://app.agentops.ai'.
 - `max_wait_time` (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 5,000 (5 seconds).
+- `export_flush_interval` (int, optional): Time interval in milliseconds between automatic exports of telemetry data. Defaults to 1000.
 - `max_queue_size` (int, optional): The maximum size of the event queue. Defaults to 512.
 - `default_tags` (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
 - `tags` (List[str], optional): **[Deprecated]** Use `default_tags` instead. Will be removed in v4.0.
@@ -65,6 +66,7 @@ Updates client configuration after initialization. Supports the same parameters 
 - `endpoint` (str, optional): The endpoint for the AgentOps service.
 - `app_url` (str, optional): The dashboard URL for the AgentOps app.
 - `max_wait_time` (int, optional): Maximum time to wait in milliseconds before flushing the queue.
+- `export_flush_interval` (int, optional): Time interval in milliseconds between automatic exports of telemetry data.
 - `max_queue_size` (int, optional): Maximum size of the event queue.
 - `default_tags` (List[str], optional): Default tags for the sessions.
 - `instrument_llm_calls` (bool, optional): Whether to instrument LLM calls.
