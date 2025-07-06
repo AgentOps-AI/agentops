@@ -64,6 +64,7 @@ test = [
     # ------------------------------------------------------------------------------------------------------------------------------------
     # ;;
     "pytest-cov",
+    "pytest-timeout",  # Added for integration tests timeout handling
     "fastapi[standard]",
     "openai-agents[voice]",
 ]
