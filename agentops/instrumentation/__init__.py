@@ -351,7 +351,7 @@ def _perform_instrumentation(package_name: str):
                 if concurrent_instrumentor is not None:
                     concurrent_instrumentor._agentops_instrumented_package_key = "concurrent.futures"
                     _active_instrumentors.append(concurrent_instrumentor)
-                    logger.info("AgentOps: Instrumented concurrent.futures as a dependency of mem0.")
+                    logger.debug("AgentOps: Instrumented concurrent.futures as a dependency of mem0.")
             except Exception as e:
                 logger.debug(f"Could not instrument concurrent.futures for mem0: {e}")
     else:
@@ -497,7 +497,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     try:
         # Use the provider directly from the global tracer instance
         instrumentor.instrument(tracer_provider=tracer.provider)
-        logger.info(
+        logger.debug(
             f"AgentOps: Successfully instrumented '{loader.class_name}' for package '{loader.package_name or loader.module_name}'."
         )
     except Exception as e:
@@ -573,6 +573,22 @@ def uninstrument_all():
         logger.debug(f"Uninstrumented {instrumentor.__class__.__name__}")
     _active_instrumentors = []
     _has_agentic_library = False
+
+
+def get_instrumented_libraries() -> list[str]:
+    """
+    Get the list of currently instrumented libraries.
+    
+    Returns:
+        List of package names that are currently instrumented.
+    """
+    instrumented_libs = []
+    for instrumentor in _active_instrumentors:
+        if hasattr(instrumentor, "_agentops_instrumented_package_key"):
+            package_key = instrumentor._agentops_instrumented_package_key
+            if package_key:
+                instrumented_libs.append(package_key)
+    return instrumented_libs
 
 
 def get_active_libraries() -> set[str]:

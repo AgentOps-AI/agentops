@@ -153,7 +153,7 @@ class ConcurrentFuturesInstrumentor(CommonInstrumentor):
         ThreadPoolExecutor.__init__ = _context_propagating_init(self._original_init)
         ThreadPoolExecutor.submit = _context_propagating_submit(self._original_submit)
 
-        logger.info("[ConcurrentFuturesInstrumentor] Successfully instrumented concurrent.futures.ThreadPoolExecutor")
+        logger.debug("[ConcurrentFuturesInstrumentor] Successfully instrumented concurrent.futures.ThreadPoolExecutor")
 
     def _uninstrument(self, **kwargs: Any) -> None:
         """Uninstrument the concurrent.futures module."""

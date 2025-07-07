@@ -28,6 +28,9 @@ from agentops.sdk.attributes import (
 from agentops.semconv import SpanKind
 from agentops.helpers.dashboard import log_trace_url
 from opentelemetry.trace.status import StatusCode
+from opentelemetry.util.types import Attributes
+
+from agentops.instrumentation import get_instrumented_libraries
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 
@@ -366,7 +369,9 @@ class TracingCore:
 
         # Log the session replay URL for this new trace
         try:
-            log_trace_url(span, title=trace_name)
+            # Get the list of instrumented libraries to include in the first session URL log
+            instrumented_libraries = get_instrumented_libraries()
+            log_trace_url(span, title=trace_name, instrumented_libraries=instrumented_libraries)
         except Exception as e:
             logger.warning(f"Failed to log trace URL for '{trace_name}': {e}")
 
