@@ -78,3 +78,44 @@ class TestDashboardHelpers(unittest.TestCase):
             mock_logger.info.assert_called_once()
             log_message = mock_logger.info.call_args[0][0]
             self.assertIn(expected_url, log_message)
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.helpers.dashboard.logger")
+    @patch("agentops.get_client")
+    def test_log_trace_url_with_statistics(self, mock_get_client, mock_logger, mock_tracer):
+        """Test log_trace_url includes statistics when available."""
+        # Mock the config's app_url
+        mock_client = MagicMock()
+        mock_client.config.app_url = "https://test-app.agentops.ai"
+        mock_get_client.return_value = mock_client
+
+        # Create a mock span
+        mock_span = MagicMock()
+        mock_span.context.trace_id = 12345
+
+        # Mock tracer to return statistics
+        mock_tracer.initialized = True
+        mock_tracer._internal_processor = MagicMock()
+        mock_tracer.get_trace_statistics.return_value = {
+            "total_spans": 10,
+            "tool_count": 3,
+            "llm_count": 5,
+            "total_cost": 0.25
+        }
+
+        # Call log_trace_url
+        log_trace_url(mock_span, title="test")
+
+        # Verify that statistics were logged
+        calls = mock_logger.info.call_args_list
+        self.assertGreater(len(calls), 1)  # Should have multiple log calls
+        
+        # Check that statistics are included in the logs
+        log_messages = [str(call[0][0]) for call in calls]
+        all_messages = " ".join(log_messages)
+        
+        self.assertIn("Session Statistics", all_messages)
+        self.assertIn("Total Spans: 10", all_messages)
+        self.assertIn("Tools: 3", all_messages)
+        self.assertIn("LLM Calls: 5", all_messages)
+        self.assertIn("Total Cost: $0.2500", all_messages)

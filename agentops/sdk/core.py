@@ -84,22 +84,15 @@ def setup_telemetry(
     max_wait_time: int = 5000,
     export_flush_interval: int = 1000,
     jwt: Optional[str] = None,
-) -> tuple[TracerProvider, MeterProvider]:
+) -> tuple[TracerProvider, MeterProvider, InternalSpanProcessor]:
     """
-    Setup the telemetry system.
+    Sets up OpenTelemetry with OTLP exporter and optional authentication.
 
-    Args:
-        service_name: Name of the OpenTelemetry service
-        project_id: Project ID to include in resource attributes
-        exporter_endpoint: Endpoint for the span exporter
-        metrics_endpoint: Endpoint for the metrics exporter
-        max_queue_size: Maximum number of spans to queue before forcing a flush
-        max_wait_time: Maximum time in milliseconds to wait before flushing
-        export_flush_interval: Time interval in milliseconds between automatic exports of telemetry data
-        jwt: JWT token for authentication
+    This configures both the trace provider and meter provider with appropriate
+    exporters and processors.
 
     Returns:
-        Tuple of (TracerProvider, MeterProvider)
+        Tuple of (TracerProvider, MeterProvider, InternalSpanProcessor)
     """
     # Build resource attributes
     resource_attrs = get_global_resource_attributes(
@@ -142,7 +135,7 @@ def setup_telemetry(
 
     logger.debug("Telemetry system initialized")
 
-    return provider, meter_provider
+    return provider, meter_provider, internal_processor
 
 
 class TracingCore:
@@ -162,6 +155,7 @@ class TracingCore:
         self._span_processors: list = []
         self._active_traces: dict = {}
         self._traces_lock = threading.Lock()
+        self._internal_processor: Optional[InternalSpanProcessor] = None
 
         # Register shutdown handler
         atexit.register(self.shutdown)
@@ -208,7 +202,7 @@ class TracingCore:
         self._config = config
 
         # Setup telemetry using the extracted configuration
-        provider, meter_provider = setup_telemetry(
+        provider, meter_provider, internal_processor = setup_telemetry(
             service_name=config["service_name"] or "",
             project_id=config.get("project_id"),
             exporter_endpoint=config["exporter_endpoint"],
@@ -221,6 +215,7 @@ class TracingCore:
 
         self.provider = provider
         self._meter_provider = meter_provider
+        self._internal_processor = internal_processor # Store the internal processor
 
         self._initialized = True
         logger.debug("Tracing core initialized")
@@ -601,6 +596,25 @@ class TracingCore:
         """
         with self._traces_lock:
             return len(self._active_traces)
+
+    def get_trace_statistics(self, trace_id: int) -> Dict[str, Any]:
+        """
+        Get the collected statistics for a specific trace.
+        
+        Args:
+            trace_id: The trace ID to get statistics for.
+            
+        Returns:
+            Dictionary containing trace statistics.
+        """
+        if self._internal_processor:
+            return self._internal_processor.get_trace_statistics(trace_id)
+        return {
+            "total_spans": 0,
+            "tool_count": 0,
+            "llm_count": 0,
+            "total_cost": 0.0
+        }
 
 
 # Global tracer instance; one per process runtime

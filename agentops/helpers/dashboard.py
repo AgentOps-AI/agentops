@@ -42,3 +42,22 @@ def log_trace_url(span: Union[Span, ReadableSpan], title: Optional[str] = None) 
     """
     session_url = get_trace_url(span)
     logger.info(colored(f"\x1b[34mSession Replay for {title} trace: {session_url}\x1b[0m", "blue"))
+    
+    # Get trace statistics if available
+    try:
+        from agentops.sdk.core import tracer
+        
+        if tracer.initialized and tracer._internal_processor:
+            trace_id = span.context.trace_id
+            stats = tracer.get_trace_statistics(trace_id)
+            
+            # Only print statistics if we have collected some data
+            if stats["total_spans"] > 0:
+                logger.info(colored("\x1b[34m📊 Session Statistics:\x1b[0m", "blue"))
+                logger.info(colored(f"\x1b[34m  • Total Spans: {stats['total_spans']}\x1b[0m", "blue"))
+                logger.info(colored(f"\x1b[34m  • Tools: {stats['tool_count']}\x1b[0m", "blue"))
+                logger.info(colored(f"\x1b[34m  • LLM Calls: {stats['llm_count']}\x1b[0m", "blue"))
+                logger.info(colored(f"\x1b[34m  • Total Cost: ${stats['total_cost']:.4f}\x1b[0m", "blue"))
+    except Exception as e:
+        # Silently ignore errors in statistics collection to not break the main flow
+        logger.debug(f"Failed to get trace statistics: {e}")
