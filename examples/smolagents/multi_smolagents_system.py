@@ -82,7 +82,7 @@ def visit_webpage(url: str) -> str:
 
     except RequestException as e:
         return f"Error fetching the webpage: {str(e)}"
-    except Exception as e:
+    except agentops.ValidationError as e:
         return f"An unexpected error occurred: {str(e)}"
 
 
@@ -111,4 +111,16 @@ answer = manager_agent.run(
 print(answer)
 # Awesome! We've successfully run a multi-agent system. Let's end the agentops session with a "Success" state. You can also end the session with a "Failure" or "Indeterminate" state, which is set as default.
 agentops.end_trace(tracer, end_state="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
 # You can view the session in the [AgentOps dashboard](https://app.agentops.ai/sessions) by clicking the link provided after ending the session.
+

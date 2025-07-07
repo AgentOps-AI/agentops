@@ -15,6 +15,7 @@
 # %pip install agentops
 # ## Setting up the SQL Table
 from sqlalchemy import (
+
     create_engine,
     MetaData,
     Table,
@@ -156,4 +157,16 @@ agent = CodeAgent(
 agent.run("Which waiter got more total money from tips?")
 # All done! Now we can end the agentops session with a "Success" state. You can also end the session with a "Failure" or "Indeterminate" state, where the "Indeterminate" state is used by default.
 agentops.end_trace(tracer, end_state="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
 # You can view the session in the [AgentOps dashboard](https://app.agentops.ai/sessions) by clicking the link provided after ending the session.
+

@@ -187,6 +187,17 @@ async def main():
 # await main()
 agentops.end_trace(tracer, status="Success")
 
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
+
 # ## Conclusion
 #
 # **AgentOps makes observability effortless** - simply import the library and all your interactions are automatically tracked, visualized, and analyzed. This enables you to:
@@ -197,3 +208,4 @@ agentops.end_trace(tracer, status="Success")
 # - Scale your AI applications with confidence in tool reliability
 #
 # Visit [app.agentops.ai](https://app.agentops.ai) to explore your tool usage sessions and gain deeper insights into your AI application's tool interactions.
+

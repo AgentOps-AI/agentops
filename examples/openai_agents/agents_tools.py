@@ -248,6 +248,17 @@ async def run_web_search_demo():
 # End the AgentOps trace session
 agentops.end_trace(tracer, end_state="Success")
 
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
+
 # ## Conclusion
 #
 # Each tool extends agent capabilities and enables sophisticated automation. **AgentOps makes tool observability effortless** - simply import the library and all your tool interactions are automatically tracked, visualized, and analyzed. This enables you to:

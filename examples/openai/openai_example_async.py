@@ -14,7 +14,6 @@ import agentops
 import os
 import asyncio
 from dotenv import load_dotenv
-
 # Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
@@ -77,6 +76,17 @@ async def main_stream():
 
 asyncio.run(main_stream())
 agentops.end_trace(tracer, end_state="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
 
 # Note that the response is a generator that yields chunks of the story. We can track this with AgentOps by navigating to the trace url and viewing the run.
 # All done!

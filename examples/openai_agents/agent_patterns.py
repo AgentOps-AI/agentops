@@ -723,6 +723,17 @@ if __name__ == "__main__":
 
 # End the AgentOps trace session
 agentops.end_trace(tracer, end_state="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
 # ## Conclusion
 #
 # This notebook has demonstrated 9 key agent patterns that are commonly used in production AI applications. Each pattern showcases how agents can be orchestrated to perform complex tasks, validate inputs and outputs, and improve overall application performance.
@@ -737,3 +748,4 @@ agentops.end_trace(tracer, end_state="Success")
 # - **Workflow optimization** - Identifying bottlenecks and improving agent coordination
 #
 # Visit [app.agentops.ai](https://app.agentops.ai) to explore your agent sessions and gain deeper insights into your AI application's behavior.
+

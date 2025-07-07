@@ -34,6 +34,13 @@ from agentops.logging.config import logger
 from agentops.helpers.deprecation import deprecated, warn_deprecated_param
 import threading
 
+# Import validation functions
+from agentops.validation import (
+    validate_trace_spans,
+    print_validation_summary,
+    ValidationError
+)
+
 # Thread-safe client management
 _client_lock = threading.Lock()
 _client = None
@@ -442,37 +449,40 @@ def update_trace_metadata(metadata: Dict[str, Any], prefix: str = "trace.metadat
 
 
 __all__ = [
-    "init",
-    "configure",
-    "get_client",
-    "record",
-    "start_trace",
-    "end_trace",
-    "update_trace_metadata",
+    # Legacy exports
     "start_session",
     "end_session",
     "track_agent",
     "track_tool",
     "end_all_sessions",
+    "Session",
     "ToolEvent",
     "ErrorEvent",
     "ActionEvent",
     "LLMEvent",
-    "Session",
+    # Modern exports
+    "init",
+    "start_trace",
+    "end_trace",
+    "update_trace_metadata",
+    "Client",
+    "get_client",
+    # Decorators
     "trace",
     "session",
     "agent",
     "task",
     "workflow",
     "operation",
-    "guardrail",
-    "tracer",
     "tool",
-    # Trace state enums
+    "guardrail",
+    # Enums
     "TraceState",
     "SUCCESS",
     "ERROR",
     "UNSET",
-    # OpenTelemetry status codes (for advanced users)
-    "StatusCode",
+    # Validation
+    "validate_trace_spans",
+    "print_validation_summary",
+    "ValidationError",
 ]

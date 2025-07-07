@@ -60,4 +60,16 @@ print(response.choices[0].message.content)
 # Awesome! It returns a fascinating response explaining the image and also deciphering the text content. All of this can be tracked with AgentOps by going to the session url above.
 agentops.end_trace(tracer, end_state="Success")
 
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
+
 # We end the session with a success state and a success reason. This is useful if you want to track the success or failure of the chatbot. In that case you can set the end state to failure and provide a reason. By default the session will have an indeterminate end state.
+
