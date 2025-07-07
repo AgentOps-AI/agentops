@@ -1,15 +1,9 @@
 version = 1
-revision = 1
-requires-python = ">=3.9, <3.14"
+requires-python = ">=3.9"
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
+    "python_full_version < '3.10'",
 ]
 
 [manifest]
@@ -20,9 +14,10 @@ constraints = [
 
 [[package]]
 name = "agentops"
-version = "0.4.6"
+version = "0.4.17"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "opentelemetry-api", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "opentelemetry-api", version = "1.31.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "opentelemetry-exporter-otlp-proto-http", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -45,8 +40,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "ipython", version = "8.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "ipython", version = "8.35.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "ipython", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "ipython", version = "8.35.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "mypy" },
     { name = "pdbpp" },
     { name = "pyfakefs" },
@@ -61,8 +55,7 @@ dev = [
     { name = "ruff" },
     { name = "types-requests" },
     { name = "vcrpy", version = "4.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "vcrpy", version = "5.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and platform_python_implementation == 'PyPy'" },
-    { name = "vcrpy", version = "7.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and platform_python_implementation != 'PyPy'" },
+    { name = "vcrpy", version = "5.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 test = [
     { name = "anthropic" },
@@ -74,19 +67,20 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<0.29.0" },
     { name = "opentelemetry-api", marker = "python_full_version < '3.10'", specifier = "==1.29.0" },
     { name = "opentelemetry-api", marker = "python_full_version >= '3.10'", specifier = ">1.29.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", marker = "python_full_version < '3.10'", specifier = "==1.29.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", marker = "python_full_version >= '3.10'", specifier = ">1.29.0" },
     { name = "opentelemetry-instrumentation", marker = "python_full_version < '3.10'", specifier = "==0.50b0" },
-    { name = "opentelemetry-instrumentation", marker = "python_full_version >= '3.10'", specifier = ">0.50b0" },
+    { name = "opentelemetry-instrumentation", marker = "python_full_version >= '3.10'", specifier = ">=0.50b0" },
     { name = "opentelemetry-sdk", marker = "python_full_version < '3.10'", specifier = "==1.29.0" },
     { name = "opentelemetry-sdk", marker = "python_full_version >= '3.10'", specifier = ">1.29.0" },
     { name = "opentelemetry-semantic-conventions", marker = "python_full_version < '3.10'", specifier = "==0.50b0" },
-    { name = "opentelemetry-semantic-conventions", marker = "python_full_version >= '3.10'", specifier = ">0.50b0" },
+    { name = "opentelemetry-semantic-conventions", marker = "python_full_version >= '3.10'", specifier = ">=0.50b0" },
     { name = "ordered-set", specifier = ">=4.0.0,<5.0.0" },
     { name = "packaging", specifier = ">=21.0,<25.0" },
-    { name = "psutil", specifier = ">=5.9.8,<6.1.0" },
+    { name = "psutil", specifier = ">=5.9.8,<7.0.1" },
     { name = "pyyaml", specifier = ">=5.3,<7.0" },
     { name = "requests", specifier = ">=2.0.0,<3.0.0" },
     { name = "termcolor", specifier = ">=2.3.0,<2.5.0" },
@@ -620,8 +614,7 @@ name = "importlib-metadata"
 version = "8.5.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "zipp", marker = "python_full_version < '3.10'" },
@@ -636,12 +629,8 @@ name = "importlib-metadata"
 version = "8.6.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "zipp", marker = "python_full_version >= '3.10'" },
@@ -665,8 +654,7 @@ name = "ipython"
 version = "8.18.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "colorama", marker = "python_full_version < '3.10' and sys_platform == 'win32'" },
@@ -691,65 +679,25 @@ name = "ipython"
 version = "8.35.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
-    { name = "colorama", marker = "python_full_version == '3.10.*' and sys_platform == 'win32'" },
-    { name = "decorator", marker = "python_full_version == '3.10.*'" },
+    { name = "colorama", marker = "python_full_version >= '3.10' and sys_platform == 'win32'" },
+    { name = "decorator", marker = "python_full_version >= '3.10'" },
     { name = "exceptiongroup", marker = "python_full_version == '3.10.*'" },
-    { name = "jedi", marker = "python_full_version == '3.10.*'" },
-    { name = "matplotlib-inline", marker = "python_full_version == '3.10.*'" },
-    { name = "pexpect", marker = "python_full_version == '3.10.*' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
-    { name = "prompt-toolkit", marker = "python_full_version == '3.10.*'" },
-    { name = "pygments", marker = "python_full_version == '3.10.*'" },
-    { name = "stack-data", marker = "python_full_version == '3.10.*'" },
-    { name = "traitlets", marker = "python_full_version == '3.10.*'" },
-    { name = "typing-extensions", marker = "python_full_version == '3.10.*'" },
+    { name = "jedi", marker = "python_full_version >= '3.10'" },
+    { name = "matplotlib-inline", marker = "python_full_version >= '3.10'" },
+    { name = "pexpect", marker = "python_full_version >= '3.10' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "prompt-toolkit", marker = "python_full_version >= '3.10'" },
+    { name = "pygments", marker = "python_full_version >= '3.10'" },
+    { name = "stack-data", marker = "python_full_version >= '3.10'" },
+    { name = "traitlets", marker = "python_full_version >= '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version >= '3.10' and python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0c/77/7d1501e8b539b179936e0d5969b578ed23887be0ab8c63e0120b825bda3e/ipython-8.35.0.tar.gz", hash = "sha256:d200b7d93c3f5883fc36ab9ce28a18249c7706e51347681f80a0aef9895f2520", size = 5605027 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/91/bf/17ffca8c8b011d0bac90adb5d4e720cb3ae1fe5ccfdfc14ca31f827ee320/ipython-8.35.0-py3-none-any.whl", hash = "sha256:e6b7470468ba6f1f0a7b116bb688a3ece2f13e2f94138e508201fad677a788ba", size = 830880 },
-]
-
-[[package]]
-name = "ipython"
-version = "9.1.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-]
-dependencies = [
-    { name = "colorama", marker = "python_full_version >= '3.11' and sys_platform == 'win32'" },
-    { name = "decorator", marker = "python_full_version >= '3.11'" },
-    { name = "ipython-pygments-lexers", marker = "python_full_version >= '3.11'" },
-    { name = "jedi", marker = "python_full_version >= '3.11'" },
-    { name = "matplotlib-inline", marker = "python_full_version >= '3.11'" },
-    { name = "pexpect", marker = "python_full_version >= '3.11' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
-    { name = "prompt-toolkit", marker = "python_full_version >= '3.11'" },
-    { name = "pygments", marker = "python_full_version >= '3.11'" },
-    { name = "stack-data", marker = "python_full_version >= '3.11'" },
-    { name = "traitlets", marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions", marker = "python_full_version == '3.11.*'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/70/9a/6b8984bedc990f3a4aa40ba8436dea27e23d26a64527de7c2e5e12e76841/ipython-9.1.0.tar.gz", hash = "sha256:a47e13a5e05e02f3b8e1e7a0f9db372199fe8c3763532fe7a1e0379e4e135f16", size = 4373688 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b2/9d/4ff2adf55d1b6e3777b0303fdbe5b723f76e46cba4a53a32fe82260d2077/ipython-9.1.0-py3-none-any.whl", hash = "sha256:2df07257ec2f84a6b346b8d83100bcf8fa501c6e01ab75cd3799b0bb253b3d2a", size = 604053 },
-]
-
-[[package]]
-name = "ipython-pygments-lexers"
-version = "1.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pygments", marker = "python_full_version >= '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/4c/5dd1d8af08107f88c7f741ead7a40854b8ac24ddf9ae850afbcf698aa552/ipython_pygments_lexers-1.1.1.tar.gz", hash = "sha256:09c0138009e56b6854f9535736f4171d855c8c08a563a0dcd8022f78355c7e81", size = 8393 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/33/1f075bf72b0b747cb3288d011319aaf64083cf2efef8354174e3ed4540e2/ipython_pygments_lexers-1.1.1-py3-none-any.whl", hash = "sha256:a9462224a505ade19a605f71f8fa63c2048833ce50abc86768a0d81d876dc81c", size = 8074 },
 ]
 
 [[package]]
@@ -1127,8 +1075,7 @@ name = "networkx"
 version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/80/a84676339aaae2f1cfdf9f418701dd634aef9cc76f708ef55c36ff39c3ca/networkx-3.2.1.tar.gz", hash = "sha256:9f1bb5cf3409bf324e0a722c20bdb4c20ee39bf1c30ce8ae499c8502b0b5e0c6", size = 2073928 }
 wheels = [
@@ -1140,12 +1087,8 @@ name = "networkx"
 version = "3.4.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fd/1d/06475e1cd5264c0b870ea2cc6fdb3e37177c1e565c43f56ff17a10e3937f/networkx-3.4.2.tar.gz", hash = "sha256:307c3669428c5362aab27c8a1260aa8f47c4e91d3891f48be0141738d8d053e1", size = 2151368 }
 wheels = [
@@ -1262,8 +1205,7 @@ name = "opentelemetry-api"
 version = "1.29.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "deprecated", marker = "python_full_version < '3.10'" },
@@ -1279,12 +1221,8 @@ name = "opentelemetry-api"
 version = "1.31.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "deprecated", marker = "python_full_version >= '3.10'" },
@@ -1300,8 +1238,7 @@ name = "opentelemetry-exporter-otlp-proto-common"
 version = "1.29.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "opentelemetry-proto", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1316,12 +1253,8 @@ name = "opentelemetry-exporter-otlp-proto-common"
 version = "1.31.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "opentelemetry-proto", version = "1.31.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -1336,8 +1269,7 @@ name = "opentelemetry-exporter-otlp-proto-http"
 version = "1.29.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "deprecated", marker = "python_full_version < '3.10'" },
@@ -1358,12 +1290,8 @@ name = "opentelemetry-exporter-otlp-proto-http"
 version = "1.31.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "deprecated", marker = "python_full_version >= '3.10'" },
@@ -1384,8 +1312,7 @@ name = "opentelemetry-instrumentation"
 version = "0.50b0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "opentelemetry-api", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1403,12 +1330,8 @@ name = "opentelemetry-instrumentation"
 version = "0.52b1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "opentelemetry-api", version = "1.31.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -1426,8 +1349,7 @@ name = "opentelemetry-proto"
 version = "1.29.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "protobuf", marker = "python_full_version < '3.10'" },
@@ -1442,12 +1364,8 @@ name = "opentelemetry-proto"
 version = "1.31.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "protobuf", marker = "python_full_version >= '3.10'" },
@@ -1462,8 +1380,7 @@ name = "opentelemetry-sdk"
 version = "1.29.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "opentelemetry-api", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1480,12 +1397,8 @@ name = "opentelemetry-sdk"
 version = "1.31.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "opentelemetry-api", version = "1.31.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -1502,8 +1415,7 @@ name = "opentelemetry-semantic-conventions"
 version = "0.50b0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "deprecated", marker = "python_full_version < '3.10'" },
@@ -1519,12 +1431,8 @@ name = "opentelemetry-semantic-conventions"
 version = "0.52b1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
     { name = "deprecated", marker = "python_full_version >= '3.10'" },
@@ -2008,8 +1916,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
     { name = "vcrpy", version = "4.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "vcrpy", version = "5.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and platform_python_implementation == 'PyPy'" },
-    { name = "vcrpy", version = "7.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and platform_python_implementation != 'PyPy'" },
+    { name = "vcrpy", version = "5.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fe/2a/ea6b8036ae01979eae02d8ad5a7da14dec90d9176b613e49fb8d134c78fc/pytest_recording-0.13.2.tar.gz", hash = "sha256:000c3babbb466681457fd65b723427c1779a0c6c17d9e381c3142a701e124877", size = 25270 }
 wheels = [
@@ -2442,8 +2349,7 @@ name = "vcrpy"
 version = "4.3.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
-    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+    "python_full_version < '3.10'",
 ]
 dependencies = [
     { name = "pyyaml", marker = "python_full_version < '3.10'" },
@@ -2461,38 +2367,17 @@ name = "vcrpy"
 version = "5.1.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
+    "python_full_version >= '3.13'",
+    "python_full_version >= '3.10' and python_full_version < '3.13'",
 ]
 dependencies = [
-    { name = "pyyaml", marker = "python_full_version >= '3.10' and platform_python_implementation == 'PyPy'" },
-    { name = "wrapt", marker = "python_full_version >= '3.10' and platform_python_implementation == 'PyPy'" },
-    { name = "yarl", marker = "python_full_version >= '3.10' and platform_python_implementation == 'PyPy'" },
+    { name = "pyyaml", marker = "python_full_version >= '3.10'" },
+    { name = "wrapt", marker = "python_full_version >= '3.10'" },
+    { name = "yarl", marker = "python_full_version >= '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a5/ea/a166a3cce4ac5958ba9bbd9768acdb1ba38ae17ff7986da09fa5b9dbc633/vcrpy-5.1.0.tar.gz", hash = "sha256:bbf1532f2618a04f11bce2a99af3a9647a32c880957293ff91e0a5f187b6b3d2", size = 84576 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/5b/3f70bcb279ad30026cc4f1df0a0491a0205a24dddd88301f396c485de9e7/vcrpy-5.1.0-py2.py3-none-any.whl", hash = "sha256:605e7b7a63dcd940db1df3ab2697ca7faf0e835c0852882142bafb19649d599e", size = 41969 },
-]
-
-[[package]]
-name = "vcrpy"
-version = "7.0.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
-    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
-]
-dependencies = [
-    { name = "pyyaml", marker = "python_full_version >= '3.10' and platform_python_implementation != 'PyPy'" },
-    { name = "urllib3", marker = "python_full_version >= '3.10' and platform_python_implementation != 'PyPy'" },
-    { name = "wrapt", marker = "python_full_version >= '3.10' and platform_python_implementation != 'PyPy'" },
-    { name = "yarl", marker = "python_full_version >= '3.10' and platform_python_implementation != 'PyPy'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/25/d3/856e06184d4572aada1dd559ddec3bedc46df1f2edc5ab2c91121a2cccdb/vcrpy-7.0.0.tar.gz", hash = "sha256:176391ad0425edde1680c5b20738ea3dc7fb942520a48d2993448050986b3a50", size = 85502 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/5d/1f15b252890c968d42b348d1e9b0aa12d5bf3e776704178ec37cceccdb63/vcrpy-7.0.0-py2.py3-none-any.whl", hash = "sha256:55791e26c18daa363435054d8b35bd41a4ac441b6676167635d1b37a71dbe124", size = 42321 },
 ]
 
 [[package]]
