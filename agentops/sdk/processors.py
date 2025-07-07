@@ -11,6 +11,9 @@ from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 
 from agentops.logging import logger, upload_logfile
 
+# Collect statistics about spans for dashboard summary
+from agentops.sdk.trace_stats import record_span
+
 
 class InternalSpanProcessor(SpanProcessor):
     """
@@ -54,6 +57,12 @@ class InternalSpanProcessor(SpanProcessor):
         # Skip if span is not sampled
         if not span.context or not span.context.trace_flags.sampled:
             return
+
+        # Record span statistics for dashboard summary
+        try:
+            record_span(span)
+        except Exception as e:
+            logger.debug(f"[agentops.InternalSpanProcessor] Failed to record span stats: {e}")
 
         if self._root_span_id and (span.context.span_id is self._root_span_id):
             logger.debug(f"[agentops.InternalSpanProcessor] Ending root span: {span.name}")

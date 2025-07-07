@@ -7,6 +7,9 @@ from termcolor import colored
 from opentelemetry.sdk.trace import Span, ReadableSpan
 from agentops.logging import logger
 
+# Stats helper for additional session information
+from agentops.sdk.trace_stats import get_trace_stats
+
 
 def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
     """
@@ -41,4 +44,23 @@ def log_trace_url(span: Union[Span, ReadableSpan], title: Optional[str] = None) 
         span: The span to log the URL for.
     """
     session_url = get_trace_url(span)
-    logger.info(colored(f"\x1b[34mSession Replay for {title} trace: {session_url}\x1b[0m", "blue"))
+
+    # Gather statistics if available
+    stats_text = ""
+    try:
+        stats = get_trace_stats(span.context.trace_id)
+        if stats and stats.total_spans:
+            stats_text = (
+                f" | Spans: {stats.total_spans} | Tools: {stats.tools} "
+                f"| LLM Calls: {stats.llms} | LLM Spend: ${stats.total_cost:.4f}"
+            )
+    except Exception:
+        # Silently ignore any issues collecting stats
+        pass
+
+    logger.info(
+        colored(
+            f"\x1b[34mSession Replay for {title} trace: {session_url}{stats_text}\x1b[0m",
+            "blue",
+        )
+    )
