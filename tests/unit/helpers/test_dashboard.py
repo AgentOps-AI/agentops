@@ -78,3 +78,29 @@ class TestDashboardHelpers(unittest.TestCase):
             mock_logger.info.assert_called_once()
             log_message = mock_logger.info.call_args[0][0]
             self.assertIn(expected_url, log_message)
+
+    @patch("agentops.helpers.dashboard.logger")
+    @patch("agentops.get_client")
+    def test_log_trace_url_with_instrumented_libraries(self, mock_get_client, mock_logger):
+        """Test log_trace_url includes instrumented libraries when provided."""
+        # Mock the config's app_url
+        mock_client = MagicMock()
+        mock_client.config.app_url = "https://test-app.agentops.ai"
+        mock_get_client.return_value = mock_client
+
+        # Create a mock span
+        mock_span = MagicMock()
+        mock_span.context.trace_id = "test-trace-id"
+
+        # Mock get_trace_url to return a known value
+        expected_url = "https://test-app.agentops.ai/sessions?trace_id=test-trace-id"
+        with patch("agentops.helpers.dashboard.get_trace_url", return_value=expected_url):
+            # Call log_trace_url with instrumented libraries
+            instrumented_libs = ["openai", "anthropic", "langchain"]
+            log_trace_url(mock_span, title="test", instrumented_libraries=instrumented_libs)
+
+            # Assert that logger.info was called with a message containing the URL and libraries
+            mock_logger.info.assert_called_once()
+            log_message = mock_logger.info.call_args[0][0]
+            self.assertIn(expected_url, log_message)
+            self.assertIn("instrumented: openai, anthropic, langchain", log_message)

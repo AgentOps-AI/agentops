@@ -33,12 +33,22 @@ def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
     return f"{app_url}/sessions?trace_id={trace_id}"
 
 
-def log_trace_url(span: Union[Span, ReadableSpan], title: Optional[str] = None) -> None:
+def log_trace_url(span: Union[Span, ReadableSpan], title: Optional[str] = None, instrumented_libraries: Optional[list[str]] = None) -> None:
     """
     Log the trace URL for the AgentOps dashboard.
 
     Args:
         span: The span to log the URL for.
+        title: Optional title for the trace.
+        instrumented_libraries: Optional list of instrumented library names.
     """
     session_url = get_trace_url(span)
-    logger.info(colored(f"\x1b[34mSession Replay for {title} trace: {session_url}\x1b[0m", "blue"))
+    
+    # Build the message with instrumented libraries if provided
+    message = f"\x1b[34mSession Replay for {title} trace: {session_url}"
+    if instrumented_libraries:
+        libraries_str = ", ".join(instrumented_libraries)
+        message += f" (instrumented: {libraries_str})"
+    message += "\x1b[0m"
+    
+    logger.info(colored(message, "blue"))
