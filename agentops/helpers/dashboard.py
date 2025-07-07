@@ -41,4 +41,28 @@ def log_trace_url(span: Union[Span, ReadableSpan], title: Optional[str] = None) 
         span: The span to log the URL for.
     """
     session_url = get_trace_url(span)
-    logger.info(colored(f"\x1b[34mSession Replay for {title} trace: {session_url}\x1b[0m", "blue"))
+
+    # Determine if this is the first time we're logging a session URL.
+    # We keep module-level state to avoid repeating the library list on subsequent calls.
+    global _has_logged_first_session_url  # type: ignore  # Runtime attribute assignment below
+
+    # Fallback in case the attribute doesn't exist yet
+    if "_has_logged_first_session_url" not in globals():
+        _has_logged_first_session_url = False  # type: ignore
+
+    libraries_text = ""
+    if not _has_logged_first_session_url:
+        try:
+            # Import lazily to avoid circular dependencies if instrumentation isn't enabled.
+            from agentops.instrumentation import get_active_libraries
+
+            active_libs = sorted(get_active_libraries())
+            if active_libs:
+                libraries_text = f" | Instrumented libraries: {', '.join(active_libs)}"
+        except Exception:
+            # Silently ignore any errors while attempting to fetch instrumentation data.
+            pass
+
+        _has_logged_first_session_url = True  # type: ignore
+
+    logger.info(colored(f"\x1b[34mSession Replay for {title} trace: {session_url}{libraries_text}\x1b[0m", "blue"))
