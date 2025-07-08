@@ -108,9 +108,23 @@ class TestCheckLlmSpans:
     def test_check_llm_spans_found(self):
         """Test when LLM spans are found."""
         spans = [
-            {"span_name": "OpenAI Chat Completion"},
+            {
+                "span_name": "OpenAI Chat Completion",
+                "span_attributes": {
+                    "agentops.span.kind": "llm"
+                }
+            },
             {"span_name": "Some other span"},
-            {"span_name": "anthropic.messages.create"}
+            {
+                "span_name": "anthropic.messages.create",
+                "span_attributes": {
+                    "agentops": {
+                        "span": {
+                            "kind": "llm"
+                        }
+                    }
+                }
+            }
         ]
 
         has_llm, llm_names = check_llm_spans(spans)
@@ -148,7 +162,12 @@ class TestValidateTraceSpans:
         mock_token.return_value = "test-token"
         mock_details.return_value = {
             "spans": [
-                {"span_name": "OpenAI Chat Completion"},
+                {
+                    "span_name": "OpenAI Chat Completion",
+                    "span_attributes": {
+                        "agentops.span.kind": "llm"
+                    }
+                },
                 {"span_name": "Other span"}
             ]
         }
@@ -187,7 +206,14 @@ class TestValidateTraceSpans:
         mock_details.side_effect = [
             {"spans": []},
             {"spans": []},
-            {"spans": [{"span_name": "OpenAI Chat Completion"}]}
+            {
+                "spans": [{
+                    "span_name": "OpenAI Chat Completion",
+                    "span_attributes": {
+                        "agentops.span.kind": "llm"
+                    }
+                }]
+            }
         ]
 
         result = validate_trace_spans(
@@ -199,8 +225,12 @@ class TestValidateTraceSpans:
         assert result["span_count"] == 1
         assert mock_details.call_count == 3
 
-    def test_validate_trace_spans_no_trace_id(self):
+    @patch('opentelemetry.trace.get_current_span')
+    def test_validate_trace_spans_no_trace_id(self, mock_get_current_span):
         """Test validation without trace ID."""
+        # Mock get_current_span to return None
+        mock_get_current_span.return_value = None
+
         with pytest.raises(ValueError, match="No trace ID found"):
             validate_trace_spans()
 
@@ -221,7 +251,12 @@ class TestValidateTraceSpans:
 
         mock_token.return_value = "test-token"
         mock_details.return_value = {
-            "spans": [{"span_name": "OpenAI Chat Completion"}]  # Use an LLM span name
+            "spans": [{
+                "span_name": "OpenAI Chat Completion",
+                "span_attributes": {
+                    "agentops.span.kind": "llm"
+                }
+            }]
         }
         mock_metrics.return_value = {
             "total_tokens": 100,
