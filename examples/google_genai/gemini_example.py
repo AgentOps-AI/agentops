@@ -46,3 +46,13 @@ token_response = client.models.count_tokens(
     model="gemini-1.5-flash", contents="This is a test sentence to count tokens."
 )
 print(f"Token count: {token_response.total_tokens}")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "="*50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=None)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise

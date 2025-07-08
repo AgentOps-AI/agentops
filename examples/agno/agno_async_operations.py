@@ -75,6 +75,16 @@ async def demonstrate_async_operations():
         print(f"An error occurred: {e}")
         agentops.end_trace(tracer, end_state="Error")
 
+    # Let's check programmatically that spans were recorded in AgentOps
+    print("\n" + "="*50)
+    print("Now let's verify that our LLM calls were tracked properly...")
+    try:
+        agentops.validate_trace_spans(trace_context=tracer)
+        print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+    except agentops.ValidationError as e:
+        print(f"\n❌ Error validating spans: {e}")
+        raise
+
 
 if __name__ == "__main__":
     asyncio.run(demonstrate_async_operations())
