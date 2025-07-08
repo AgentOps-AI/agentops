@@ -11,9 +11,6 @@ from typing import Annotated, Literal
 import asyncio
 import os
 from dotenv import load_dotenv
-from IPython.core.error import (
-    StdinNotImplementedError,
-)
 
 import agentops
 
@@ -97,9 +94,6 @@ async def main():
 
         agentops.end_trace(tracer, end_state="Success")
 
-    except StdinNotImplementedError:
-        print("StdinNotImplementedError: This typically happens in non-interactive environments.")
-        agentops.end_trace(tracer, end_state="Indeterminate")
     except Exception as e:
         print(f"An error occurred: {e}")
         agentops.end_trace(tracer, end_state="Error")

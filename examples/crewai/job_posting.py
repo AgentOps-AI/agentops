@@ -133,10 +133,10 @@ class Tasks:
 tracer = agentops.start_trace(trace_name="CrewAI Job Posting", tags=["crew-job-posting-example", "agentops-example"])
 tasks = Tasks()
 agents = Agents()
-company_description = input("What is the company description?\n")
-company_domain = input("What is the company domain?\n")
-hiring_needs = input("What are the hiring needs?\n")
-specific_benefits = input("What are specific_benefits you offer?\n")
+company_description = "We are a software company that builds AI-powered tools for businesses."
+company_domain = "https://www.agentops.ai"
+hiring_needs = "We are looking for a software engineer with 3 years of experience in Python and Django."
+specific_benefits = "We offer a competitive salary, health insurance, and a 401k plan."
 
 # Create Agents
 researcher_agent = agents.research_agent()
@@ -182,5 +182,3 @@ try:
 except agentops.ValidationError as e:
     print(f"\n❌ Error validating spans: {e}")
     raise
-
-

@@ -1,2 +1,3 @@
 crewai
-crewai-tools 
+crewai-tools
+pymarkdown

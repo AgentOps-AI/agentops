@@ -9,9 +9,6 @@
 # Then import them
 import os
 from dotenv import load_dotenv
-from IPython.core.error import (
-    StdinNotImplementedError,
-)
 import asyncio
 
 import agentops
@@ -82,10 +79,6 @@ async def main():
         await Console().run(stream)
         agentops.end_trace(tracer, end_state="Success")
 
-    except StdinNotImplementedError:
-        print("StdinNotImplementedError: This typically happens in non-interactive environments.")
-        print("Skipping interactive part of chat for automation.")
-        agentops.end_trace(tracer, end_state="Indeterminate")
     except Exception as e:
         print(f"An error occurred: {e}")
         agentops.end_trace(tracer, end_state="Error")
