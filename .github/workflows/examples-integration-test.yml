@@ -217,7 +217,6 @@ jobs:
         LLAMA_API_KEY: ${{ secrets.LLAMA_API_KEY }}
         PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
-        MULTION_API_KEY: ${{ secrets.MULTION_API_KEY }}
         PYTHONPATH: ${{ github.workspace }}
       run: |
         echo "Running ${{ matrix.example.name }}..."
