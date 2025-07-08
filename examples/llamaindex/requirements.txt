@@ -1,0 +1,3 @@
+llama-index
+llama-index-llms-openai
+llama-index-instrumentation-agentops 

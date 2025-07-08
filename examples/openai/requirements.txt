@@ -1,0 +1,3 @@
+openai
+pandas  # for multi_tool_orchestration.py
+tavily-python  # for web_search.py 
