@@ -35,7 +35,7 @@ You have experience in writing for children and adults alike.
 You are given a prompt and you need to generate a story based on the prompt.
 """
 
-user_prompt = "Write a story about a cyber-warrior trapped in the imperial time period."
+user_prompt = "Write a very short story about a cyber-warrior trapped in the imperial time period."
 
 messages = [
     {"role": "system", "content": system_prompt},
