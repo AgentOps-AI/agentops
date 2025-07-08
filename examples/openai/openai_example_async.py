@@ -20,7 +20,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 
 # Next we initialize the AgentOps client.
-agentops.init(auto_start_session=True)
+agentops.init(auto_start_session=True, tags=["openai", "async", "agentops-example"])
 tracer = agentops.start_trace(
     trace_name="OpenAI Async Example", tags=["openai-async-example", "openai", "agentops-example"]
 )

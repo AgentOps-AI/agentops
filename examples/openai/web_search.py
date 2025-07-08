@@ -26,7 +26,7 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 
-agentops.init(auto_start_session=True)
+agentops.init(auto_start_session=True, tags=["openai", "web-search", "agentops-example"])
 tracer = agentops.start_trace(
     trace_name="OpenAI Responses Example", tags=["openai-responses-example", "openai", "agentops-example"]
 )
@@ -131,4 +131,3 @@ except agentops.ValidationError as e:
 # 3️⃣ Re-submit tool results for summarization → another request
 #
 # We are very excited for you to try out the Responses API and see how it can simplify your code and make it easier to build complex, multimodal, tool-augmented interactions!
-

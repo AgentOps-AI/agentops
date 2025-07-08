@@ -123,7 +123,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
     by running multiple memory operations in parallel.
     """
 
-    tracer = agentops.start_trace("mem0_memory_async_example")
+    tracer = agentops.start_trace("mem0_memory_async_example", tags=["mem0", "async", "memory-management"])
     try:
         # Initialize async Memory with configuration
         async_memory = await AsyncMemory.from_config(local_config)
@@ -186,7 +186,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
 
 
 # Initialize AgentOps
-agentops.init()
+agentops.init(tags=["mem0", "memory-management", "agentops-example"])
 
 # Configuration for local memory (Memory)
 # This configuration specifies the LLM provider and model settings

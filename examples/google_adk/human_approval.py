@@ -31,7 +31,8 @@ nest_asyncio.apply()
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your_agentops_api_key_here"
 
 # Initialize AgentOps - Just 2 lines!
-agentops.init(AGENTOPS_API_KEY, trace_name="adk-human-approval-notebook", auto_start_session=False)
+agentops.init(AGENTOPS_API_KEY, trace_name="adk-human-approval-notebook",
+              auto_start_session=False, tags=["google-adk", "human-approval", "agentops-example"])
 
 # Define some constants for our application.
 APP_NAME = "human_approval_app_notebook"

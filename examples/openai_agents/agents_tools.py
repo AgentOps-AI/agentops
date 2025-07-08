@@ -48,7 +48,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(auto_start_session=False, tags=["agentops-example"])
+agentops.init(auto_start_session=False, tags=["openai-agents", "tools", "agentops-example"])
 
 # ## 1. Code Interpreter Tool
 #

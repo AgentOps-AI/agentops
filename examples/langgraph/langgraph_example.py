@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-agentops.init(os.getenv("AGENTOPS_API_KEY"))
+agentops.init(os.getenv("AGENTOPS_API_KEY"), tags=["langgraph", "tool-usage", "agentops-example"])
 
 
 @tool

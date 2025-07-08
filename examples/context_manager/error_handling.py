@@ -66,7 +66,7 @@ def basic_exception_handling():
     """Basic example of exception handling with context managers."""
     print("Basic Exception Handling")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(api_key=AGENTOPS_API_KEY, tags=["context-manager", "error-handling", "agentops-example"])
 
     error_types = ["value_error", "type_error", "runtime_error", "success"]
 

@@ -8,7 +8,7 @@ from llama_index.instrumentation.agentops import AgentOpsHandler
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.huggingface import HuggingFaceLLM
 
-handler = AgentOpsHandler()
+handler = AgentOpsHandler(tags=["llamaindex", "rag", "agentops-example"])
 handler.init()
 
 load_dotenv()
