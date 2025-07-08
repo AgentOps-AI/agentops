@@ -1,0 +1,3 @@
+ag2
+nest-asyncio
+wikipedia-api 

@@ -28,9 +28,13 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 os.environ["PINECONE_API_KEY"] = os.getenv("PINECONE_API_KEY", "your_pinecone_api_key_here")
 
-agentops.init(auto_start_session=True)
+agentops.init(
+    auto_start_session=True,
+    trace_name="OpenAI Multi-Tool Orchestration",
+    tags=["openai", "multi-tool", "agentops-example"],
+)
 tracer = agentops.start_trace(
-    trace_name="Multi-Tool Orchestration with RAG",
+    trace_name="OpenAI Multi-Tool Orchestration with RAG",
     tags=["multi-tool-orchestration-rag-demo", "openai-responses", "agentops-example"],
 )
 client = OpenAI()
@@ -341,5 +345,16 @@ print(response_2)
 # # print the final answer
 print(response_2.output_text)
 agentops.end_trace(tracer, end_state="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
 
 # Here, we have seen  how to utilize OpenAI's Responses API to implement a Retrieval-Augmented Generation (RAG) approach with multi-tool calling capabilities. It showcases an example where the model selects the appropriate tool based on the input query: general questions may be handled by built-in tools such as web-search, while specific medical inquiries related to internal knowledge are addressed by retrieving context from a vector database (such as Pinecone) via function calls. Additonally, we have showcased how multiple tool calls can be sequentially combined to generate a final response based on our instructions provided to responses API. Happy coding!

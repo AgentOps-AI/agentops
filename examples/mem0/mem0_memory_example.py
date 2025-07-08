@@ -26,8 +26,8 @@ load_dotenv()
 os.environ["AGENTOPS_LOG_LEVEL"] = "DEBUG"
 
 # Set environment variables before importing
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "")
 
 # Now import mem0 - it will be instrumented by agentops
 from mem0 import Memory, AsyncMemory  # noqa  E402
@@ -57,7 +57,7 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
     must complete before the next one begins.
     """
 
-    agentops.start_trace("mem0_memory_example", tags=["mem0_memory_example"])
+    tracer = agentops.start_trace("Mem0 Memory Example", tags=["mem0_memory_example"])
     try:
         # Initialize sync Memory with local configuration
         memory = Memory.from_config(local_config)
@@ -96,9 +96,10 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
         delete_all_result = memory.delete_all(user_id=user_id)
         print(f"Delete all result: {delete_all_result}")
 
-        agentops.end_trace(end_state="success")
-    except Exception:
-        agentops.end_trace(end_state="error")
+        agentops.end_trace(tracer, end_state="Success")
+    except Exception as e:
+        agentops.end_trace(tracer, end_state="Error")
+        raise e
 
 
 async def demonstrate_async_memory(local_config, sample_messages, sample_preferences, user_id):
@@ -122,7 +123,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
     by running multiple memory operations in parallel.
     """
 
-    agentops.start_trace("mem0_memory_async_example")
+    tracer = agentops.start_trace("Mem0 Memory Async Example", tags=["mem0", "async", "memory-management"])
     try:
         # Initialize async Memory with configuration
         async_memory = await AsyncMemory.from_config(local_config)
@@ -177,11 +178,15 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
         delete_all_result = await async_memory.delete_all(user_id=user_id)
         print(f"Delete all result: {delete_all_result}")
 
-        agentops.end_trace(end_state="success")
+        agentops.end_trace(tracer, end_state="Success")
 
-    except Exception:
-        agentops.end_trace(end_state="error")
+    except Exception as e:
+        agentops.end_trace(tracer, end_state="Error")
+        raise e
 
+
+# Initialize AgentOps
+agentops.init(trace_name="Mem0 Memory Example", tags=["mem0", "memory-management", "agentops-example"])
 
 # Configuration for local memory (Memory)
 # This configuration specifies the LLM provider and model settings
@@ -222,3 +227,15 @@ sample_preferences = [
 # Execute both sync and async demonstrations
 demonstrate_sync_memory(local_config, sample_messages, sample_preferences, user_id)
 asyncio.run(demonstrate_async_memory(local_config, sample_messages, sample_preferences, user_id))
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    # Note: Using trace_id since we ran multiple traces
+    # In a real application, you would store each tracer and validate individually
+    result = agentops.validate_trace_spans(check_llm=False)  # Don't check for LLM spans as this uses memory operations
+    agentops.print_validation_summary(result)
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise

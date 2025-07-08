@@ -67,7 +67,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize AgentOps for monitoring and analytics
-agentops.init(auto_start_session=False, tags=["agno-example", "research-team"])
+agentops.init(auto_start_session=False, trace_name="Agno Research Team", tags=["agno-example", "research-team"])
 
 
 def demonstrate_research_team():
@@ -203,6 +203,16 @@ def demonstrate_research_team():
 
     except Exception:
         agentops.end_trace(tracer, end_state="Error")
+
+    # Let's check programmatically that spans were recorded in AgentOps
+    print("\n" + "=" * 50)
+    print("Now let's verify that our LLM calls were tracked properly...")
+    try:
+        agentops.validate_trace_spans(trace_context=tracer)
+        print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+    except agentops.ValidationError as e:
+        print(f"\n❌ Error validating spans: {e}")
+        raise
 
 
 demonstrate_research_team()

@@ -53,8 +53,12 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(tags=["customer-service-agent", "openai-agents", "agentops-example"], auto_start_session=False)
-tracer = agentops.start_trace(trace_name="Customer Service Agent")
+agentops.init(
+    trace_name="OpenAI Agents Customer Service",
+    tags=["customer-service-agent", "openai-agents", "agentops-example"],
+    auto_start_session=False,
+)
+tracer = agentops.start_trace(trace_name="OpenAI Agents Customer Service Agent")
 
 
 # Context model for the airline agent
@@ -102,13 +106,13 @@ async def update_seat(context: RunContextWrapper[AirlineAgentContext], confirmat
     return f"Updated seat to {new_seat} for confirmation number {confirmation_number}"
 
 
-### HOOKS
+# HOOKS
 async def on_seat_booking_handoff(context: RunContextWrapper[AirlineAgentContext]) -> None:
     flight_number = f"FLT-{random.randint(100, 999)}"
     context.context.flight_number = flight_number
 
 
-### AGENTS
+# AGENTS
 faq_agent = Agent[AirlineAgentContext](
     name="FAQ Agent",
     handoff_description="A helpful agent that can answer questions about the airline.",
@@ -186,6 +190,17 @@ async def main():
 
 # await main()
 agentops.end_trace(tracer, status="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
 
 # ## Conclusion
 #

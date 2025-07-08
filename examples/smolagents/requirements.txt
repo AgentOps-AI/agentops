@@ -1,0 +1,4 @@
+smolagents
+pandas
+duckduckgo-search 
+sqlalchemy

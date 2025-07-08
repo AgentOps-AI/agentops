@@ -51,7 +51,11 @@ def sequential_parallel_traces():
     """Example of sequential parallel traces - each trace is independent."""
     print("Sequential Parallel Traces")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Sequential Parallel Traces",
+        tags=["context-manager", "agentops-example"],
+    )
 
     tasks = ["task_1", "task_2", "task_3"]
     results = []
@@ -75,7 +79,11 @@ def nested_parallel_traces():
     """Example showing that nested context managers create parallel traces."""
     print("\nNested Parallel Traces")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Nested Parallel Traces",
+        tags=["context-manager", "agentops-example"],
+    )
 
     # Outer trace for the overall workflow
     with agentops.start_trace("workflow_main", tags=["workflow", "main"]):
@@ -110,7 +118,11 @@ def concurrent_traces_with_threads():
     """Example of truly concurrent traces using threading."""
     print("\nConcurrent Traces with Threading")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Concurrent Threads",
+        tags=["context-manager", "agentops-example"],
+    )
 
     def worker_function(worker_id: int, task_data: str):
         """Function to run in a separate thread with its own trace."""
@@ -149,7 +161,11 @@ def concurrent_traces_with_executor():
     """Example using ThreadPoolExecutor for concurrent traces."""
     print("\nConcurrent Traces with ThreadPoolExecutor")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Concurrent Executor",
+        tags=["context-manager", "agentops-example"],
+    )
 
     def process_with_trace(task_id: int, data: str) -> str:
         """Process data within its own trace context."""
@@ -195,7 +211,9 @@ def trace_with_different_tag_types():
     """Example showing different ways to tag parallel traces."""
     print("\nTraces with Different Tag Types")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY, trace_name="Context Manager Tag Types", tags=["context-manager", "agentops-example"]
+    )
 
     # Trace with list tags
     with agentops.start_trace("list_tags_trace", tags=["list", "example", "demo"]):

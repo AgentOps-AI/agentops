@@ -9,9 +9,6 @@
 # Then import them
 import os
 from dotenv import load_dotenv
-from IPython.core.error import (
-    StdinNotImplementedError,
-)
 import asyncio
 
 import agentops
@@ -35,7 +32,7 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
 # When initializing AgentOps, you can pass in optional tags to help filter sessions
-agentops.init(auto_start_session=False)
+agentops.init(auto_start_session=False, trace_name="Autogen Agent Chat Example")
 tracer = agentops.start_trace(
     trace_name="Microsoft Agent Chat Example", tags=["autogen-chat", "microsoft-autogen", "agentops-example"]
 )
@@ -50,7 +47,7 @@ tracer = agentops.start_trace(
 # * Errors
 # # Simple Chat Example
 # Define model and API key
-model_name = "gpt-4-turbo"  # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
+model_name = "gpt-4o-mini"  # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
 api_key = os.getenv("OPENAI_API_KEY")
 
 # Create the model client
@@ -82,15 +79,21 @@ async def main():
         await Console().run(stream)
         agentops.end_trace(tracer, end_state="Success")
 
-    except StdinNotImplementedError:
-        print("StdinNotImplementedError: This typically happens in non-interactive environments.")
-        print("Skipping interactive part of chat for automation.")
-        agentops.end_trace(tracer, end_state="Indeterminate")
     except Exception as e:
         print(f"An error occurred: {e}")
         agentops.end_trace(tracer, end_state="Error")
     finally:
         await model_client.close()
+
+    # Let's check programmatically that spans were recorded in AgentOps
+    print("\n" + "=" * 50)
+    print("Now let's verify that our LLM calls were tracked properly...")
+    try:
+        agentops.validate_trace_spans(trace_context=tracer)
+        print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+    except agentops.ValidationError as e:
+        print(f"\n❌ Error validating spans: {e}")
+        raise
 
 
 if __name__ == "__main__":

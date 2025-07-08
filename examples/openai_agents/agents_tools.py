@@ -48,7 +48,11 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(auto_start_session=False, tags=["agentops-example"])
+agentops.init(
+    auto_start_session=False,
+    trace_name="OpenAI Agents Tools Examples",
+    tags=["openai-agents", "tools", "agentops-example"],
+)
 
 # ## 1. Code Interpreter Tool
 #
@@ -61,7 +65,7 @@ agentops.init(auto_start_session=False, tags=["agentops-example"])
 # - Handle data processing tasks
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="Code Interpreter Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents Code Interpreter Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 
@@ -111,7 +115,7 @@ agentops.end_trace(tracer, end_state="Success")
 # **Note:** This example requires a pre-configured vector store ID.
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="File Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents File Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 
@@ -157,7 +161,7 @@ agentops.end_trace(tracer, end_state="Success")
 # - Automatic image saving and display
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="Image Generation Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents Image Generation Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 
@@ -222,7 +226,7 @@ agentops.end_trace(tracer, end_state="Success")
 # - Configurable search parameters
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="Web Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents Web Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 
@@ -247,6 +251,17 @@ async def run_web_search_demo():
 
 # End the AgentOps trace session
 agentops.end_trace(tracer, end_state="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+
 
 # ## Conclusion
 #

@@ -66,13 +66,17 @@ def basic_exception_handling():
     """Basic example of exception handling with context managers."""
     print("Basic Exception Handling")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Basic Exception Handling",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     error_types = ["value_error", "type_error", "runtime_error", "success"]
 
     for error_type in error_types:
         try:
-            with agentops.start_trace(f"basic_{error_type}", tags=["basic", "error-handling"]):
+            with agentops.start_trace(f"Context Manager Basic {error_type}", tags=["basic", "error-handling"]):
                 print(f"Started trace for {error_type}")
 
                 agent = ErrorProneAgent(f"BasicAgent_{error_type}")
@@ -93,7 +97,11 @@ def nested_exception_handling():
     """Example of exception handling in nested traces."""
     print("\nNested Exception Handling")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Nested Exception Handling",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     try:
         with agentops.start_trace("outer_operation", tags=["nested", "outer"]):
@@ -124,7 +132,11 @@ def retry_pattern():
     """Example of retry pattern with context managers."""
     print("\nRetry Pattern")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Retry Pattern",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     max_retries = 3
     for attempt in range(max_retries):
@@ -160,7 +172,11 @@ def graceful_degradation():
     """Example of graceful degradation pattern."""
     print("\nGraceful Degradation")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Graceful Degradation",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     try:
         with agentops.start_trace("primary_service", tags=["degradation", "primary"]):
@@ -188,7 +204,11 @@ def partial_success_handling():
     """Example of partial success handling."""
     print("\nPartial Success Handling")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Partial Success Handling",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     steps = ["step1", "step2", "fail", "step4"]
 
@@ -210,7 +230,11 @@ def custom_exception_handling():
     """Example of handling custom exceptions."""
     print("\nCustom Exception Handling")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Custom Exception Handling",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     try:
         with agentops.start_trace("custom_exception", tags=["custom", "exception"]):
@@ -232,7 +256,11 @@ def finally_blocks_example():
     """Example of exception handling with finally blocks."""
     print("\nFinally Blocks Example")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Finally Blocks",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     cleanup_actions = []
 
@@ -263,7 +291,11 @@ def exception_chaining_example():
     """Example of exception chaining and context preservation."""
     print("\nException Chaining Example")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Exception Chaining",
+        tags=["context-manager", "error-handling", "agentops-example"],
+    )
 
     try:
         with agentops.start_trace("exception_chaining", tags=["chaining", "context"]):
@@ -315,3 +347,13 @@ if __name__ == "__main__":
     exception_chaining_example()
 
     print("\nAll error handling examples completed!")
+
+    # Let's check programmatically that spans were recorded in AgentOps
+    print("\n" + "=" * 50)
+    print("Now let's verify that our LLM calls were tracked properly...")
+    try:
+        agentops.validate_trace_spans(trace_context=None)
+        print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+    except agentops.ValidationError as e:
+        print(f"\n❌ Error validating spans: {e}")
+        raise

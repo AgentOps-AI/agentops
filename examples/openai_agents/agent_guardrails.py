@@ -33,7 +33,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(api_key=os.environ["AGENTOPS_API_KEY"], tags=["agentops-example"])
+agentops.init(api_key=os.environ["AGENTOPS_API_KEY"], trace_name="OpenAI Agents Guardrails", tags=["agentops-example"])
 
 
 # OpenAI Agents SDK guardrail example with agentops guardrails decorator for observability
@@ -81,3 +81,14 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=None)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
