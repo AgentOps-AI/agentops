@@ -121,10 +121,25 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
     for span in spans:
         # Check span name for common LLM patterns
         span_name = span.get("span_name", "").lower()
-        if any(pattern in span_name for pattern in [
-            "openai", "gpt", "claude", "anthropic", "llm", "chat",
-            "completion", "gemini", "mistral", "cohere", "ai21"
-        ]):
+
+        # Skip session spans - these are not LLM spans
+        if ".session" in span_name or span_name.endswith("session"):
+            continue
+
+        # Check for actual LLM provider patterns - be more specific
+        # Look for patterns like "openai.chat.completion", "anthropic.messages", etc.
+        llm_provider_patterns = [
+            "openai.chat", "openai.completion", "openai.embedding",
+            "anthropic.messages", "anthropic.completion",
+            "google.generativeai", "gemini.generate",
+            "mistral.chat", "mistral.completion",
+            "cohere.generate", "cohere.chat",
+            "ai21.complete", "ai21.generate",
+            "gpt-", "claude-",  # Model names in span names
+            "litellm.completion", "litellm.acompletion"
+        ]
+
+        if any(pattern in span_name for pattern in llm_provider_patterns):
             llm_spans.append(span["span_name"])
 
     return len(llm_spans) > 0, llm_spans
