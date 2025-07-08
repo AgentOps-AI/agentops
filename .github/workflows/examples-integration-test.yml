@@ -126,73 +126,13 @@ jobs:
         # Install common dependencies
         pip install python-dotenv requests
         
-        # Install provider-specific dependencies based on the example
-        if [[ "${{ matrix.example.path }}" == *"openai"* ]]; then
-          pip install openai
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"anthropic"* ]]; then
-          pip install anthropic
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"langchain"* ]]; then
-          pip install langchain langchain-openai
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"litellm"* ]]; then
-          pip install litellm
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"google_genai"* ]]; then
-          pip install google-generativeai
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"xai"* ]]; then
-          pip install openai  # xAI uses OpenAI client
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"crewai"* ]]; then
-          pip install crewai crewai-tools
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"autogen"* ]]; then
-          pip install pyautogen
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"ag2"* ]]; then
-          pip install ag2
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"agno"* ]]; then
-          pip install agno
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"watsonx"* ]]; then
-          pip install ibm-watsonx-ai
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"mem0"* ]]; then
-          pip install mem0ai
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"smolagents"* ]]; then
-          pip install smolagents
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"llamaindex"* ]]; then
-          pip install llama-index
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"langgraph"* ]]; then
-          pip install langgraph
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"google_adk"* ]]; then
-          pip install google-genai nest-asyncio
-        fi
-        
-        if [[ "${{ matrix.example.path }}" == *"openai_agents"* ]]; then
-          pip install openai  # OpenAI Agents SDK examples
+        # Install from requirements.txt in the example's directory
+        example_dir=$(dirname "${{ matrix.example.path }}")
+        if [ -f "$example_dir/requirements.txt" ]; then
+          echo "Installing dependencies from $example_dir/requirements.txt"
+          pip install -r "$example_dir/requirements.txt"
+        else
+          echo "No requirements.txt found in $example_dir"
         fi
     
     - name: Run example - ${{ matrix.example.name }}
