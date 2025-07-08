@@ -213,7 +213,7 @@ def ToolEvent(*args: Any, **kwargs: Any) -> None:
 
 @deprecated("Automatically tracked in v4.")
 def ErrorEvent(*args: Any, **kwargs: Any) -> Any:
-    """@deprecated Automatically tracked in v4. Returns minimal object for test compatibility."""
+    """@deprecated Automatically tracked in v4."""
     from agentops.helpers.time import get_ISO_time
 
     class LegacyErrorEvent:
@@ -226,7 +226,7 @@ def ErrorEvent(*args: Any, **kwargs: Any) -> Any:
 
 @deprecated("Automatically tracked in v4.")
 def ActionEvent(*args: Any, **kwargs: Any) -> Any:
-    """@deprecated Automatically tracked in v4. Returns minimal object for test compatibility."""
+    """@deprecated Automatically tracked in v4."""
     from agentops.helpers.time import get_ISO_time
 
     class LegacyActionEvent:
