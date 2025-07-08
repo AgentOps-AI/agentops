@@ -1,2 +1,5 @@
+google-adk
 google-genai
 nest-asyncio 
+agentops
+python-dotenv 
