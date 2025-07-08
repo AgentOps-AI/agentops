@@ -36,7 +36,7 @@ You are given a prompt and you need to generate a story based on the prompt.
 """
 
 user_prompt = [
-    {"type": "text", "text": "Write a mystery thriller story based on your understanding of the provided image."},
+    {"type": "text", "text": "Write a very short mystery thriller story based on your understanding of the provided image."},
     {
         "type": "image_url",
         "image_url": {"url": "https://www.cosy.sbg.ac.at/~pmeerw/Watermarking/lena_color.gif"},
