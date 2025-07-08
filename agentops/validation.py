@@ -160,6 +160,20 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
                     if "prompt" in gen_ai_attrs or "completion" in gen_ai_attrs:
                         is_llm_span = True
 
+            # Check for LLM_REQUEST_TYPE attribute (used by provider instrumentations)
+            if not is_llm_span and isinstance(span_attributes, dict):
+                from agentops.semconv import SpanAttributes, LLMRequestTypeValues
+
+                # Check for LLM request type
+                llm_request_type = span_attributes.get(SpanAttributes.LLM_REQUEST_TYPE, "")
+
+                # Check if it's a chat or completion request (the main LLM types)
+                if llm_request_type in [
+                    LLMRequestTypeValues.CHAT.value,
+                    LLMRequestTypeValues.COMPLETION.value
+                ]:
+                    is_llm_span = True
+
         if is_llm_span:
             llm_spans.append(span_name)
 

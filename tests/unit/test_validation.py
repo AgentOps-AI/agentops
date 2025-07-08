@@ -150,6 +150,76 @@ class TestCheckLlmSpans:
         assert has_llm is False
         assert len(llm_names) == 0
 
+    def test_check_llm_spans_with_request_type(self):
+        """Test when LLM spans are identified by LLM_REQUEST_TYPE attribute."""
+        from agentops.semconv import SpanAttributes, LLMRequestTypeValues
+
+        spans = [
+            {
+                "span_name": "openai.chat.completion",
+                "span_attributes": {
+                    SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.CHAT.value
+                }
+            },
+            {
+                "span_name": "anthropic.messages.create",
+                "span_attributes": {
+                    SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.CHAT.value
+                }
+            },
+            {
+                "span_name": "llm.completion",
+                "span_attributes": {
+                    SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.COMPLETION.value
+                }
+            },
+            {
+                "span_name": "embedding.create",
+                "span_attributes": {
+                    SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.EMBEDDING.value
+                }
+            },
+            {"span_name": "database.query"}
+        ]
+
+        has_llm, llm_names = check_llm_spans(spans)
+        assert has_llm is True
+        assert len(llm_names) == 3  # Only chat and completion types count as LLM
+        assert "openai.chat.completion" in llm_names
+        assert "anthropic.messages.create" in llm_names
+        assert "llm.completion" in llm_names
+        assert "embedding.create" not in llm_names  # Embeddings are not LLM spans
+
+    def test_check_llm_spans_real_world(self):
+        """Test with real-world span structures from OpenAI and Anthropic."""
+        from agentops.semconv import SpanAttributes, LLMRequestTypeValues
+
+        # This simulates what we actually get from the OpenAI and Anthropic instrumentations
+        spans = [
+            {
+                "span_name": "openai.chat.completion",
+                "span_attributes": {
+                    SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.CHAT.value,
+                    SpanAttributes.LLM_SYSTEM: "OpenAI",
+                    SpanAttributes.LLM_REQUEST_MODEL: "gpt-4"
+                }
+            },
+            {
+                "span_name": "anthropic.messages.create",
+                "span_attributes": {
+                    SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.CHAT.value,
+                    SpanAttributes.LLM_SYSTEM: "Anthropic",
+                    SpanAttributes.LLM_REQUEST_MODEL: "claude-3-opus-20240229"
+                }
+            }
+        ]
+
+        has_llm, llm_names = check_llm_spans(spans)
+        assert has_llm is True
+        assert len(llm_names) == 2
+        assert "openai.chat.completion" in llm_names
+        assert "anthropic.messages.create" in llm_names
+
 
 class TestValidateTraceSpans:
     """Test the main validation function."""
