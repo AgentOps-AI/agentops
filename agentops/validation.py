@@ -164,8 +164,12 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
             if not is_llm_span and isinstance(span_attributes, dict):
                 from agentops.semconv import SpanAttributes, LLMRequestTypeValues
 
-                # Check for LLM request type
+                # Check for LLM request type - try both gen_ai.* and llm.* prefixes
+                # The instrumentation sets gen_ai.* but the API might return llm.*
                 llm_request_type = span_attributes.get(SpanAttributes.LLM_REQUEST_TYPE, "")
+                if not llm_request_type:
+                    # Try the llm.* prefix version
+                    llm_request_type = span_attributes.get("llm.request.type", "")
 
                 # Check if it's a chat or completion request (the main LLM types)
                 if llm_request_type in [
@@ -261,18 +265,7 @@ def validate_trace_spans(
                     "metrics": None
                 }
 
-                # Check for LLM spans if requested
-                if check_llm:
-                    has_llm_spans, llm_span_names = check_llm_spans(spans)
-                    result["has_llm_spans"] = has_llm_spans
-                    result["llm_span_names"] = llm_span_names
-
-                    if has_llm_spans:
-                        logger.info(f"Found LLM spans: {', '.join(llm_span_names)}")
-                    elif check_llm:
-                        logger.warning("No LLM spans found in trace")
-
-                # Get metrics
+                # Get metrics first - if we have token usage, we definitely have LLM spans
                 try:
                     metrics = get_trace_metrics(trace_id, jwt_token)
                     result["metrics"] = metrics
@@ -280,14 +273,31 @@ def validate_trace_spans(
                     if metrics:
                         logger.info(f"Trace metrics - Total tokens: {metrics.get('total_tokens', 0)}, "
                                     f"Cost: ${metrics.get('total_cost', '0.0000')}")
+
+                        # If we have token usage > 0, we definitely have LLM activity
+                        if metrics.get('total_tokens', 0) > 0:
+                            result["has_llm_spans"] = True
+                            logger.info("LLM activity confirmed via token usage metrics")
                 except Exception as e:
                     logger.warning(f"Could not retrieve metrics: {e}")
 
-                # Validate based on requirements
-                if check_llm and not has_llm_spans:
+                # Check for LLM spans if requested and not already confirmed via metrics
+                if check_llm and not result["has_llm_spans"]:
+                    has_llm_spans, llm_span_names = check_llm_spans(spans)
+                    result["has_llm_spans"] = has_llm_spans
+                    result["llm_span_names"] = llm_span_names
+
+                    if has_llm_spans:
+                        logger.info(f"Found LLM spans: {', '.join(llm_span_names)}")
+                    else:
+                        logger.warning("No LLM spans found via attribute inspection")
+
+                # Final validation
+                if check_llm and not result["has_llm_spans"]:
                     raise ValidationError(
-                        f"No LLM spans found in trace {trace_id}. "
-                        f"Found spans: {[s.get('span_name', 'unnamed') for s in spans]}"
+                        f"No LLM activity detected in trace {trace_id}. "
+                        f"Found spans: {[s.get('span_name', 'unnamed') for s in spans]}, "
+                        f"Token usage: {result.get('metrics', {}).get('total_tokens', 0)}"
                     )
 
                 return result
@@ -305,7 +315,7 @@ def validate_trace_spans(
     raise ValidationError(
         f"Validation failed for trace {trace_id} after {max_retries} attempts. "
         f"Expected at least {min_spans} spans" +
-        (", including LLM spans" if check_llm else "") +
+        (", including LLM activity" if check_llm else "") +
         ". Please check that tracking is properly configured."
     )
 
@@ -324,9 +334,13 @@ def print_validation_summary(result: Dict[str, Any]) -> None:
     print(f"✅ Found {result['span_count']} span(s) in trace")
 
     if result.get('has_llm_spans'):
-        print(f"✅ Found LLM spans: {', '.join(result['llm_span_names'])}")
-    elif result.get('llm_span_names') is not None:
-        print("⚠️  No LLM spans detected")
+        if result.get('llm_span_names'):
+            print(f"✅ Found LLM spans: {', '.join(result['llm_span_names'])}")
+        else:
+            # LLM activity confirmed via metrics
+            print("✅ LLM activity confirmed via token usage metrics")
+    elif 'has_llm_spans' in result:
+        print("⚠️  No LLM activity detected")
 
     if result.get('metrics'):
         metrics = result['metrics']
