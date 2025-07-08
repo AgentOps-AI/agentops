@@ -27,38 +27,6 @@
     "name": "Docs",
     "icon": "lines-leaning"
   },
-  "anchors": [
-    {
-      "name": "Chat With Docs",
-      "icon": "user-doctor-message",
-      "url": "https://entelligence.ai/AgentOps-AI&agentops"
-    },
-    {
-      "name": "Your Dashboard",
-      "icon": "chart-tree-map",
-      "url": "https://app.agentops.ai"
-    },
-    {
-      "name": "Discord",
-      "icon": "discord",
-      "url": "https://discord.gg/UgJyyxx7uc"
-    },
-    {
-      "name": "GitHub",
-      "icon": "github",
-      "url": "https://github.com/AgentOps-AI"
-    },
-    {
-      "name": "Call my Agent (Support)",
-      "icon": "headset",
-      "url": "https://agentops.ai/contact"
-    },
-    {
-      "name": "Give Feedback",
-      "icon": "comment-smile",
-      "url": "https://agentops.ai/contact"
-    }
-  ],
   "versions": ["v2", "v1", "v0"],
   "navigation": [
     {
