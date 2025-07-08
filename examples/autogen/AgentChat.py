@@ -50,7 +50,7 @@ tracer = agentops.start_trace(
 # * Errors
 # # Simple Chat Example
 # Define model and API key
-model_name = "gpt-4-turbo"  # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
+model_name = "gpt-4o-mini"  # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
 api_key = os.getenv("OPENAI_API_KEY")
 
 # Create the model client
