@@ -19,7 +19,8 @@ os.environ["XAI_API_KEY"] = os.getenv("XAI_API_KEY", "your_xai_api_key_here")
 
 # Next we initialize the AgentOps client.
 agentops.init(auto_start_session=False, tags=["xai", "grok-vision", "agentops-example"])
-tracer = agentops.start_trace(trace_name="XAI Vision Example", tags=["xai-example", "grok-vision", "agentops-example"])
+tracer = agentops.start_trace(trace_name="XAI Grok Vision Example", tags=[
+                              "xai-example", "grok-vision", "agentops-example"])
 
 # And we are all set! Note the seesion url above. We will use it to track the program's performance.
 #

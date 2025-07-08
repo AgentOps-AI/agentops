@@ -101,7 +101,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 
 agentops.init(auto_start_session=False)
 tracer = agentops.start_trace(
-    trace_name="Text-to-SQL", tags=["smolagents", "example", "text-to-sql", "agentops-example"]
+    trace_name="Smolagents Text-to-SQL", tags=["smolagents", "example", "text-to-sql", "agentops-example"]
 )
 model = LiteLLMModel("openai/gpt-4o-mini")
 agent = CodeAgent(
@@ -169,4 +169,3 @@ except agentops.ValidationError as e:
     raise
 
 # You can view the session in the [AgentOps dashboard](https://app.agentops.ai/sessions) by clicking the link provided after ending the session.
-

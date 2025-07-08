@@ -54,7 +54,7 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
 agentops.init(tags=["customer-service-agent", "openai-agents", "agentops-example"], auto_start_session=False)
-tracer = agentops.start_trace(trace_name="Customer Service Agent")
+tracer = agentops.start_trace(trace_name="OpenAI Agents Customer Service Agent")
 
 
 # Context model for the airline agent
@@ -102,13 +102,13 @@ async def update_seat(context: RunContextWrapper[AirlineAgentContext], confirmat
     return f"Updated seat to {new_seat} for confirmation number {confirmation_number}"
 
 
-### HOOKS
+# HOOKS
 async def on_seat_booking_handoff(context: RunContextWrapper[AirlineAgentContext]) -> None:
     flight_number = f"FLT-{random.randint(100, 999)}"
     context.context.flight_number = flight_number
 
 
-### AGENTS
+# AGENTS
 faq_agent = Agent[AirlineAgentContext](
     name="FAQ Agent",
     handoff_description="A helpful agent that can answer questions about the airline.",
@@ -208,4 +208,3 @@ except agentops.ValidationError as e:
 # - Scale your AI applications with confidence in tool reliability
 #
 # Visit [app.agentops.ai](https://app.agentops.ai) to explore your tool usage sessions and gain deeper insights into your AI application's tool interactions.
-

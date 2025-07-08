@@ -72,7 +72,7 @@ def basic_exception_handling():
 
     for error_type in error_types:
         try:
-            with agentops.start_trace(f"basic_{error_type}", tags=["basic", "error-handling"]):
+            with agentops.start_trace(f"Context Manager Basic {error_type}", tags=["basic", "error-handling"]):
                 print(f"Started trace for {error_type}")
 
                 agent = ErrorProneAgent(f"BasicAgent_{error_type}")

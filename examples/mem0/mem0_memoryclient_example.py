@@ -54,7 +54,7 @@ def demonstrate_sync_memory_client(sample_messages, sample_preferences, user_id)
     Cloud benefit: All memory operations are handled by Mem0's infrastructure,
     providing scalability and persistence without local storage management.
     """
-    agentops.start_trace("mem0_memoryclient_example", tags=["mem0_memoryclient_example"])
+    agentops.start_trace("Mem0 MemoryClient Example", tags=["mem0_memoryclient_example"])
     try:
         # Initialize sync MemoryClient with API key for cloud access
         client = MemoryClient(api_key=mem0_api_key)
@@ -106,7 +106,7 @@ async def demonstrate_async_memory_client(sample_messages, sample_preferences, u
     concurrently, significantly reducing total execution time compared to sequential calls.
     This is especially beneficial when dealing with network I/O to cloud services.
     """
-    agentops.start_trace("mem0_memoryclient_example", tags=["mem0_memoryclient_example"])
+    agentops.start_trace("Mem0 MemoryClient Async Example", tags=["mem0_memoryclient_example"])
     try:
         # Initialize async MemoryClient for concurrent cloud operations
         async_client = AsyncMemoryClient(api_key=mem0_api_key)

@@ -61,7 +61,7 @@ agentops.init(auto_start_session=False, tags=["openai-agents", "tools", "agentop
 # - Handle data processing tasks
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="Code Interpreter Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents Code Interpreter Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 
@@ -111,7 +111,7 @@ agentops.end_trace(tracer, end_state="Success")
 # **Note:** This example requires a pre-configured vector store ID.
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="File Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents File Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 
@@ -157,7 +157,7 @@ agentops.end_trace(tracer, end_state="Success")
 # - Automatic image saving and display
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="Image Generation Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents Image Generation Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 
@@ -222,7 +222,7 @@ agentops.end_trace(tracer, end_state="Success")
 # - Configurable search parameters
 # Start the AgentOps trace session
 tracer = agentops.start_trace(
-    trace_name="Web Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
+    trace_name="OpenAI Agents Web Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
 )
 
 

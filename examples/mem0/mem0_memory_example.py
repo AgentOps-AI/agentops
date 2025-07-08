@@ -57,7 +57,7 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
     must complete before the next one begins.
     """
 
-    tracer = agentops.start_trace("mem0_memory_example", tags=["mem0_memory_example"])
+    tracer = agentops.start_trace("Mem0 Memory Example", tags=["mem0_memory_example"])
     try:
         # Initialize sync Memory with local configuration
         memory = Memory.from_config(local_config)
@@ -123,7 +123,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
     by running multiple memory operations in parallel.
     """
 
-    tracer = agentops.start_trace("mem0_memory_async_example", tags=["mem0", "async", "memory-management"])
+    tracer = agentops.start_trace("Mem0 Memory Async Example", tags=["mem0", "async", "memory-management"])
     try:
         # Initialize async Memory with configuration
         async_memory = await AsyncMemory.from_config(local_config)

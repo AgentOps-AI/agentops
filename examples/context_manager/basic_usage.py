@@ -43,7 +43,7 @@ def basic_context_manager_example():
     agentops.init(api_key=AGENTOPS_API_KEY, tags=["context-manager", "agentops-example"])
 
     # Use native TraceContext context manager
-    with agentops.start_trace("basic_example", tags=["basic", "demo"]):
+    with agentops.start_trace("Context Manager Basic Example", tags=["basic", "demo"]):
         print("Trace started")
 
         # Create and use agent
@@ -61,7 +61,7 @@ def multiple_parallel_traces():
     agentops.init(api_key=AGENTOPS_API_KEY, tags=["context-manager", "agentops-example"])
 
     # First trace
-    with agentops.start_trace("task_1", tags=["parallel", "task-1"]):
+    with agentops.start_trace("Context Manager Task 1", tags=["parallel", "task-1"]):
         print("Task 1 started")
         agent1 = SimpleAgent("Agent1")
         result1 = agent1.process_data("task 1 data")
