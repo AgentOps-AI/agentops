@@ -14,6 +14,7 @@ import agentops
 import os
 import asyncio
 from dotenv import load_dotenv
+
 # Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
@@ -36,7 +37,10 @@ You are given a prompt and you need to generate a story based on the prompt.
 """
 
 user_prompt = [
-    {"type": "text", "text": "Write a very short mystery thriller story based on your understanding of the provided image."},
+    {
+        "type": "text",
+        "text": "Write a very short mystery thriller story based on your understanding of the provided image.",
+    },
     {
         "type": "image_url",
         "image_url": {"url": "https://www.cosy.sbg.ac.at/~pmeerw/Watermarking/lena_color.gif"},
@@ -78,7 +82,7 @@ asyncio.run(main_stream())
 agentops.end_trace(tracer, end_state="Success")
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that our LLM calls were tracked properly...")
 try:
     agentops.validate_trace_spans(trace_context=tracer)

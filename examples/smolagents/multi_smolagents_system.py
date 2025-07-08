@@ -49,7 +49,8 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 
 agentops.init(auto_start_session=False)
 tracer = agentops.start_trace(
-    trace_name="Smolagents Multi-Agent System Orchestration", tags=["smolagents", "example", "multi-agent", "agentops-example"]
+    trace_name="Smolagents Multi-Agent System Orchestration",
+    tags=["smolagents", "example", "multi-agent", "agentops-example"],
 )
 model = LiteLLMModel("openai/gpt-4o-mini")
 # ## Create a Web Search Tool
@@ -113,7 +114,7 @@ print(answer)
 agentops.end_trace(tracer, end_state="Success")
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that our LLM calls were tracked properly...")
 try:
     agentops.validate_trace_spans(trace_context=tracer)

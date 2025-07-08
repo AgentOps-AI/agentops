@@ -15,7 +15,6 @@
 # %pip install agentops
 # ## Setting up the SQL Table
 from sqlalchemy import (
-
     create_engine,
     MetaData,
     Table,
@@ -159,7 +158,7 @@ agent.run("Which waiter got more total money from tips?")
 agentops.end_trace(tracer, end_state="Success")
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that our LLM calls were tracked properly...")
 try:
     agentops.validate_trace_spans(trace_context=tracer)

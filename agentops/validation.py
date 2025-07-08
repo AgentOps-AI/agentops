@@ -15,6 +15,7 @@ from agentops.exceptions import ApiServerException
 
 class ValidationError(Exception):
     """Raised when span validation fails."""
+
     pass
 
 
@@ -33,20 +34,20 @@ def get_jwt_token(api_key: Optional[str] = None) -> str:
     """
     if api_key is None:
         from agentops import get_client
+
         client = get_client()
         if client and client.config.api_key:
             api_key = client.config.api_key
         else:
             import os
+
             api_key = os.getenv("AGENTOPS_API_KEY")
             if not api_key:
                 raise ValueError("No API key provided and AGENTOPS_API_KEY environment variable not set")
 
     try:
         response = requests.post(
-            "https://api.agentops.ai/public/v1/auth/access_token",
-            json={"api_key": api_key},
-            timeout=10
+            "https://api.agentops.ai/public/v1/auth/access_token", json={"api_key": api_key}, timeout=10
         )
         response.raise_for_status()
         return response.json()["bearer"]
@@ -72,7 +73,7 @@ def get_trace_details(trace_id: str, jwt_token: str) -> Dict[str, Any]:
         response = requests.get(
             f"https://api.agentops.ai/public/v1/traces/{trace_id}",
             headers={"Authorization": f"Bearer {jwt_token}"},
-            timeout=10
+            timeout=10,
         )
         response.raise_for_status()
         return response.json()
@@ -98,7 +99,7 @@ def get_trace_metrics(trace_id: str, jwt_token: str) -> Dict[str, Any]:
         response = requests.get(
             f"https://api.agentops.ai/public/v1/traces/{trace_id}/metrics",
             headers={"Authorization": f"Bearer {jwt_token}"},
-            timeout=10
+            timeout=10,
         )
         response.raise_for_status()
         return response.json()
@@ -146,6 +147,7 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
             # Structure 3: Look for SpanAttributes.AGENTOPS_SPAN_KIND
             if not span_kind and isinstance(span_attributes, dict):
                 from agentops.semconv import SpanAttributes
+
                 span_kind = span_attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND, "")
 
             # Check if this is an LLM span by span kind
@@ -172,10 +174,7 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
                     llm_request_type = span_attributes.get("llm.request.type", "")
 
                 # Check if it's a chat or completion request (the main LLM types)
-                if llm_request_type in [
-                    LLMRequestTypeValues.CHAT.value,
-                    LLMRequestTypeValues.COMPLETION.value
-                ]:
+                if llm_request_type in [LLMRequestTypeValues.CHAT.value, LLMRequestTypeValues.COMPLETION.value]:
                     is_llm_span = True
 
         if is_llm_span:
@@ -191,7 +190,7 @@ def validate_trace_spans(
     retry_delay: float = 1.0,
     check_llm: bool = True,
     min_spans: int = 1,
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Validate that spans have been sent to AgentOps.
@@ -217,10 +216,11 @@ def validate_trace_spans(
         # Try to get from current span
         try:
             from opentelemetry.trace import get_current_span
+
             current_span = get_current_span()
-            if current_span and hasattr(current_span, 'get_span_context'):
+            if current_span and hasattr(current_span, "get_span_context"):
                 span_context = current_span.get_span_context()
-                if hasattr(span_context, 'trace_id') and span_context.trace_id:
+                if hasattr(span_context, "trace_id") and span_context.trace_id:
                     if isinstance(span_context.trace_id, int):
                         trace_id = format(span_context.trace_id, "032x")
                     else:
@@ -230,9 +230,9 @@ def validate_trace_spans(
 
     elif trace_context is not None and trace_id is None:
         # Extract from TraceContext
-        if hasattr(trace_context, 'span') and trace_context.span:
+        if hasattr(trace_context, "span") and trace_context.span:
             span_context = trace_context.span.get_span_context()
-            if hasattr(span_context, 'trace_id'):
+            if hasattr(span_context, "trace_id"):
                 if isinstance(span_context.trace_id, int):
                     trace_id = format(span_context.trace_id, "032x")
                 else:
@@ -262,7 +262,7 @@ def validate_trace_spans(
                     "spans": spans,
                     "has_llm_spans": False,
                     "llm_span_names": [],
-                    "metrics": None
+                    "metrics": None,
                 }
 
                 # Get metrics first - if we have token usage, we definitely have LLM spans
@@ -271,11 +271,13 @@ def validate_trace_spans(
                     result["metrics"] = metrics
 
                     if metrics:
-                        logger.info(f"Trace metrics - Total tokens: {metrics.get('total_tokens', 0)}, "
-                                    f"Cost: ${metrics.get('total_cost', '0.0000')}")
+                        logger.info(
+                            f"Trace metrics - Total tokens: {metrics.get('total_tokens', 0)}, "
+                            f"Cost: ${metrics.get('total_cost', '0.0000')}"
+                        )
 
                         # If we have token usage > 0, we definitely have LLM activity
-                        if metrics.get('total_tokens', 0) > 0:
+                        if metrics.get("total_tokens", 0) > 0:
                             result["has_llm_spans"] = True
                             logger.info("LLM activity confirmed via token usage metrics")
                 except Exception as e:
@@ -303,8 +305,10 @@ def validate_trace_spans(
                 return result
 
             else:
-                logger.debug(f"Only {len(spans)} spans found, expected at least {min_spans}. "
-                             f"Retrying... ({attempt + 1}/{max_retries})")
+                logger.debug(
+                    f"Only {len(spans)} spans found, expected at least {min_spans}. "
+                    f"Retrying... ({attempt + 1}/{max_retries})"
+                )
 
         except ApiServerException as e:
             logger.debug(f"API error during validation: {e}. Retrying... ({attempt + 1}/{max_retries})")
@@ -314,9 +318,9 @@ def validate_trace_spans(
 
     raise ValidationError(
         f"Validation failed for trace {trace_id} after {max_retries} attempts. "
-        f"Expected at least {min_spans} spans" +
-        (", including LLM activity" if check_llm else "") +
-        ". Please check that tracking is properly configured."
+        f"Expected at least {min_spans} spans"
+        + (", including LLM activity" if check_llm else "")
+        + ". Please check that tracking is properly configured."
     )
 
 
@@ -327,24 +331,24 @@ def print_validation_summary(result: Dict[str, Any]) -> None:
     Args:
         result: Validation result dictionary from validate_trace_spans
     """
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("🔍 AgentOps Span Validation Results")
-    print("="*50)
+    print("=" * 50)
 
     print(f"✅ Found {result['span_count']} span(s) in trace")
 
-    if result.get('has_llm_spans'):
-        if result.get('llm_span_names'):
+    if result.get("has_llm_spans"):
+        if result.get("llm_span_names"):
             print(f"✅ Found LLM spans: {', '.join(result['llm_span_names'])}")
         else:
             # LLM activity confirmed via metrics
             print("✅ LLM activity confirmed via token usage metrics")
-    elif 'has_llm_spans' in result:
+    elif "has_llm_spans" in result:
         print("⚠️  No LLM activity detected")
 
-    if result.get('metrics'):
-        metrics = result['metrics']
-        print(f"\n📊 Trace Metrics:")
+    if result.get("metrics"):
+        metrics = result["metrics"]
+        print("\n📊 Trace Metrics:")
         print(f"   - Total tokens: {metrics.get('total_tokens', 0)}")
         print(f"   - Prompt tokens: {metrics.get('prompt_tokens', 0)}")
         print(f"   - Completion tokens: {metrics.get('completion_tokens', 0)}")

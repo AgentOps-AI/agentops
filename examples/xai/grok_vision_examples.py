@@ -19,8 +19,9 @@ os.environ["XAI_API_KEY"] = os.getenv("XAI_API_KEY", "your_xai_api_key_here")
 
 # Next we initialize the AgentOps client.
 agentops.init(auto_start_session=False, tags=["xai", "grok-vision", "agentops-example"])
-tracer = agentops.start_trace(trace_name="XAI Grok Vision Example", tags=[
-                              "xai-example", "grok-vision", "agentops-example"])
+tracer = agentops.start_trace(
+    trace_name="XAI Grok Vision Example", tags=["xai-example", "grok-vision", "agentops-example"]
+)
 
 # And we are all set! Note the seesion url above. We will use it to track the program's performance.
 #
@@ -62,7 +63,7 @@ print(response.choices[0].message.content)
 agentops.end_trace(tracer, end_state="Success")
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that our LLM calls were tracked properly...")
 try:
     agentops.validate_trace_spans(trace_context=tracer)

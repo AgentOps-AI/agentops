@@ -97,7 +97,7 @@ model.close_persistent_connection()
 llama_model.close_persistent_connection()
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that our LLM calls were tracked properly...")
 try:
     agentops.validate_trace_spans(trace_context=None)

@@ -229,7 +229,7 @@ demonstrate_sync_memory(local_config, sample_messages, sample_preferences, user_
 asyncio.run(demonstrate_async_memory(local_config, sample_messages, sample_preferences, user_id))
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that our LLM calls were tracked properly...")
 try:
     # Note: Using trace_id since we ran multiple traces

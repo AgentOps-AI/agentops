@@ -174,8 +174,9 @@ agentops.end_trace(tracer, end_state="Success")
 #
 # This pattern demonstrates breaking down a complex task into a series of smaller, sequential steps. Each step is performed by an agent, and the output of one agent is used as input to the next.
 # Start the AgentOps trace session
-tracer = agentops.start_trace(trace_name="OpenAI Agents Deterministic Flow Pattern",
-                              tags=["agentops-example", "openai-agents"])
+tracer = agentops.start_trace(
+    trace_name="OpenAI Agents Deterministic Flow Pattern", tags=["agentops-example", "openai-agents"]
+)
 
 # Define the story generation workflow
 story_outline_agent = Agent(
@@ -247,8 +248,9 @@ agentops.end_trace(tracer, end_state="Success")
 #
 # For this demo, we'll allow the user to choose which tool use behavior to test:
 # Start the AgentOps trace session
-tracer = agentops.start_trace(trace_name="OpenAI Agents Forcing Tool Use Pattern",
-                              tags=["agentops-example", "openai-agents"])
+tracer = agentops.start_trace(
+    trace_name="OpenAI Agents Forcing Tool Use Pattern", tags=["agentops-example", "openai-agents"]
+)
 
 
 # Define the weather tool and agent
@@ -327,8 +329,9 @@ agentops.end_trace(tracer, end_state="Success")
 #
 # This pattern demonstrates how to use input guardrails to validate user inputs before they reach the main agent. Guardrails can prevent inappropriate or off-topic requests from being processed.
 # Start the AgentOps trace session
-tracer = agentops.start_trace(trace_name="OpenAI Agents Input Guardrails Pattern",
-                              tags=["agentops-example", "openai-agents"])
+tracer = agentops.start_trace(
+    trace_name="OpenAI Agents Input Guardrails Pattern", tags=["agentops-example", "openai-agents"]
+)
 
 
 # Define the guardrail
@@ -391,8 +394,9 @@ agentops.end_trace(tracer, end_state="Success")
 #
 # This pattern shows how to use one LLM to evaluate and improve the output of another. The first agent generates content, and the second agent judges the quality and provides feedback for improvement.
 # Start the AgentOps trace session
-tracer = agentops.start_trace(trace_name="OpenAI Agents LLM as a Judge Pattern",
-                              tags=["agentops-example", "openai-agents"])
+tracer = agentops.start_trace(
+    trace_name="OpenAI Agents LLM as a Judge Pattern", tags=["agentops-example", "openai-agents"]
+)
 
 # Define the story generation and evaluation agents
 story_outline_generator = Agent(
@@ -472,8 +476,9 @@ agentops.end_trace(tracer, end_state="Success")
 #
 # This pattern demonstrates how to use output guardrails to validate agent outputs after they are generated. This can help prevent sensitive information from being shared or ensure outputs meet quality standards.
 # Start the AgentOps trace session
-tracer = agentops.start_trace(trace_name="OpenAI Agents Output Guardrails Pattern",
-                              tags=["agentops-example", "openai-agents"])
+tracer = agentops.start_trace(
+    trace_name="OpenAI Agents Output Guardrails Pattern", tags=["agentops-example", "openai-agents"]
+)
 
 
 # The agent's output type
@@ -540,8 +545,9 @@ agentops.end_trace(tracer, end_state="Success")
 #
 # This pattern shows how to run multiple agents in parallel to improve latency or generate multiple options to choose from. In this example, we run translation agents multiple times and pick the best result.
 # Start the AgentOps trace session
-tracer = agentops.start_trace(trace_name="OpenAI Agents Parallelization Pattern",
-                              tags=["agentops-example", "openai-agents"])
+tracer = agentops.start_trace(
+    trace_name="OpenAI Agents Parallelization Pattern", tags=["agentops-example", "openai-agents"]
+)
 
 # Define agents for parallelization
 spanish_translation_agent = Agent(
@@ -651,8 +657,9 @@ agentops.end_trace(tracer, end_state="Success")
 #
 # This pattern shows how to use guardrails during streaming to provide real-time validation. Unlike output guardrails that run after completion, streaming guardrails can interrupt the generation process early.
 # Start the AgentOps trace session
-tracer = agentops.start_trace(trace_name="OpenAI Agents Streaming Guardrails Pattern",
-                              tags=["agentops-example", "openai-agents"])
+tracer = agentops.start_trace(
+    trace_name="OpenAI Agents Streaming Guardrails Pattern", tags=["agentops-example", "openai-agents"]
+)
 
 # Define streaming guardrail agent
 streaming_agent = Agent(
@@ -732,7 +739,7 @@ if __name__ == "__main__":
 agentops.end_trace(tracer, end_state="Success")
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that our LLM calls were tracked properly...")
 try:
     agentops.validate_trace_spans(trace_context=tracer)

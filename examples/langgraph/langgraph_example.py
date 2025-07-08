@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
 
 # Let's check programmatically that spans were recorded in AgentOps
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Now let's verify that we have enough spans tracked properly...")
 try:
     # LangGraph doesn't emit LLM spans in the same format, so we just check span count

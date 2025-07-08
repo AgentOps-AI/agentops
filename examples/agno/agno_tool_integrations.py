@@ -32,10 +32,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
 
 # Initialize AgentOps
-agentops.init(
-    auto_start_session=False,
-    tags=["agno-tools", "tool-integration", "demo"]
-)
+agentops.init(auto_start_session=False, tags=["agno-tools", "tool-integration", "demo"])
 
 
 def demonstrate_tool_integration():
@@ -56,7 +53,7 @@ def demonstrate_tool_integration():
             role="Research information using Google Search",
             model=OpenAIChat(id="gpt-4o-mini"),
             tools=[GoogleSearchTools()],
-            instructions="You are a research assistant. Use Google Search to find accurate, up-to-date information."
+            instructions="You are a research assistant. Use Google Search to find accurate, up-to-date information.",
         )
 
         response = search_agent.run("What are the latest developments in AI agents?")
@@ -70,15 +67,11 @@ def demonstrate_tool_integration():
             name="Research Agent",
             role="Comprehensive research using multiple tools",
             model=OpenAIChat(id="gpt-4o-mini"),
-            tools=[
-                GoogleSearchTools(),
-                ArxivTools(),
-                DuckDuckGoTools()
-            ],
+            tools=[GoogleSearchTools(), ArxivTools(), DuckDuckGoTools()],
             instructions="""You are a comprehensive research assistant. 
             Use Google Search for general information, Arxiv for academic papers, 
             and DuckDuckGo as an alternative search engine. 
-            Provide well-researched, balanced information from multiple sources."""
+            Provide well-researched, balanced information from multiple sources.""",
         )
 
         response = research_agent.run(
@@ -96,12 +89,10 @@ def demonstrate_tool_integration():
             role="Find and summarize academic papers",
             model=OpenAIChat(id="gpt-4o-mini"),
             tools=[ArxivTools()],
-            instructions="You are an academic research assistant. Use Arxiv to find relevant papers and provide concise summaries."
+            instructions="You are an academic research assistant. Use Arxiv to find relevant papers and provide concise summaries.",
         )
 
-        response = academic_agent.run(
-            "Find recent papers about tool augmented language models"
-        )
+        response = academic_agent.run("Find recent papers about tool augmented language models")
         print(f"Academic Agent Response:\n{response.content}")
 
         # Example 4: Comparing Search Tools
@@ -112,13 +103,10 @@ def demonstrate_tool_integration():
             name="Comparison Agent",
             role="Compare results from different search engines",
             model=OpenAIChat(id="gpt-4o-mini"),
-            tools=[
-                GoogleSearchTools(),
-                DuckDuckGoTools()
-            ],
+            tools=[GoogleSearchTools(), DuckDuckGoTools()],
             instructions="""Compare search results from Google and DuckDuckGo. 
             Note any differences in results, ranking, or information quality.
-            Be objective in your comparison."""
+            Be objective in your comparison.""",
         )
 
         response = comparison_agent.run(
@@ -145,7 +133,7 @@ def demonstrate_tool_integration():
         raise
 
     # Let's check programmatically that spans were recorded in AgentOps
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Now let's verify that our LLM calls were tracked properly...")
     try:
         agentops.validate_trace_spans(trace_context=tracer)

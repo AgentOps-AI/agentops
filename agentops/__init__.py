@@ -35,11 +35,7 @@ from agentops.helpers.deprecation import deprecated, warn_deprecated_param
 import threading
 
 # Import validation functions
-from agentops.validation import (
-    validate_trace_spans,
-    print_validation_summary,
-    ValidationError
-)
+from agentops.validation import validate_trace_spans, print_validation_summary, ValidationError
 
 # Thread-safe client management
 _client_lock = threading.Lock()
