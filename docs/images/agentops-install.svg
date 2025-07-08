@@ -1,0 +1,40 @@
+<svg width="600" height="180" viewBox="0 0 600 180" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <style>
+    .frame { opacity: 0; animation: show 9s step-start infinite; }
+    @keyframes show {
+      0% { opacity: 1; }
+      33.333% { opacity: 1; }
+      33.334% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    #f2 { animation-delay: 3s; }
+    #f3 { animation-delay: 6s; }
+    text { font-family: monospace; font-size: 16px; fill: #e6e6e6; }
+  </style>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#1e1e1e" />
+
+  <!-- Frame 1: Installation -->
+  <g id="f1" class="frame">
+    <text x="20" y="40">$ pip install agentops</text>
+    <text x="20" y="70">Collecting agentops</text>
+    <text x="20" y="90">Downloading agentops-0.9.0-py3-none-any.whl &hellip;</text>
+    <text x="20" y="110">Successfully installed agentops-0.9.0</text>
+  </g>
+
+  <!-- Frame 2: Set API Key -->
+  <g id="f2" class="frame">
+    <text x="20" y="40">$ export AGENTOPS_API_KEY="sk-xxxxxx"</text>
+    <text x="20" y="70">$ echo $AGENTOPS_API_KEY</text>
+    <text x="20" y="90">sk-xxxxxx</text>
+  </g>
+
+  <!-- Frame 3: Run a session -->
+  <g id="f3" class="frame">
+    <text x="20" y="40">import agentops</text>
+    <text x="20" y="70">agentops.init()</text>
+    <text x="20" y="100"># &hellip; your agent code &hellip;</text>
+    <text x="20" y="130">agentops.end_session(&quot;Success&quot;)</text>
+  </g>
+</svg>

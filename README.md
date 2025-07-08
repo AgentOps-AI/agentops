@@ -83,6 +83,10 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 
 ## Quick Start ⌨️
 
+<div align="center">
+  <img src="docs/images/agentops-install.svg" alt="AgentOps Quick Start" width="600" />
+</div>
+
 ```bash
 pip install agentops
 ```
