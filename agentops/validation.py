@@ -123,30 +123,44 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
 
         # Check span attributes for LLM span kind
         span_attributes = span.get("span_attributes", {})
+        is_llm_span = False
 
-        # Try different possible structures for span kind
-        span_kind = None
+        # If we have span_attributes, check them
+        if span_attributes:
+            # Try different possible structures for span kind
+            span_kind = None
 
-        # Structure 1: span_attributes.agentops.span.kind
-        if isinstance(span_attributes, dict):
-            agentops_attrs = span_attributes.get("agentops", {})
-            if isinstance(agentops_attrs, dict):
-                span_info = agentops_attrs.get("span", {})
-                if isinstance(span_info, dict):
-                    span_kind = span_info.get("kind", "")
+            # Structure 1: span_attributes.agentops.span.kind
+            if isinstance(span_attributes, dict):
+                agentops_attrs = span_attributes.get("agentops", {})
+                if isinstance(agentops_attrs, dict):
+                    span_info = agentops_attrs.get("span", {})
+                    if isinstance(span_info, dict):
+                        span_kind = span_info.get("kind", "")
 
-        # Structure 2: Direct in span_attributes
-        if not span_kind and isinstance(span_attributes, dict):
-            # Try looking for agentops.span.kind as a flattened key
-            span_kind = span_attributes.get("agentops.span.kind", "")
+            # Structure 2: Direct in span_attributes
+            if not span_kind and isinstance(span_attributes, dict):
+                # Try looking for agentops.span.kind as a flattened key
+                span_kind = span_attributes.get("agentops.span.kind", "")
 
-        # Structure 3: Look for SpanAttributes.AGENTOPS_SPAN_KIND
-        if not span_kind and isinstance(span_attributes, dict):
-            from agentops.semconv import SpanAttributes
-            span_kind = span_attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND, "")
+            # Structure 3: Look for SpanAttributes.AGENTOPS_SPAN_KIND
+            if not span_kind and isinstance(span_attributes, dict):
+                from agentops.semconv import SpanAttributes
+                span_kind = span_attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND, "")
 
-        # Check if this is an LLM span
-        if span_kind == "llm":
+            # Check if this is an LLM span by span kind
+            is_llm_span = span_kind == "llm"
+
+            # Alternative check: Look for gen_ai.prompt or gen_ai.completion attributes
+            # These are standard semantic conventions for LLM spans
+            if not is_llm_span and isinstance(span_attributes, dict):
+                gen_ai_attrs = span_attributes.get("gen_ai", {})
+                if isinstance(gen_ai_attrs, dict):
+                    # If we have prompt or completion data, it's an LLM span
+                    if "prompt" in gen_ai_attrs or "completion" in gen_ai_attrs:
+                        is_llm_span = True
+
+        if is_llm_span:
             llm_spans.append(span_name)
 
     return len(llm_spans) > 0, llm_spans
