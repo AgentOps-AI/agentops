@@ -67,7 +67,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize AgentOps for monitoring and analytics
-agentops.init(auto_start_session=False, tags=["agno-example", "research-team"])
+agentops.init(auto_start_session=False, trace_name="Agno Research Team", tags=["agno-example", "research-team"])
 
 
 def demonstrate_research_team():

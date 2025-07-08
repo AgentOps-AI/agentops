@@ -28,7 +28,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv(
     "OPENAI_API_KEY", "your_openai_api_key_here"
 )  # or the provider of your choosing
 
-agentops.init(auto_start_session=False)
+agentops.init(auto_start_session=False, trace_name="LiteLLM Example")
 tracer = agentops.start_trace(trace_name="LiteLLM Example", tags=["litellm-example", "agentops-example"])
 
 # Note: AgentOps requires that you call LiteLLM completions differently than the LiteLLM's docs mention

@@ -22,7 +22,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 # ### Agent Configuration
 #
 # Configure an assistant agent and user proxy to be used for LLM recommendation and execution respectively.
-agentops.init(auto_start_session=False)
+agentops.init(auto_start_session=False, trace_name="AG2 Wikipedia Search Tools")
 tracer = agentops.start_trace(
     trace_name="AG2 Wikipedia Search Tools", tags=["ag2-wikipedia-search-tools", "agentops-example"]
 )

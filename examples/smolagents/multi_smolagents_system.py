@@ -47,7 +47,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(auto_start_session=False)
+agentops.init(auto_start_session=False, trace_name="Smolagents Multi-Agent System")
 tracer = agentops.start_trace(
     trace_name="Smolagents Multi-Agent System Orchestration",
     tags=["smolagents", "example", "multi-agent", "agentops-example"],

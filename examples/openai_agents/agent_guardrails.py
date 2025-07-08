@@ -33,7 +33,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(api_key=os.environ["AGENTOPS_API_KEY"], tags=["agentops-example"])
+agentops.init(api_key=os.environ["AGENTOPS_API_KEY"], trace_name="OpenAI Agents Guardrails", tags=["agentops-example"])
 
 
 # OpenAI Agents SDK guardrail example with agentops guardrails decorator for observability

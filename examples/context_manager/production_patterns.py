@@ -125,7 +125,11 @@ def api_endpoint_pattern():
     """Example of using context managers in API endpoint pattern."""
     print("API Endpoint Pattern")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager API Endpoint Pattern",
+        tags=["context-manager", "production", "agentops-example"],
+    )
 
     # Simulate API requests
     requests = [
@@ -154,7 +158,11 @@ def batch_processing_pattern():
     """Example of batch processing with context managers."""
     print("\nBatch Processing Pattern")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Batch Processing Pattern",
+        tags=["context-manager", "production", "agentops-example"],
+    )
 
     # Simulate batch data
     batch_data = [{"id": f"item_{i:03d}", "type": "data_record", "payload": {"value": i * 10}} for i in range(1, 6)]
@@ -188,7 +196,11 @@ def microservice_pattern():
     """Example of microservice communication pattern."""
     print("\nMicroservice Communication Pattern")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Microservice Pattern",
+        tags=["context-manager", "production", "agentops-example"],
+    )
 
     def authenticate_user(user_id: str) -> bool:
         """Simulate authentication service."""
@@ -239,7 +251,11 @@ def monitoring_pattern():
     """Example of monitoring with context managers."""
     print("\nMonitoring Pattern")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Monitoring Pattern",
+        tags=["context-manager", "production", "agentops-example"],
+    )
 
     class AlertManager:
         """Simple alert manager for demonstration."""

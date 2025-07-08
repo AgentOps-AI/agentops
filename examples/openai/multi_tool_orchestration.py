@@ -28,7 +28,11 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 os.environ["PINECONE_API_KEY"] = os.getenv("PINECONE_API_KEY", "your_pinecone_api_key_here")
 
-agentops.init(auto_start_session=True, tags=["openai", "multi-tool", "agentops-example"])
+agentops.init(
+    auto_start_session=True,
+    trace_name="OpenAI Multi-Tool Orchestration",
+    tags=["openai", "multi-tool", "agentops-example"],
+)
 tracer = agentops.start_trace(
     trace_name="OpenAI Multi-Tool Orchestration with RAG",
     tags=["multi-tool-orchestration-rag-demo", "openai-responses", "agentops-example"],

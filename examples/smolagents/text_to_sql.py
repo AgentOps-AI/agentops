@@ -98,7 +98,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(auto_start_session=False)
+agentops.init(auto_start_session=False, trace_name="Smolagents Text-to-SQL")
 tracer = agentops.start_trace(
     trace_name="Smolagents Text-to-SQL", tags=["smolagents", "example", "text-to-sql", "agentops-example"]
 )

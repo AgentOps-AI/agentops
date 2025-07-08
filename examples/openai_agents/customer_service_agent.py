@@ -53,7 +53,11 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(tags=["customer-service-agent", "openai-agents", "agentops-example"], auto_start_session=False)
+agentops.init(
+    trace_name="OpenAI Agents Customer Service",
+    tags=["customer-service-agent", "openai-agents", "agentops-example"],
+    auto_start_session=False,
+)
 tracer = agentops.start_trace(trace_name="OpenAI Agents Customer Service Agent")
 
 

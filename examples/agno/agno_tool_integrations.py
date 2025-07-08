@@ -32,7 +32,9 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
 
 # Initialize AgentOps
-agentops.init(auto_start_session=False, tags=["agno-tools", "tool-integration", "demo"])
+agentops.init(
+    auto_start_session=False, trace_name="Agno Tool Integrations", tags=["agno-tools", "tool-integration", "demo"]
+)
 
 
 def demonstrate_tool_integration():

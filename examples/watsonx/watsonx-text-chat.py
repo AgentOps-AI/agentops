@@ -15,7 +15,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 
 # Initialize AgentOps
-agentops.init(tags=["watsonx-text-chat", "agentops-example"])
+agentops.init(trace_name="WatsonX Text Chat Example", tags=["watsonx-text-chat", "agentops-example"])
 # ## Initialize IBM Watsonx AI Credentials
 #
 # To use IBM Watsonx AI, you need to set up your credentials and project ID.

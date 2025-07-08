@@ -15,7 +15,7 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY", "your_gemini_api_key_here")
 
 # Initialize AgentOps and Gemini client
-agentops.init(tags=["gemini-example", "agentops-example"])
+agentops.init(trace_name="Google Gemini Example", tags=["gemini-example", "agentops-example"])
 client = genai.Client()
 
 # Test synchronous generation

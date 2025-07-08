@@ -17,7 +17,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 
 # Next we initialize the AgentOps client.
-agentops.init(auto_start_session=False, tags=["xai", "grok", "agentops-example"])
+agentops.init(auto_start_session=False, trace_name="XAI Grok Example", tags=["xai", "grok", "agentops-example"])
 tracer = agentops.start_trace(trace_name="XAI Grok Example", tags=["xai-example", "grok", "agentops-example"])
 
 # And we are all set! Note the seesion url above. We will use it to track the chatbot.

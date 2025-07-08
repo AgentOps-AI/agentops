@@ -10,7 +10,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-agentops.init(os.getenv("AGENTOPS_API_KEY"), tags=["langgraph", "tool-usage", "agentops-example"])
+agentops.init(
+    os.getenv("AGENTOPS_API_KEY"),
+    trace_name="LangGraph Tool Usage Example",
+    tags=["langgraph", "tool-usage", "agentops-example"],
+)
 
 
 @tool

@@ -15,7 +15,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 
 # Initialize AgentOps
-agentops.init(tags=["watsonx-tokenization", "agentops-example"])
+agentops.init(trace_name="WatsonX Tokenization Model Example", tags=["watsonx-tokenization", "agentops-example"])
 # ## Initialize IBM Watsonx AI Credentials
 #
 # To use IBM Watsonx AI, you need to set up your credentials and project ID.

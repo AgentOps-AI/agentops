@@ -24,7 +24,7 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
 # The first step in any AgentOps integration is to call `agentops.init()`
-agentops.init(tags=["markdown_validator", "agentops-example"])
+agentops.init(trace_name="CrewAI Markdown Validator", tags=["markdown_validator", "agentops-example"])
 
 
 # Lets start by creating our markdown validator tool

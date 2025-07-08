@@ -186,7 +186,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
 
 
 # Initialize AgentOps
-agentops.init(tags=["mem0", "memory-management", "agentops-example"])
+agentops.init(trace_name="Mem0 Memory Example", tags=["mem0", "memory-management", "agentops-example"])
 
 # Configuration for local memory (Memory)
 # This configuration specifies the LLM provider and model settings

@@ -22,7 +22,7 @@ os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY", "your_anthropic
 #
 # Now let's set the client as Anthropic and open an agentops trace!
 client = Anthropic()
-agentops.init(tags=["anthropic-async", "agentops-example"])
+agentops.init(trace_name="Anthropic Async Example", tags=["anthropic-async", "agentops-example"])
 # Now we create three personality presets;
 #
 # Legion is a relentless and heavy-hitting Titan that embodies brute strength and defensive firepower, Northstar is a precise and agile sniper that excels in long-range combat and flight, while Ronin is a swift and aggressive melee specialist who thrives on close-quarters hit-and-run tactics.

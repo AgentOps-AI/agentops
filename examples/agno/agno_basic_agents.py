@@ -35,7 +35,9 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
 
-agentops.init(auto_start_session=False, tags=["agno-example", "basics", "agents-and-teams"])
+agentops.init(
+    auto_start_session=False, trace_name="Agno Basic Agents", tags=["agno-example", "basics", "agents-and-teams"]
+)
 
 
 def demonstrate_basic_agents():

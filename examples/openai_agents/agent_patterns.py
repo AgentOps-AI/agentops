@@ -78,7 +78,11 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
 # Initialize AgentOps
-agentops.init(auto_start_session=False, tags=["openai-agents", "patterns", "agentops-example"])
+agentops.init(
+    auto_start_session=False,
+    trace_name="OpenAI Agents Patterns",
+    tags=["openai-agents", "patterns", "agentops-example"],
+)
 # Note: tracer will be defined in each section's cell for clarity, using the specific tags for that pattern.
 # ## 1. Agents as Tools Pattern
 #

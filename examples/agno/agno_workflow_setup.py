@@ -27,7 +27,7 @@ from typing import Iterator
 
 
 load_dotenv()
-agentops.init(auto_start_session=False, tags=["agno-example", "workflow-setup"])
+agentops.init(auto_start_session=False, trace_name="Agno Workflow Setup", tags=["agno-example", "workflow-setup"])
 
 
 class CacheWorkflow(Workflow):

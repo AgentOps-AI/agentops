@@ -32,7 +32,7 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_her
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
 # When initializing AgentOps, you can pass in optional tags to help filter sessions
-agentops.init(auto_start_session=False)
+agentops.init(auto_start_session=False, trace_name="Autogen Agent Chat Example")
 tracer = agentops.start_trace(
     trace_name="Microsoft Agent Chat Example", tags=["autogen-chat", "microsoft-autogen", "agentops-example"]
 )
