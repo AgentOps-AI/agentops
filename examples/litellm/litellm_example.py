@@ -46,7 +46,7 @@ tracer = agentops.start_trace(trace_name="LiteLLM Example", tags=["litellm-examp
 # litellm.completion()
 # ```
 messages = [{"role": "user", "content": "Write a 12 word poem about secret agents."}]
-response = litellm.completion(model="gpt-4", messages=messages)  # or the model of your choosing
+response = litellm.completion(model="gpt-4o-mini", messages=messages)  # or the model of your choosing
 print(response.choices[0].message.content)
 
 agentops.end_trace(tracer, end_state="Success")
@@ -60,5 +60,3 @@ try:
 except agentops.ValidationError as e:
     print(f"\n❌ Error validating spans: {e}")
     raise
-
-
