@@ -1,0 +1,119 @@
+---
+title: "MCP Docs Server"
+description: "Chat with AgentOps documentation directly in your IDE using the Mintlify MCP Docs Server"
+---
+
+# MCP Docs Server
+
+The Mintlify MCP Docs Server provides direct access to AgentOps's documentation and examples in Cursor, Windsurf, VSCode, Zed, Claude Code, or any other IDE or tool that supports MCP.
+
+The MCP server tools have been designed to allow an agent to query the specific information it needs to complete an AgentOps related task - for example: implementing agent observability, integrating with different LLM providers, understanding trace concepts, and troubleshooting issues.
+
+## How it works
+
+Once it's installed in your IDE you can write prompts and assume the agent will understand everything about AgentOps.
+
+### Add features
+
+- "Add AgentOps observability to my LangChain agent"
+- "Implement custom trace decorators with the @trace decorator"
+- "Add tool tracking with cost metrics using the @tool decorator"
+
+### Ask about integrations
+
+- "How do I integrate AgentOps with OpenAI's new Agents SDK? Show me a working example"
+- "Does AgentOps support CrewAI? How do I set up the integration?"
+- "Can I use AgentOps with Anthropic Claude? Show me how to configure it"
+
+### Debug or update existing code
+
+- "My traces aren't showing up in the dashboard, what could be wrong?"
+- "How do I add custom metadata to my traces?"
+- "I need to track multiple agents in my system, show me how to use the @agent decorator"
+
+And more - if you have a question, try asking your IDE and let it look it up for you.
+
+## Installation
+
+<Tabs>
+  <Tab title="Quick Install">
+    The easiest way to install the AgentOps MCP Docs Server is using the Mintlify CLI:
+    
+    ```bash
+    npx mint-mcp add agentops
+    ```
+    
+    This command will automatically add the MCP server to your IDE's configuration.
+  </Tab>
+  
+  <Tab title="Manual Configuration">
+    If you prefer manual setup or the automatic installation doesn't work, you can add the configuration manually:
+    
+    ### For Claude Desktop
+    
+    Add to your Claude Desktop configuration file:
+    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+    
+    ```json
+    {
+      "mcpServers": {
+        "agentops-docs": {
+          "command": "npx",
+          "args": ["@mintlify/mcp", "agentops"]
+        }
+      }
+    }
+    ```
+    
+    ### For VSCode with Continue
+    
+    Add to your Continue configuration:
+    
+    ```json
+    {
+      "mcpServers": {
+        "agentops-docs": {
+          "command": "npx",
+          "args": ["@mintlify/mcp", "agentops"]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Common Issues
+
+### Server Not Starting
+
+- **Ensure npx is installed and working**: Try running `npx --version` in your terminal
+- **Check for conflicting MCP servers**: Make sure there are no duplicate server names in your configuration
+- **Verify your configuration file syntax**: Ensure the JSON is valid (no trailing commas, proper quotes)
+- **On Windows**: Make sure NPM is installed properly. You can install Node.js (which includes NPM) from [nodejs.org](https://nodejs.org/)
+
+### Tool Calls Failing
+
+- **Restart the MCP server and/or your IDE**: Sometimes a fresh start resolves connection issues
+- **Update to the latest version of your IDE**: MCP support is actively being improved
+- **Check IDE logs**: Look for any error messages related to MCP or the documentation server
+
+### Documentation Not Found
+
+- **Verify server name**: Make sure you're using the correct server name in your prompts
+- **Check internet connection**: The MCP Docs Server needs internet access to fetch documentation
+- **Try specific questions**: Instead of general queries, ask about specific AgentOps features
+
+## Tips for Better Results
+
+1. **Be specific**: Ask about specific AgentOps features, decorators, or integrations
+2. **Provide context**: Mention what you're trying to achieve with your agent system
+3. **Ask for examples**: Request working code examples for your specific use case
+4. **Reference the docs structure**: You can ask about specific sections like "quickstart", "integrations", or "decorators"
+
+## Need Help?
+
+If you're having trouble with the MCP Docs Server:
+- Check the [AgentOps Discord](https://discord.gg/UgJyyxx7uc) for community support
+- Report issues on the [AgentOps GitHub](https://github.com/AgentOps-AI/agentops)
+- Visit the [main documentation](https://docs.agentops.ai) for manual browsing
