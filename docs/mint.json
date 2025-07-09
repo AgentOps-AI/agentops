@@ -114,7 +114,8 @@
         "v2/concepts/decorators",
         "v2/concepts/traces",
         "v2/concepts/spans",
-        "v2/concepts/tags"
+        "v2/concepts/tags",
+        "v2/concepts/mcp"
       ],
       "version": "v2"
     },
