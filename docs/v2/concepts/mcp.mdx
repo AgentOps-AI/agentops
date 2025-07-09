@@ -1,0 +1,138 @@
+---
+title: "Model Context Protocol (MCP)"
+description: "Understand MCP concepts, benefits, and how to use it with AgentOps"
+---
+
+# Model Context Protocol (MCP)
+
+<ModelContext>
+MCP is an **open standard** that defines how language-model clients (such as Claude Desktop, Cursor, or Windsurf) can **discover** and **invoke** external tools and resources through a common JSON-RPC interface.  
+In short, MCP lets AI systems *do things*—instead of just **talking** about things—by securely bridging the gap between an LLM and the APIs, databases, or services you already run.
+</ModelContext>
+
+## Why MCP matters
+
+1. **Standardisation** – Every client speaks the same protocol, so you write an integration once and it works everywhere.
+2. **Security & Permissions** – The spec includes authentication, capability negotiation, and fine-grained argument schemas so you stay in control of what an AI agent can do.
+3. **Rich Interactions** – Beyond simple “tool calls”, MCP supports long-running operations, streaming results, resources (file-like objects), prompt templates, and more.
+4. **Friction-less Adoption** – Platforms like **Mintlify** (the technology that powers these docs!) can automatically generate MCP servers from your existing docs & OpenAPI specs—no code required.
+
+> Looking for the official spec?  
+> <https://modelcontextprotocol.io/>
+
+---
+
+## Key Concepts
+
+| Term | Definition |
+|------|------------|
+| **MCP Client** | The *LLM application* (e.g. Cursor) that needs to call external tools. |
+| **MCP Server** | A *process or service* that exposes tools/resources to clients via the MCP JSON-RPC API. |
+| **Tool** | A server-side function with a JSON schema describing its parameters & return type. |
+| **Resource** | A file-like object that can be listed (`listResources`) and fetched (`readResource`). |
+| **Prompt** | A reusable template that the client can render/complete via the server. |
+
+---
+
+## AgentOps & MCP
+
+AgentOps ships an official MCP server that wraps our **Public API** and traces data as first-class tools.  
+This allows an LLM to:
+
+* Authenticate with your project (`auth` tool).
+* Query traces or spans by ID (`get_trace`, `get_span`, …).
+* Fetch aggregated cost & token metrics.
+
+See the dedicated page → [/v2/usage/mcp-server](/v2/usage/mcp-server) for installation details.
+
+---
+
+## Installing an MCP server
+
+Most MCP clients understand two transport types:
+
+* **`command` (stdio)** – Run a local executable (e.g. `npx agentops-mcp`).
+* **`url` (HTTP SSE)** – Connect to a remote server that speaks MCP over Server-Sent Events.
+
+Below is an example *global* `~/.cursor/mcp.json` that installs both the AgentOps server and the generic Mintlify server:
+
+```json mcp
+{
+  "mcpServers": {
+    "agentops": {
+      "command": "npx",
+      "args": ["agentops-mcp"],
+      "env": {
+        "AGENTOPS_API_KEY": "YOUR_API_KEY"
+      }
+    },
+    "mintlify": {
+      "command": "npx",
+      "args": ["@mintlify/mcp", "add", "mintlify"]
+    }
+  }
+}
+```
+
+Once connected, your client can list tools:
+
+```bash
+mcp-cli list-tools agentops
+```
+
+and execute them:
+
+```bash
+mcp-cli call-tool agentops get_trace '{"trace_id": "trace_123"}'
+```
+
+---
+
+## Building your own MCP server
+
+If you want to expose **your** application to LLMs, you have a few options:
+
+1. **Mintlify auto-generation** – If your docs live on Mintlify, flip the *MCP* toggle in the dashboard and you’re done.
+2. **FastMCP / mcp-framework** – JavaScript/TypeScript frameworks that let you define tools with zod schemas in a handful of lines.
+3. **Reference SDKs** – The official `@modelcontextprotocol/sdk` packages (Python, Java, etc.) if you need full control.
+
+A minimal TypeScript example with *FastMCP*:
+
+```ts title="hello_world.ts"
+import { MCPServer } from "fastmcp";
+import { z } from "zod";
+
+const server = new MCPServer();
+
+server.addTool({
+  name: "hello_world",
+  description: "Return a greeting",
+  parameters: z.object({ name: z.string() }),
+  execute: async ({ name }) => `Hello, ${name}!`
+});
+
+server.start();
+```
+
+Run it locally:
+
+```bash
+npx ts-node hello_world.ts
+```
+
+---
+
+## Best Practices
+
+* **Validate inputs** – Always use the provided JSON schema to reject invalid arguments.
+* **Keep tools small & composable** – Single-responsibility tools are easier for an LLM to reason about.
+* **Emit meaningful errors** – MCP surfaces error messages back to the client; make them actionable.
+* **Secure secrets** – Pass API keys via environment variables, *never* hard-code them in the server.
+
+---
+
+## Further Reading
+
+* Official spec – <https://modelcontextprotocol.io/>
+* Mintlify blog – [What is MCP and how to get started](https://mintlify.com/blog/what-is-mcp-and-how-to-get-started)
+* Registry – [mcpt (archived)](https://mintlify.com/blog/mcpt)
