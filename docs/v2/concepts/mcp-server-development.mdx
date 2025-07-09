@@ -1,0 +1,837 @@
+---
+title: "Building MCP Servers"
+description: "Complete guide to developing custom MCP servers for enhanced AI capabilities"
+---
+
+# Building MCP Servers
+
+This guide walks through creating custom MCP servers that expose tools, resources, and prompts to AI applications.
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** (v18+) for TypeScript/JavaScript servers
+- **Python** (v3.8+) for Python servers
+- **Understanding of JSON-RPC 2.0** for protocol communication
+- **Basic knowledge of the service/API** you want to expose
+
+### Choosing Your Language
+
+MCP provides official SDKs for multiple languages:
+
+```bash
+# TypeScript/JavaScript
+npm install @modelcontextprotocol/sdk
+
+# Python
+pip install mcp
+
+# Go
+go get github.com/modelcontextprotocol/go-sdk
+
+# Other languages have community SDKs
+```
+
+## Basic Server Structure
+
+### TypeScript Example
+
+```typescript
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  Tool,
+} from '@modelcontextprotocol/sdk/types.js';
+
+class MyMCPServer {
+  private server: Server;
+
+  constructor() {
+    this.server = new Server(
+      {
+        name: "my-mcp-server",
+        version: "1.0.0",
+      },
+      {
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {},
+        },
+      }
+    );
+
+    this.setupHandlers();
+  }
+
+  private setupHandlers() {
+    // List available tools
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      return {
+        tools: [
+          {
+            name: "get_weather",
+            description: "Get current weather for a location",
+            inputSchema: {
+              type: "object",
+              properties: {
+                location: {
+                  type: "string",
+                  description: "City name or coordinates",
+                },
+              },
+              required: ["location"],
+            },
+          },
+        ],
+      };
+    });
+
+    // Handle tool calls
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+
+      if (name === "get_weather") {
+        const location = args.location as string;
+        const weather = await this.getWeather(location);
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Weather in ${location}: ${weather.temperature}°C, ${weather.condition}`,
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unknown tool: ${name}`);
+    });
+  }
+
+  private async getWeather(location: string) {
+    // Your weather API implementation
+    return {
+      temperature: 22,
+      condition: "sunny",
+    };
+  }
+
+  async run() {
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+  }
+}
+
+const server = new MyMCPServer();
+server.run().catch(console.error);
+```
+
+### Python Example
+
+```python
+import asyncio
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import (
+    Tool,
+    TextContent,
+    CallToolRequest,
+    CallToolResult,
+)
+
+# Create server instance
+server = Server("my-mcp-server")
+
+@server.list_tools()
+async def list_tools() -> list[Tool]:
+    """List available tools."""
+    return [
+        Tool(
+            name="get_weather",
+            description="Get current weather for a location",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "City name or coordinates",
+                    },
+                },
+                "required": ["location"],
+            },
+        ),
+    ]
+
+@server.call_tool()
+async def call_tool(name: str, arguments: dict) -> CallToolResult:
+    """Handle tool calls."""
+    if name == "get_weather":
+        location = arguments.get("location")
+        weather = await get_weather(location)
+        
+        return CallToolResult(
+            content=[
+                TextContent(
+                    type="text",
+                    text=f"Weather in {location}: {weather['temperature']}°C, {weather['condition']}",
+                ),
+            ],
+        )
+    
+    raise ValueError(f"Unknown tool: {name}")
+
+async def get_weather(location: str) -> dict:
+    """Get weather data for location."""
+    # Your weather API implementation
+    return {
+        "temperature": 22,
+        "condition": "sunny",
+    }
+
+async def main():
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## Implementing Tools
+
+### Tool Definition
+
+Tools are functions that AI models can call to perform actions:
+
+```typescript
+interface Tool {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: "object";
+    properties: Record<string, any>;
+    required?: string[];
+  };
+}
+```
+
+### Complex Tool Example
+
+```typescript
+// Database query tool
+{
+  name: "query_database",
+  description: "Execute SQL queries against the database",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "SQL query to execute",
+      },
+      parameters: {
+        type: "array",
+        description: "Query parameters",
+        items: {
+          type: "string",
+        },
+      },
+      limit: {
+        type: "number",
+        description: "Maximum rows to return",
+        default: 100,
+      },
+    },
+    required: ["query"],
+  },
+}
+```
+
+### Tool Implementation
+
+```typescript
+private async handleDatabaseQuery(args: any) {
+  const { query, parameters = [], limit = 100 } = args;
+  
+  // Validate query for safety
+  if (!this.isQuerySafe(query)) {
+    throw new Error("Unsafe query detected");
+  }
+
+  try {
+    const result = await this.database.query(query, parameters, { limit });
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Query executed successfully. ${result.rows.length} rows returned.`,
+        },
+        {
+          type: "text",
+          text: JSON.stringify(result.rows, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    throw new Error(`Database query failed: ${error.message}`);
+  }
+}
+
+private isQuerySafe(query: string): boolean {
+  // Implement query validation
+  const forbidden = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER'];
+  const upperQuery = query.toUpperCase();
+  
+  return !forbidden.some(keyword => upperQuery.includes(keyword));
+}
+```
+
+## Implementing Resources
+
+### Resource Definition
+
+Resources provide access to data and content:
+
+```typescript
+interface Resource {
+  uri: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+}
+```
+
+### Resource Implementation
+
+```typescript
+// List available resources
+this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  return {
+    resources: [
+      {
+        uri: "file:///project/README.md",
+        name: "Project README",
+        description: "Main project documentation",
+        mimeType: "text/markdown",
+      },
+      {
+        uri: "db://users",
+        name: "User Database",
+        description: "User account information",
+        mimeType: "application/json",
+      },
+    ],
+  };
+});
+
+// Handle resource requests
+this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const { uri } = request.params;
+  
+  if (uri.startsWith("file://")) {
+    const filePath = uri.replace("file://", "");
+    const content = await fs.readFile(filePath, "utf-8");
+    
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "text/plain",
+          text: content,
+        },
+      ],
+    };
+  }
+  
+  if (uri === "db://users") {
+    const users = await this.database.getUsers();
+    
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(users, null, 2),
+        },
+      ],
+    };
+  }
+  
+  throw new Error(`Unknown resource: ${uri}`);
+});
+```
+
+## Implementing Prompts
+
+### Prompt Definition
+
+Prompts are reusable templates for AI interactions:
+
+```typescript
+interface Prompt {
+  name: string;
+  description?: string;
+  arguments?: PromptArgument[];
+}
+
+interface PromptArgument {
+  name: string;
+  description?: string;
+  required?: boolean;
+}
+```
+
+### Prompt Implementation
+
+```typescript
+// List available prompts
+this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: [
+      {
+        name: "code_review",
+        description: "Analyze code for potential issues",
+        arguments: [
+          {
+            name: "language",
+            description: "Programming language",
+            required: true,
+          },
+          {
+            name: "file_path",
+            description: "Path to the file to review",
+            required: true,
+          },
+        ],
+      },
+    ],
+  };
+});
+
+// Handle prompt requests
+this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+  
+  if (name === "code_review") {
+    const { language, file_path } = args;
+    
+    return {
+      description: `Code review for ${file_path}`,
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Please review this ${language} code for potential issues:
+
+1. Look for bugs and logic errors
+2. Check for security vulnerabilities
+3. Assess code quality and style
+4. Suggest improvements
+
+File: ${file_path}`,
+          },
+        },
+      ],
+    };
+  }
+  
+  throw new Error(`Unknown prompt: ${name}`);
+});
+```
+
+## Error Handling
+
+### Proper Error Responses
+
+```typescript
+try {
+  // Tool operation
+  const result = await performOperation(args);
+  return { content: [{ type: "text", text: result }] };
+} catch (error) {
+  // Return structured error
+  return {
+    content: [
+      {
+        type: "text",
+        text: `Error: ${error.message}`,
+      },
+    ],
+    isError: true,
+  };
+}
+```
+
+### Error Types
+
+```typescript
+enum ErrorType {
+  INVALID_PARAMS = "INVALID_PARAMS",
+  RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND",
+  PERMISSION_DENIED = "PERMISSION_DENIED",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+}
+
+class MCPError extends Error {
+  constructor(
+    message: string,
+    public type: ErrorType,
+    public details?: any
+  ) {
+    super(message);
+    this.name = "MCPError";
+  }
+}
+```
+
+## Transport Configuration
+
+### stdio Transport
+
+```typescript
+// For local processes
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+### HTTP + SSE Transport
+
+```typescript
+// For web services
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+
+const transport = new SSEServerTransport('/mcp', {
+  port: 8080,
+  host: 'localhost',
+});
+await server.connect(transport);
+```
+
+### Custom Transport
+
+```typescript
+class CustomTransport implements Transport {
+  async start(onMessage: (message: any) => void): Promise<void> {
+    // Initialize your transport
+  }
+  
+  async send(message: any): Promise<void> {
+    // Send message via your protocol
+  }
+  
+  async close(): Promise<void> {
+    // Clean up resources
+  }
+}
+```
+
+## Testing Your Server
+
+### Unit Tests
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { MyMCPServer } from './server.js';
+
+describe('MCP Server', () => {
+  let server: MyMCPServer;
+  
+  beforeEach(() => {
+    server = new MyMCPServer();
+  });
+  
+  it('should list tools correctly', async () => {
+    const tools = await server.listTools();
+    expect(tools).toHaveLength(1);
+    expect(tools[0].name).toBe('get_weather');
+  });
+  
+  it('should execute weather tool', async () => {
+    const result = await server.callTool('get_weather', {
+      location: 'New York'
+    });
+    
+    expect(result.content).toBeDefined();
+    expect(result.content[0].text).toContain('Weather in New York');
+  });
+});
+```
+
+### Integration Tests
+
+```typescript
+import { spawn } from 'child_process';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+
+describe('Server Integration', () => {
+  it('should handle client connections', async () => {
+    const serverProcess = spawn('node', ['dist/server.js']);
+    const client = new Client();
+    
+    try {
+      await client.connect(serverProcess.stdio);
+      const tools = await client.listTools();
+      expect(tools).toBeDefined();
+    } finally {
+      serverProcess.kill();
+    }
+  });
+});
+```
+
+## Deployment
+
+### Package Configuration
+
+```json
+{
+  "name": "my-mcp-server",
+  "version": "1.0.0",
+  "description": "Custom MCP server",
+  "main": "dist/server.js",
+  "bin": {
+    "my-mcp-server": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts"
+  },
+  "keywords": ["mcp", "server", "ai"],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
+```
+
+### Docker Deployment
+
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY dist/ ./dist/
+
+EXPOSE 8080
+
+CMD ["npm", "start"]
+```
+
+### NPM Publishing
+
+```bash
+# Build your server
+npm run build
+
+# Test locally
+npm link
+my-mcp-server
+
+# Publish to npm
+npm publish
+```
+
+## Best Practices
+
+### Security
+
+```typescript
+// Input validation
+function validateInput(input: any, schema: any): boolean {
+  // Implement schema validation
+  return true;
+}
+
+// Rate limiting
+class RateLimiter {
+  private requests = new Map<string, number[]>();
+  
+  isAllowed(clientId: string, limit: number = 10): boolean {
+    const now = Date.now();
+    const window = 60000; // 1 minute
+    
+    const clientRequests = this.requests.get(clientId) || [];
+    const validRequests = clientRequests.filter(time => now - time < window);
+    
+    if (validRequests.length >= limit) {
+      return false;
+    }
+    
+    validRequests.push(now);
+    this.requests.set(clientId, validRequests);
+    return true;
+  }
+}
+```
+
+### Performance
+
+```typescript
+// Caching
+class Cache {
+  private cache = new Map<string, { data: any; expires: number }>();
+  
+  get(key: string): any {
+    const item = this.cache.get(key);
+    if (!item || Date.now() > item.expires) {
+      this.cache.delete(key);
+      return null;
+    }
+    return item.data;
+  }
+  
+  set(key: string, data: any, ttl: number = 300000): void {
+    this.cache.set(key, {
+      data,
+      expires: Date.now() + ttl,
+    });
+  }
+}
+
+// Connection pooling
+class ConnectionPool {
+  private pool: Connection[] = [];
+  private maxSize = 10;
+  
+  async getConnection(): Promise<Connection> {
+    if (this.pool.length > 0) {
+      return this.pool.pop()!;
+    }
+    
+    if (this.pool.length < this.maxSize) {
+      return await this.createConnection();
+    }
+    
+    throw new Error("Connection pool exhausted");
+  }
+  
+  releaseConnection(connection: Connection): void {
+    this.pool.push(connection);
+  }
+}
+```
+
+### Logging
+
+```typescript
+import { createLogger, format, transports } from 'winston';
+
+const logger = createLogger({
+  level: 'info',
+  format: format.combine(
+    format.timestamp(),
+    format.errors({ stack: true }),
+    format.json()
+  ),
+  transports: [
+    new transports.File({ filename: 'error.log', level: 'error' }),
+    new transports.File({ filename: 'combined.log' }),
+    new transports.Console({
+      format: format.simple()
+    })
+  ],
+});
+
+// Usage
+logger.info('Tool executed', { 
+  tool: 'get_weather', 
+  location: 'New York',
+  duration: 150 
+});
+```
+
+## Advanced Features
+
+### Streaming Responses
+
+```typescript
+// For large data responses
+this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+  
+  if (name === "large_data_query") {
+    const stream = await this.database.queryStream(args.query);
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Starting data stream...",
+        },
+      ],
+      stream: stream,
+    };
+  }
+});
+```
+
+### Notifications
+
+```typescript
+// Proactive notifications to clients
+this.server.notification({
+  method: "notifications/resources/updated",
+  params: {
+    uri: "file:///project/data.json",
+    timestamp: new Date().toISOString(),
+  },
+});
+```
+
+### Progress Tracking
+
+```typescript
+// Long-running operations
+this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+  
+  if (name === "long_operation") {
+    const operationId = generateId();
+    
+    // Start operation in background
+    this.startLongOperation(operationId, args);
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Operation started with ID: ${operationId}`,
+        },
+      ],
+    };
+  }
+});
+
+private async startLongOperation(id: string, args: any) {
+  for (let i = 0; i < 100; i++) {
+    // Send progress updates
+    this.server.notification({
+      method: "notifications/progress",
+      params: {
+        operationId: id,
+        progress: i + 1,
+        total: 100,
+      },
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
+```
+
+## Next Steps
+
+- **[MCP Best Practices](./mcp-best-practices)**: Security, performance, and design guidelines
+- **[MCP Integration Guide](./mcp-integration)**: Connect your server to AI clients
+- **[AgentOps MCP Server](../usage/mcp-server)**: Example implementation for trace analysis
+
+Building MCP servers opens up infinite possibilities for AI integration. Start with simple tools and gradually add more sophisticated capabilities as your needs grow.

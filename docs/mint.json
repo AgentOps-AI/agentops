@@ -119,6 +119,16 @@
       "version": "v2"
     },
     {
+      "group": "Model Context Protocol (MCP)",
+      "pages": [
+        "v2/concepts/mcp-overview",
+        "v2/concepts/mcp-integration",
+        "v2/concepts/mcp-server-development",
+        "v2/concepts/mcp-best-practices"
+      ],
+      "version": "v2"
+    },
+    {
       "group": "Integrations",
       "pages": [
         "v2/integrations/ag2",

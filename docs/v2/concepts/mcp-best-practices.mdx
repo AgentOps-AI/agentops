@@ -1,0 +1,931 @@
+---
+title: "MCP Best Practices"
+description: "Security, performance, and design guidelines for building robust MCP implementations"
+---
+
+# MCP Best Practices
+
+This guide covers best practices for building secure, performant, and maintainable MCP servers and client integrations.
+
+## Security Best Practices
+
+### Authentication and Authorization
+
+**API Key Management:**
+```typescript
+// Use environment variables for sensitive data
+const apiKey = process.env.GITHUB_API_KEY;
+if (!apiKey) {
+  throw new Error("GITHUB_API_KEY environment variable is required");
+}
+
+// Validate API key format
+function validateApiKey(key: string): boolean {
+  return /^[a-zA-Z0-9_-]+$/.test(key) && key.length >= 32;
+}
+```
+
+**Token Security:**
+```typescript
+// Implement token rotation
+class TokenManager {
+  private tokenStore = new Map<string, { token: string; expires: number }>();
+  
+  async getToken(service: string): Promise<string> {
+    const cached = this.tokenStore.get(service);
+    if (cached && Date.now() < cached.expires) {
+      return cached.token;
+    }
+    
+    const newToken = await this.refreshToken(service);
+    this.tokenStore.set(service, {
+      token: newToken,
+      expires: Date.now() + 3600000, // 1 hour
+    });
+    
+    return newToken;
+  }
+  
+  private async refreshToken(service: string): Promise<string> {
+    // Implement token refresh logic
+    return "new-token";
+  }
+}
+```
+
+### Input Validation
+
+**Schema Validation:**
+```typescript
+import Ajv from 'ajv';
+
+const ajv = new Ajv();
+
+const toolInputSchema = {
+  type: "object",
+  properties: {
+    query: {
+      type: "string",
+      minLength: 1,
+      maxLength: 1000,
+      pattern: "^[a-zA-Z0-9\\s\\-_.,!?]+$"
+    },
+    limit: {
+      type: "integer",
+      minimum: 1,
+      maximum: 100
+    }
+  },
+  required: ["query"],
+  additionalProperties: false
+};
+
+const validate = ajv.compile(toolInputSchema);
+
+function validateToolInput(input: any): boolean {
+  const valid = validate(input);
+  if (!valid) {
+    throw new Error(`Invalid input: ${ajv.errorsText(validate.errors)}`);
+  }
+  return true;
+}
+```
+
+**SQL Injection Prevention:**
+```typescript
+// Use parameterized queries
+async function executeQuery(query: string, params: any[]): Promise<any> {
+  // Never concatenate user input directly into queries
+  const allowedQueries = new Set([
+    'SELECT * FROM users WHERE id = ?',
+    'SELECT * FROM orders WHERE user_id = ? AND status = ?'
+  ]);
+  
+  if (!allowedQueries.has(query)) {
+    throw new Error('Query not allowed');
+  }
+  
+  return await this.database.query(query, params);
+}
+```
+
+### Access Control
+
+**Resource Permissions:**
+```typescript
+class ResourceManager {
+  private permissions = new Map<string, Set<string>>();
+  
+  constructor() {
+    // Define resource permissions
+    this.permissions.set('file:///sensitive/', new Set(['admin']));
+    this.permissions.set('file:///public/', new Set(['user', 'admin']));
+  }
+  
+  canAccess(resource: string, userRole: string): boolean {
+    for (const [path, roles] of this.permissions) {
+      if (resource.startsWith(path)) {
+        return roles.has(userRole);
+      }
+    }
+    return false;
+  }
+}
+```
+
+**Rate Limiting:**
+```typescript
+class RateLimiter {
+  private requests = new Map<string, number[]>();
+  private limits = new Map<string, number>();
+  
+  constructor() {
+    this.limits.set('tools', 10); // 10 requests per minute
+    this.limits.set('resources', 50); // 50 requests per minute
+  }
+  
+  async checkLimit(clientId: string, operation: string): Promise<boolean> {
+    const limit = this.limits.get(operation) || 5;
+    const now = Date.now();
+    const window = 60000; // 1 minute
+    
+    const key = `${clientId}:${operation}`;
+    const requests = this.requests.get(key) || [];
+    
+    // Remove old requests
+    const validRequests = requests.filter(time => now - time < window);
+    
+    if (validRequests.length >= limit) {
+      return false;
+    }
+    
+    validRequests.push(now);
+    this.requests.set(key, validRequests);
+    return true;
+  }
+}
+```
+
+### Secure Communication
+
+**Transport Security:**
+```typescript
+// HTTPS configuration for HTTP transport
+const httpsOptions = {
+  key: fs.readFileSync('path/to/private-key.pem'),
+  cert: fs.readFileSync('path/to/certificate.pem'),
+  ca: fs.readFileSync('path/to/ca-certificate.pem'),
+  requestCert: true,
+  rejectUnauthorized: true
+};
+
+const server = https.createServer(httpsOptions, app);
+```
+
+**Message Encryption:**
+```typescript
+import crypto from 'crypto';
+
+class MessageEncryption {
+  private key: Buffer;
+  
+  constructor(key: string) {
+    this.key = crypto.scryptSync(key, 'salt', 32);
+  }
+  
+  encrypt(text: string): string {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipher('aes-256-cbc', this.key);
+    cipher.setAutoPadding(true);
+    
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    return iv.toString('hex') + ':' + encrypted;
+  }
+  
+  decrypt(encryptedData: string): string {
+    const [ivHex, encrypted] = encryptedData.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const decipher = crypto.createDecipher('aes-256-cbc', this.key);
+    
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    return decrypted;
+  }
+}
+```
+
+## Performance Best Practices
+
+### Caching Strategies
+
+**Memory Caching:**
+```typescript
+class MemoryCache {
+  private cache = new Map<string, {
+    data: any;
+    expires: number;
+    hits: number;
+  }>();
+  
+  get(key: string): any {
+    const item = this.cache.get(key);
+    if (!item || Date.now() > item.expires) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    item.hits++;
+    return item.data;
+  }
+  
+  set(key: string, data: any, ttl: number = 300000): void {
+    this.cache.set(key, {
+      data,
+      expires: Date.now() + ttl,
+      hits: 0
+    });
+    
+    // Cleanup old entries
+    if (this.cache.size > 1000) {
+      this.cleanup();
+    }
+  }
+  
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [key, value] of this.cache) {
+      if (now > value.expires || value.hits === 0) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+```
+
+**Redis Caching:**
+```typescript
+import Redis from 'ioredis';
+
+class RedisCache {
+  private redis: Redis;
+  
+  constructor() {
+    this.redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      retryDelayOnFailover: 100,
+      maxRetriesPerRequest: 3
+    });
+  }
+  
+  async get(key: string): Promise<any> {
+    const value = await this.redis.get(key);
+    return value ? JSON.parse(value) : null;
+  }
+  
+  async set(key: string, data: any, ttl: number = 300): Promise<void> {
+    await this.redis.setex(key, ttl, JSON.stringify(data));
+  }
+  
+  async del(key: string): Promise<void> {
+    await this.redis.del(key);
+  }
+}
+```
+
+### Connection Pooling
+
+**Database Connection Pool:**
+```typescript
+import { Pool } from 'pg';
+
+class DatabasePool {
+  private pool: Pool;
+  
+  constructor() {
+    this.pool = new Pool({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      max: 20, // Maximum number of connections
+      min: 5,  // Minimum number of connections
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+  }
+  
+  async query(text: string, params: any[]): Promise<any> {
+    const client = await this.pool.connect();
+    try {
+      const result = await client.query(text, params);
+      return result.rows;
+    } finally {
+      client.release();
+    }
+  }
+  
+  async close(): Promise<void> {
+    await this.pool.end();
+  }
+}
+```
+
+**HTTP Connection Pool:**
+```typescript
+import { Agent } from 'https';
+
+class HTTPClient {
+  private agent: Agent;
+  
+  constructor() {
+    this.agent = new Agent({
+      keepAlive: true,
+      maxSockets: 50,
+      maxFreeSockets: 10,
+      timeout: 10000,
+      freeSocketTimeout: 30000
+    });
+  }
+  
+  async request(url: string, options: any = {}): Promise<any> {
+    const response = await fetch(url, {
+      ...options,
+      agent: this.agent
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return response.json();
+  }
+}
+```
+
+### Async Processing
+
+**Background Jobs:**
+```typescript
+class JobQueue {
+  private queue: Array<{
+    id: string;
+    task: () => Promise<any>;
+    priority: number;
+    created: number;
+  }> = [];
+  
+  private processing = false;
+  
+  async enqueue(task: () => Promise<any>, priority: number = 0): Promise<string> {
+    const id = crypto.randomUUID();
+    
+    this.queue.push({
+      id,
+      task,
+      priority,
+      created: Date.now()
+    });
+    
+    // Sort by priority (higher numbers first)
+    this.queue.sort((a, b) => b.priority - a.priority);
+    
+    if (!this.processing) {
+      this.processQueue();
+    }
+    
+    return id;
+  }
+  
+  private async processQueue(): Promise<void> {
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const job = this.queue.shift();
+      if (!job) continue;
+      
+      try {
+        await job.task();
+      } catch (error) {
+        console.error(`Job ${job.id} failed:`, error);
+      }
+    }
+    
+    this.processing = false;
+  }
+}
+```
+
+**Streaming Responses:**
+```typescript
+async function streamLargeData(query: string): Promise<ReadableStream> {
+  return new ReadableStream({
+    async start(controller) {
+      const cursor = await database.queryCursor(query);
+      
+      try {
+        for await (const row of cursor) {
+          const chunk = JSON.stringify(row) + '\n';
+          controller.enqueue(new TextEncoder().encode(chunk));
+        }
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        controller.close();
+        await cursor.close();
+      }
+    }
+  });
+}
+```
+
+## Design Best Practices
+
+### Error Handling
+
+**Structured Error Responses:**
+```typescript
+enum ErrorCode {
+  INVALID_INPUT = 'INVALID_INPUT',
+  RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE'
+}
+
+interface ErrorResponse {
+  code: ErrorCode;
+  message: string;
+  details?: any;
+  timestamp: string;
+  requestId?: string;
+}
+
+class MCPError extends Error {
+  constructor(
+    public code: ErrorCode,
+    message: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'MCPError';
+  }
+  
+  toResponse(): ErrorResponse {
+    return {
+      code: this.code,
+      message: this.message,
+      details: this.details,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+```
+
+**Error Recovery:**
+```typescript
+class ResilientService {
+  private retryConfig = {
+    maxRetries: 3,
+    baseDelay: 1000,
+    maxDelay: 10000,
+    backoffFactor: 2
+  };
+  
+  async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    isRetriable: (error: any) => boolean = () => true
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 0; attempt <= this.retryConfig.maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        
+        if (attempt === this.retryConfig.maxRetries || !isRetriable(error)) {
+          throw error;
+        }
+        
+        const delay = Math.min(
+          this.retryConfig.baseDelay * Math.pow(this.retryConfig.backoffFactor, attempt),
+          this.retryConfig.maxDelay
+        );
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw lastError;
+  }
+}
+```
+
+### Configuration Management
+
+**Environment-Based Configuration:**
+```typescript
+interface Config {
+  server: {
+    port: number;
+    host: string;
+    timeout: number;
+  };
+  database: {
+    url: string;
+    pool: {
+      min: number;
+      max: number;
+    };
+  };
+  cache: {
+    redis: {
+      host: string;
+      port: number;
+    };
+    ttl: number;
+  };
+  security: {
+    apiKey: string;
+    rateLimit: {
+      windowMs: number;
+      max: number;
+    };
+  };
+}
+
+function loadConfig(): Config {
+  return {
+    server: {
+      port: parseInt(process.env.PORT || '8080'),
+      host: process.env.HOST || 'localhost',
+      timeout: parseInt(process.env.TIMEOUT || '30000')
+    },
+    database: {
+      url: process.env.DATABASE_URL || 'postgresql://localhost:5432/mydb',
+      pool: {
+        min: parseInt(process.env.DB_POOL_MIN || '5'),
+        max: parseInt(process.env.DB_POOL_MAX || '20')
+      }
+    },
+    cache: {
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379')
+      },
+      ttl: parseInt(process.env.CACHE_TTL || '300')
+    },
+    security: {
+      apiKey: process.env.API_KEY || '',
+      rateLimit: {
+        windowMs: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
+        max: parseInt(process.env.RATE_LIMIT_MAX || '100')
+      }
+    }
+  };
+}
+```
+
+### Monitoring and Observability
+
+**Metrics Collection:**
+```typescript
+class MetricsCollector {
+  private metrics = new Map<string, {
+    count: number;
+    sum: number;
+    min: number;
+    max: number;
+    avg: number;
+  }>();
+  
+  recordLatency(operation: string, duration: number): void {
+    const metric = this.metrics.get(operation) || {
+      count: 0,
+      sum: 0,
+      min: Infinity,
+      max: -Infinity,
+      avg: 0
+    };
+    
+    metric.count++;
+    metric.sum += duration;
+    metric.min = Math.min(metric.min, duration);
+    metric.max = Math.max(metric.max, duration);
+    metric.avg = metric.sum / metric.count;
+    
+    this.metrics.set(operation, metric);
+  }
+  
+  getMetrics(): Record<string, any> {
+    const result: Record<string, any> = {};
+    
+    for (const [key, value] of this.metrics) {
+      result[key] = {
+        ...value,
+        min: value.min === Infinity ? 0 : value.min,
+        max: value.max === -Infinity ? 0 : value.max
+      };
+    }
+    
+    return result;
+  }
+}
+```
+
+**Health Checks:**
+```typescript
+class HealthChecker {
+  private checks = new Map<string, () => Promise<boolean>>();
+  
+  register(name: string, check: () => Promise<boolean>): void {
+    this.checks.set(name, check);
+  }
+  
+  async checkHealth(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    checks: Record<string, boolean>;
+    timestamp: string;
+  }> {
+    const results: Record<string, boolean> = {};
+    let allHealthy = true;
+    
+    for (const [name, check] of this.checks) {
+      try {
+        results[name] = await check();
+        if (!results[name]) {
+          allHealthy = false;
+        }
+      } catch (error) {
+        results[name] = false;
+        allHealthy = false;
+      }
+    }
+    
+    return {
+      status: allHealthy ? 'healthy' : 'unhealthy',
+      checks: results,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+// Usage
+const healthChecker = new HealthChecker();
+
+healthChecker.register('database', async () => {
+  const result = await database.query('SELECT 1');
+  return result.length > 0;
+});
+
+healthChecker.register('redis', async () => {
+  await redis.ping();
+  return true;
+});
+```
+
+### Testing Strategies
+
+**Unit Testing:**
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+
+describe('MCP Server Tools', () => {
+  let server: MCPServer;
+  let mockDatabase: any;
+  
+  beforeEach(() => {
+    mockDatabase = {
+      query: vi.fn(),
+      close: vi.fn()
+    };
+    
+    server = new MCPServer({ database: mockDatabase });
+  });
+  
+  it('should execute database query tool', async () => {
+    mockDatabase.query.mockResolvedValue([
+      { id: 1, name: 'John' },
+      { id: 2, name: 'Jane' }
+    ]);
+    
+    const result = await server.callTool('query_database', {
+      query: 'SELECT * FROM users'
+    });
+    
+    expect(mockDatabase.query).toHaveBeenCalledWith(
+      'SELECT * FROM users',
+      [],
+      { limit: 100 }
+    );
+    
+    expect(result.content).toHaveLength(2);
+    expect(result.content[0].text).toContain('2 rows returned');
+  });
+  
+  it('should handle database errors', async () => {
+    mockDatabase.query.mockRejectedValue(new Error('Connection failed'));
+    
+    await expect(
+      server.callTool('query_database', {
+        query: 'SELECT * FROM users'
+      })
+    ).rejects.toThrow('Database query failed: Connection failed');
+  });
+});
+```
+
+**Integration Testing:**
+```typescript
+describe('MCP Server Integration', () => {
+  let serverProcess: any;
+  let client: MCPClient;
+  
+  beforeAll(async () => {
+    // Start server process
+    serverProcess = spawn('node', ['dist/server.js'], {
+      stdio: ['pipe', 'pipe', 'inherit']
+    });
+    
+    // Wait for server to start
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Connect client
+    client = new MCPClient();
+    await client.connect({
+      stdin: serverProcess.stdin,
+      stdout: serverProcess.stdout
+    });
+  });
+  
+  afterAll(async () => {
+    await client.close();
+    serverProcess.kill();
+  });
+  
+  it('should handle complete workflow', async () => {
+    // List tools
+    const tools = await client.listTools();
+    expect(tools).toContain('query_database');
+    
+    // Execute tool
+    const result = await client.callTool('query_database', {
+      query: 'SELECT COUNT(*) FROM users'
+    });
+    
+    expect(result.content[0].text).toMatch(/\d+ rows returned/);
+  });
+});
+```
+
+## Production Deployment
+
+### Environment Setup
+
+**Docker Configuration:**
+```dockerfile
+FROM node:18-alpine
+
+# Install security updates
+RUN apk update && apk upgrade
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S mcp -u 1001
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy application code
+COPY --chown=mcp:nodejs dist/ ./dist/
+
+# Set security headers
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=1024"
+
+# Switch to non-root user
+USER mcp
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+EXPOSE 8080
+
+CMD ["node", "dist/server.js"]
+```
+
+**Kubernetes Deployment:**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mcp-server
+  template:
+    metadata:
+      labels:
+        app: mcp-server
+    spec:
+      containers:
+      - name: mcp-server
+        image: my-mcp-server:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: database-url
+        - name: REDIS_HOST
+          value: redis-service
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+### Monitoring and Alerts
+
+**Prometheus Metrics:**
+```typescript
+import { register, Counter, Histogram, Gauge } from 'prom-client';
+
+// Metrics
+const toolCallsTotal = new Counter({
+  name: 'mcp_tool_calls_total',
+  help: 'Total number of tool calls',
+  labelNames: ['tool', 'status']
+});
+
+const toolCallDuration = new Histogram({
+  name: 'mcp_tool_call_duration_seconds',
+  help: 'Tool call duration in seconds',
+  labelNames: ['tool'],
+  buckets: [0.1, 0.5, 1, 2, 5, 10]
+});
+
+const activeConnections = new Gauge({
+  name: 'mcp_active_connections',
+  help: 'Number of active client connections'
+});
+
+// Register metrics
+register.registerMetric(toolCallsTotal);
+register.registerMetric(toolCallDuration);
+register.registerMetric(activeConnections);
+
+// Usage in server
+async function callTool(name: string, args: any): Promise<any> {
+  const timer = toolCallDuration.startTimer({ tool: name });
+  
+  try {
+    const result = await executeToolCall(name, args);
+    toolCallsTotal.inc({ tool: name, status: 'success' });
+    return result;
+  } catch (error) {
+    toolCallsTotal.inc({ tool: name, status: 'error' });
+    throw error;
+  } finally {
+    timer();
+  }
+}
+```
+
+## Next Steps
+
+- **[MCP Overview](./mcp-overview)**: Understanding the Model Context Protocol
+- **[MCP Integration Guide](./mcp-integration)**: Connect AI applications to MCP servers
+- **[Building MCP Servers](./mcp-server-development)**: Create custom MCP servers
+- **[AgentOps MCP Server](../usage/mcp-server)**: Real-world implementation example
+
+Following these best practices will help you build robust, secure, and scalable MCP implementations that can handle production workloads while maintaining excellent user experiences.

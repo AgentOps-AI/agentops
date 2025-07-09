@@ -1,0 +1,521 @@
+---
+title: "MCP Integration Guide"
+description: "How to integrate AI applications with MCP servers for enhanced capabilities"
+---
+
+# MCP Integration Guide
+
+This guide covers how to integrate AI applications with MCP servers, configure clients, and use MCP-enabled tools effectively.
+
+## MCP Client Applications
+
+### Claude Desktop
+
+**Installation:**
+Claude Desktop comes with built-in MCP support.
+
+**Configuration:**
+Create or edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "/path/to/allowed/files"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://user:password@localhost/db"
+      }
+    }
+  }
+}
+```
+
+### Cursor
+
+**Installation:**
+Cursor includes MCP support through its AI features.
+
+**Configuration:**
+1. Open Cursor settings (Cmd/Ctrl + ,)
+2. Navigate to "AI" or "MCP" settings
+3. Add MCP servers:
+
+```json
+{
+  "mcp.servers": {
+    "github": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+**Deeplink Installation:**
+Use Cursor's deeplink feature for quick MCP server installation:
+
+```html
+<a href="https://cursor.com/install-mcp?name=server-name&config=base64-encoded-config">
+  Install MCP Server
+</a>
+```
+
+### Windsurf
+
+**Installation:**
+Windsurf supports MCP through its AI assistant.
+
+**Configuration:**
+Edit your Windsurf settings file:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "brave-search": {
+        "command": "npx",
+        "args": ["@modelcontextprotocol/server-brave-search"],
+        "env": {
+          "BRAVE_API_KEY": "your-api-key"
+        }
+      }
+    }
+  }
+}
+```
+
+## Server Installation Methods
+
+### NPX (Node Package Manager)
+
+**Direct execution:**
+```bash
+npx @modelcontextprotocol/server-filesystem /path/to/files
+```
+
+**In configuration:**
+```json
+{
+  "command": "npx",
+  "args": ["@modelcontextprotocol/server-filesystem", "/path/to/files"]
+}
+```
+
+### Smithery
+
+**Installation:**
+Smithery provides automated MCP server management.
+
+```bash
+# Install Smithery CLI
+npm install -g @smithery/cli
+
+# Install MCP server
+smithery install @modelcontextprotocol/server-github
+
+# Configure for Claude Desktop
+smithery install @modelcontextprotocol/server-github --client claude
+```
+
+### Docker
+
+**Run server in container:**
+```bash
+docker run -p 8080:8080 \
+  -e GITHUB_TOKEN=your-token \
+  mcp-server/github
+```
+
+**Configuration:**
+```json
+{
+  "command": "docker",
+  "args": ["run", "-i", "mcp-server/github"],
+  "env": {
+    "GITHUB_TOKEN": "your-token"
+  }
+}
+```
+
+### Python Virtual Environment
+
+**Setup:**
+```bash
+# Create virtual environment
+python -m venv mcp-env
+source mcp-env/bin/activate
+
+# Install MCP server
+pip install mcp-server-database
+
+# Run server
+mcp-server-database
+```
+
+## Server Configuration
+
+### Environment Variables
+
+**Common patterns:**
+```json
+{
+  "env": {
+    "API_KEY": "your-api-key",
+    "DATABASE_URL": "postgresql://user:pass@host:5432/db",
+    "DEBUG": "true",
+    "TIMEOUT": "30"
+  }
+}
+```
+
+**Security best practices:**
+- Store sensitive data in environment variables
+- Use credential managers when possible
+- Avoid hardcoding secrets in configuration files
+- Regularly rotate API keys and tokens
+
+### Server Arguments
+
+**Command line arguments:**
+```json
+{
+  "args": [
+    "--database-url", "postgresql://localhost:5432/mydb",
+    "--max-connections", "10",
+    "--timeout", "30",
+    "--verbose"
+  ]
+}
+```
+
+**Configuration files:**
+```json
+{
+  "args": ["--config", "/path/to/config.json"]
+}
+```
+
+## Popular MCP Servers
+
+### File System Access
+
+**@modelcontextprotocol/server-filesystem**
+```json
+{
+  "filesystem": {
+    "command": "npx",
+    "args": ["@modelcontextprotocol/server-filesystem", "/allowed/path"]
+  }
+}
+```
+
+**Capabilities:**
+- Read files and directories
+- Write and create files
+- Search file contents
+- Navigate directory structures
+
+### Database Connectivity
+
+**@modelcontextprotocol/server-postgres**
+```json
+{
+  "postgres": {
+    "command": "npx",
+    "args": ["@modelcontextprotocol/server-postgres"],
+    "env": {
+      "POSTGRES_CONNECTION_STRING": "postgresql://user:pass@localhost/db"
+    }
+  }
+}
+```
+
+**Capabilities:**
+- Execute SQL queries
+- Browse database schema
+- Manage database connections
+- Query result formatting
+
+### Web Search
+
+**@modelcontextprotocol/server-brave-search**
+```json
+{
+  "brave-search": {
+    "command": "npx",
+    "args": ["@modelcontextprotocol/server-brave-search"],
+    "env": {
+      "BRAVE_API_KEY": "your-api-key"
+    }
+  }
+}
+```
+
+**Capabilities:**
+- Web search queries
+- Real-time information retrieval
+- Search result ranking
+- Safe search filtering
+
+### GitHub Integration
+
+**@modelcontextprotocol/server-github**
+```json
+{
+  "github": {
+    "command": "npx",
+    "args": ["@modelcontextprotocol/server-github"],
+    "env": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token"
+    }
+  }
+}
+```
+
+**Capabilities:**
+- Repository browsing
+- Issue and PR management
+- Code search
+- Commit history analysis
+
+## Advanced Configuration
+
+### Multiple Servers
+
+**Configure multiple servers:**
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "/home/user/projects"]
+    },
+    "database": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://localhost:5432/mydb"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+### Custom Transport
+
+**HTTP + SSE transport:**
+```json
+{
+  "web-server": {
+    "url": "http://localhost:8080/mcp",
+    "headers": {
+      "Authorization": "Bearer your-token"
+    }
+  }
+}
+```
+
+**WebSocket transport:**
+```json
+{
+  "websocket-server": {
+    "url": "ws://localhost:8080/mcp",
+    "protocols": ["mcp-v1"]
+  }
+}
+```
+
+### Server Lifecycle Management
+
+**Restart policies:**
+```json
+{
+  "server": {
+    "command": "python",
+    "args": ["server.py"],
+    "restart": "always",
+    "maxRestarts": 5,
+    "restartDelay": 1000
+  }
+}
+```
+
+## User Experience
+
+### Tool Permissions
+
+**Understanding consent flows:**
+1. **Tool discovery**: Client lists available tools
+2. **User request**: User asks AI to perform action
+3. **Permission prompt**: Client asks user to approve tool usage
+4. **Tool execution**: Server performs action with user consent
+5. **Result display**: Response shown to user
+
+**Best practices:**
+- Always read permission prompts carefully
+- Understand what data is being accessed
+- Be cautious with destructive operations
+- Review tool parameters before approval
+
+### Resource Access
+
+**File system resources:**
+```
+Resource: file:///home/user/project/README.md
+Action: Read file contents
+Parameters: None
+```
+
+**Database resources:**
+```
+Resource: postgres://localhost:5432/mydb/users
+Action: Query user table
+Parameters: SELECT * FROM users WHERE active = true
+```
+
+### Prompt Templates
+
+**Using prompt templates:**
+1. **Browse available prompts**: List server-provided templates
+2. **Select template**: Choose appropriate prompt for task
+3. **Fill parameters**: Provide required template variables
+4. **Execute**: Run prompt with your specific context
+
+## Troubleshooting
+
+### Common Issues
+
+**Server not starting:**
+```bash
+# Check server logs
+npx @modelcontextprotocol/server-filesystem /path --verbose
+
+# Verify dependencies
+npm list @modelcontextprotocol/server-filesystem
+
+# Check permissions
+ls -la /path/to/server/files
+```
+
+**Connection failures:**
+```bash
+# Test server connectivity
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"method": "ping"}'
+
+# Check network configuration
+netstat -an | grep 8080
+```
+
+**Authentication errors:**
+```bash
+# Verify API keys
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
+
+# Test API access
+curl -H "Authorization: token $GITHUB_PERSONAL_ACCESS_TOKEN" \
+  https://api.github.com/user
+```
+
+### Debug Mode
+
+**Enable debugging:**
+```json
+{
+  "server": {
+    "command": "npx",
+    "args": ["@modelcontextprotocol/server-filesystem", "/path"],
+    "env": {
+      "DEBUG": "true",
+      "MCP_LOG_LEVEL": "debug"
+    }
+  }
+}
+```
+
+**Log analysis:**
+```bash
+# Check client logs
+tail -f ~/.claude/logs/mcp-client.log
+
+# Check server logs
+tail -f ~/.claude/logs/mcp-server-filesystem.log
+```
+
+## Security Considerations
+
+### Access Control
+
+**Principle of least privilege:**
+- Only grant access to necessary files/directories
+- Use read-only access when possible
+- Regularly review and update permissions
+- Monitor access patterns
+
+**Network security:**
+- Use HTTPS for remote servers
+- Implement proper authentication
+- Use VPNs for internal services
+- Monitor network traffic
+
+### Data Protection
+
+**Sensitive data handling:**
+- Avoid storing secrets in configuration
+- Use environment variables for credentials
+- Implement data encryption at rest
+- Regular security audits
+
+## Performance Optimization
+
+### Server Performance
+
+**Resource limits:**
+```json
+{
+  "server": {
+    "command": "node",
+    "args": ["--max-old-space-size=4096", "server.js"],
+    "timeout": 30000,
+    "maxConcurrency": 10
+  }
+}
+```
+
+**Caching strategies:**
+- Cache frequently accessed resources
+- Implement connection pooling
+- Use CDNs for static content
+- Monitor response times
+
+### Client Performance
+
+**Connection management:**
+- Reuse connections when possible
+- Implement connection pooling
+- Handle connection failures gracefully
+- Monitor connection health
+
+## Next Steps
+
+- **[Building MCP Servers](./mcp-server-development)**: Create your own MCP servers
+- **[MCP Best Practices](./mcp-best-practices)**: Security, performance, and design guidelines
+- **[AgentOps MCP Server](../usage/mcp-server)**: Using AgentOps' MCP server for trace analysis
+
+With proper integration, MCP servers can dramatically enhance your AI applications' capabilities while maintaining security and user control.
