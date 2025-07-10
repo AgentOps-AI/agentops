@@ -1,0 +1,59 @@
+---
+title: "MCP Docs"
+description: "Chat with the AgentOps documentation directly from your IDE using the Mintlify MCP Docs Server."
+---
+
+
+<Note>
+Looking for the AgentOps API tools instead? See the <a href="/v2/usage/mcp-server">MCP Server</a> guide.
+</Note>
+
+# MCP Docs Server
+
+The **Mintlify MCP Docs Server** gives you and your coding agents instant, programmatic access to every page in the AgentOps docs. It works in **Cursor**, **Windsurf**, **VS Code**, **Zed**, **Claude Code**, or any other tool that speaks the [Model Context Protocol](https://modelcontextprotocol.io/).
+
+## Installation
+
+```bash
+npx mint-mcp add agentops
+```
+
+Run the command above in any folder and your IDE will automatically register the docs server. No extra configuration required.
+
+## How it works
+
+When you (or your in-editor AI assistant) ask a question, the IDE sends a request to the MCP Docs Server. The server searches the AgentOps docs and returns the most relevant sections so the assistant can craft a precise answer.
+
+> **Example prompt**
+> "How do I record custom spans with the `@operation` decorator?"
+
+## What you can ask
+
+Here are a few ideas to get you started:
+
+### Add features
+- "Add a chat interface with streaming support to my app"
+- "Instrument my agent with the `@trace` decorator"
+
+### Ask about integrations
+- "How do I integrate AgentOps with the Vercel AI SDK?"
+- "Show me a working example for CrewAI"
+
+### Debug or update existing code
+- "My trace isn't showing spans—what could be wrong?"
+- "How do I customize the styling of the Session Waterfall?"
+
+If the answer lives in the docs, the server will find it.
+
+## Common issues
+
+### Server not starting
+1. Ensure `npx` is installed and working.
+2. Check for other MCP servers running on the same port.
+3. Verify your configuration file syntax.
+4. On Windows, confirm Node.js and npm are installed.
+
+### Tool calls failing
+1. Restart the MCP Docs Server and/or your IDE.
+2. Update to the latest version of your IDE.
+3. Confirm that the AgentOps docs server appears in your IDE’s list of MCP servers.
