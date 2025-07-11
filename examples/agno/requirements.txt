@@ -4,3 +4,5 @@ openai
 googlesearch-python
 pycountry
 arxiv
+pypdf
+duckduckgo-search
