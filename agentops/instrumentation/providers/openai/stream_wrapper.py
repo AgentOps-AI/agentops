@@ -9,13 +9,13 @@ import time
 from typing import Any, AsyncIterator, Iterator
 
 from opentelemetry import context as context_api
-from opentelemetry.trace import Span, SpanKind, Status, StatusCode, set_span_in_context
+from opentelemetry.trace import Span, SpanKind, Status, StatusCode, set_span_in_context, get_tracer
 from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
 from agentops.instrumentation.providers.openai.utils import is_metrics_enabled
-from agentops.instrumentation.providers.openai.wrappers.chat import handle_chat_attributes
+from agentops.instrumentation.providers.openai.wrappers.chat import handle_chat_attributes, _create_tool_span
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, MessageAttributes
 
 
@@ -30,17 +30,19 @@ class OpenaiStreamWrapper:
     - Chunk statistics
     """
 
-    def __init__(self, stream: Any, span: Span, request_kwargs: dict):
+    def __init__(self, stream: Any, span: Span, request_kwargs: dict, tracer=None):
         """Initialize the stream wrapper.
 
         Args:
             stream: The original OpenAI stream object
             span: The OpenTelemetry span for tracking
             request_kwargs: Original request parameters for context
+            tracer: The OpenTelemetry tracer for creating child spans
         """
         self._stream = stream
         self._span = span
         self._request_kwargs = request_kwargs
+        self._tracer = tracer
         self._start_time = time.time()
         self._first_token_time = None
         self._chunk_count = 0
@@ -192,30 +194,11 @@ class OpenaiStreamWrapper:
         if self._finish_reason:
             self._span.set_attribute(MessageAttributes.COMPLETION_FINISH_REASON.format(i=0), self._finish_reason)
 
-        # Set tool calls
-        if len(self._tool_calls) > 0:
+        # Create tool spans for each tool call
+        if len(self._tool_calls) > 0 and self._tracer is not None:
             for idx, tool_call in self._tool_calls.items():
-                # Only set attributes if values are not None
-                if tool_call["id"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=idx), tool_call["id"]
-                    )
-
-                if tool_call["type"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=0, j=idx), tool_call["type"]
-                    )
-
-                if tool_call["function"]["name"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=idx), tool_call["function"]["name"]
-                    )
-
-                if tool_call["function"]["arguments"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=idx),
-                        tool_call["function"]["arguments"],
-                    )
+                # Create a child span for this tool call
+                _create_tool_span(self._span, tool_call, self._tracer)
 
         # Set usage if available from the API
         if self._usage is not None:
@@ -254,17 +237,19 @@ class OpenaiStreamWrapper:
 class OpenAIAsyncStreamWrapper:
     """Async wrapper for OpenAI Chat Completions streaming responses."""
 
-    def __init__(self, stream: Any, span: Span, request_kwargs: dict):
+    def __init__(self, stream: Any, span: Span, request_kwargs: dict, tracer=None):
         """Initialize the async stream wrapper.
 
         Args:
             stream: The original OpenAI async stream object
             span: The OpenTelemetry span for tracking
             request_kwargs: Original request parameters for context
+            tracer: The OpenTelemetry tracer for creating child spans
         """
         self._stream = stream
         self._span = span
         self._request_kwargs = request_kwargs
+        self._tracer = tracer
         self._start_time = time.time()
         self._first_token_time = None
         self._chunk_count = 0
@@ -371,10 +356,10 @@ def chat_completion_stream_wrapper(tracer, wrapped, instance, args, kwargs):
         if is_streaming:
             # Wrap the stream
             context_api.detach(token)
-            return OpenaiStreamWrapper(response, span, kwargs)
+            return OpenaiStreamWrapper(response, span, kwargs, tracer)
         else:
             # Handle non-streaming response
-            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response)
+            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response, span=span, tracer=tracer)
 
             for key, value in response_attributes.items():
                 if key not in request_attributes:  # Avoid overwriting request attributes
@@ -436,10 +421,10 @@ async def async_chat_completion_stream_wrapper(tracer, wrapped, instance, args, 
         if is_streaming:
             # Wrap the stream
             context_api.detach(token)
-            return OpenAIAsyncStreamWrapper(response, span, kwargs)
+            return OpenAIAsyncStreamWrapper(response, span, kwargs, tracer)
         else:
             # Handle non-streaming response
-            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response)
+            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response, span=span, tracer=tracer)
 
             for key, value in response_attributes.items():
                 if key not in request_attributes:  # Avoid overwriting request attributes
