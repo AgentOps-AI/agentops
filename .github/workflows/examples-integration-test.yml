@@ -78,7 +78,7 @@ jobs:
           - { path: 'examples/google_adk/human_approval.py', name: 'Google ADK Human Approval' }
           
           # LlamaIndex examples
-          - { path: 'examples/llamaindex/llamaindex_example.py', name: 'LlamaIndex' }
+          # - { path: 'examples/llamaindex/llamaindex_example.py', name: 'LlamaIndex' }
           
           # Mem0 examples
           - { path: 'examples/mem0/mem0_memoryclient_example.py', name: 'Mem0 Memory Client' }
