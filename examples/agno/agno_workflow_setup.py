@@ -16,7 +16,6 @@ By using workflows, you can create sophisticated agent pipelines that are both p
 """
 
 from agno.agent import Agent, RunResponse
-import asyncio
 import agentops
 from dotenv import load_dotenv
 from agno.workflow import Workflow
@@ -124,4 +123,4 @@ def demonstrate_workflows():
         raise
 
 
-asyncio.run(demonstrate_workflows())
+demonstrate_workflows()

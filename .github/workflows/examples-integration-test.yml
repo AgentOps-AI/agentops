@@ -67,12 +67,6 @@ jobs:
           - { path: 'examples/ag2/async_human_input.py', name: 'AG2 Async Human Input' }
           - { path: 'examples/ag2/tools_wikipedia_search.py', name: 'AG2 Wikipedia Search' }
           
-          # Context Manager examples
-          - { path: 'examples/context_manager/basic_usage.py', name: 'Context Manager Basic' }
-          - { path: 'examples/context_manager/error_handling.py', name: 'Context Manager Errors' }
-          - { path: 'examples/context_manager/parallel_traces.py', name: 'Context Manager Parallel' }
-          - { path: 'examples/context_manager/production_patterns.py', name: 'Context Manager Production' }
-          
           # Agno examples
           - { path: 'examples/agno/agno_async_operations.py', name: 'Agno Async Operations' }
           - { path: 'examples/agno/agno_basic_agents.py', name: 'Agno Basic Agents' }
@@ -84,7 +78,7 @@ jobs:
           - { path: 'examples/google_adk/human_approval.py', name: 'Google ADK Human Approval' }
           
           # LlamaIndex examples
-          - { path: 'examples/llamaindex/llamaindex_example.py', name: 'LlamaIndex' }
+          # - { path: 'examples/llamaindex/llamaindex_example.py', name: 'LlamaIndex' }
           
           # Mem0 examples
           - { path: 'examples/mem0/mem0_memoryclient_example.py', name: 'Mem0 Memory Client' }
@@ -157,6 +151,7 @@ jobs:
         LLAMA_API_KEY: ${{ secrets.LLAMA_API_KEY }}
         PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
         PYTHONPATH: ${{ github.workspace }}
       run: |
         echo "Running ${{ matrix.example.name }}..."

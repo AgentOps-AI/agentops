@@ -27,7 +27,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 
 agentops.init(
-    auto_start_session=True, trace_name="OpenAI Web Search Example", tags=["openai", "web-search", "agentops-example"]
+    auto_start_session=False, trace_name="OpenAI Web Search Example", tags=["openai", "web-search", "agentops-example"]
 )
 tracer = agentops.start_trace(
     trace_name="OpenAI Responses Example", tags=["openai-responses-example", "openai", "agentops-example"]

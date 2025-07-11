@@ -1,3 +1,4 @@
 ag2
 nest-asyncio
 wikipedia-api 
+ag2[openai]
