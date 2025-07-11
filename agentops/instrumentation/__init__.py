@@ -332,7 +332,7 @@ def _perform_instrumentation(package_name: str):
             _has_agentic_library = True
 
         # Special case: If mem0 is instrumented, also instrument concurrent.futures
-        if package_name == "mem0" and is_newly_added:
+        if (package_name == "mem0" or package_name == "autogen") and is_newly_added:
             try:
                 # Check if concurrent.futures module is available
 
