@@ -21,22 +21,24 @@ from agentops.semconv.tool import ToolAttributes
 from agentops.semconv.span_kinds import AgentOpsSpanKindValues
 
 from opentelemetry import context as context_api
-from opentelemetry.trace import SpanKind, Status, StatusCode
+from opentelemetry.trace import SpanKind, Status, StatusCode, get_tracer
 
 logger = logging.getLogger(__name__)
 
 LLM_REQUEST_TYPE = LLMRequestTypeValues.CHAT
 
 
-def _create_tool_span(parent_span, tool_call_data, tracer):
+def _create_tool_span(parent_span, tool_call_data):
     """
     Create a distinct span for each tool call.
     
     Args:
         parent_span: The parent LLM span
         tool_call_data: The tool call data dictionary
-        tracer: The OpenTelemetry tracer instance
     """
+    # Get the tracer for this module
+    tracer = get_tracer(__name__)
+    
     # Create a child span for the tool call
     with tracer.start_as_current_span(
         name=f"tool_call.{tool_call_data['function']['name']}",
@@ -61,7 +63,6 @@ def handle_chat_attributes(
     kwargs: Optional[Dict] = None,
     return_value: Optional[Any] = None,
     span: Optional[Span] = None,
-    tracer: Optional[Any] = None,
 ) -> AttributeMap:
     """Extract attributes from chat completion calls.
 
@@ -73,7 +74,6 @@ def handle_chat_attributes(
         kwargs: Method keyword arguments
         return_value: Method return value
         span: The parent span for creating tool spans
-        tracer: The OpenTelemetry tracer for creating child spans
     """
     attributes = {
         SpanAttributes.LLM_REQUEST_TYPE: LLM_REQUEST_TYPE.value,
@@ -235,7 +235,7 @@ def handle_chat_attributes(
                     # Tool calls
                     if "tool_calls" in message:
                         tool_calls = message["tool_calls"]
-                        if tool_calls and span is not None and tracer is not None:
+                        if tool_calls and span is not None:
                             for i, tool_call in enumerate(tool_calls):
                                 # Convert tool_call to the format expected by _create_tool_span
                                 function = tool_call.get("function", {})
@@ -248,7 +248,7 @@ def handle_chat_attributes(
                                     }
                                 }
                                 # Create a child span for this tool call
-                                _create_tool_span(span, tool_call_data, tracer)
+                                _create_tool_span(span, tool_call_data)
 
         # Prompt filter results
         if "prompt_filter_results" in response_dict:
