@@ -1,0 +1,582 @@
+---
+title: "Track Endpoint Decorator"
+description: "Trace HTTP endpoints with comprehensive request/response monitoring using the @track_endpoint decorator"
+---
+
+## Overview
+
+The `@track_endpoint` decorator extends the functionality of the `@trace` decorator with HTTP-specific tracing capabilities. It automatically creates comprehensive traces for HTTP endpoints, capturing request/response data alongside standard session and LLM tracing.
+
+<Note>
+The `@track_endpoint` decorator is built using the AgentOps factory system and provides all the functionality of `@trace` with additional HTTP-specific features.
+</Note>
+
+## Basic Usage
+
+### Simple Endpoint Tracking
+
+The `@track_endpoint` decorator automatically creates a trace span that encompasses the entire HTTP request, plus additional spans for request and response data:
+
+```python
+import agentops
+from flask import Flask, request, jsonify
+
+# Initialize AgentOps
+agentops.init("your-api-key", auto_start_session=False)
+
+app = Flask(__name__)
+
+@app.route("/api/data")
+@agentops.track_endpoint
+def get_data():
+    """Simple endpoint with automatic HTTP tracing"""
+    return {"message": "Hello from tracked endpoint!", "status": "success"}
+
+@app.route("/api/user/<user_id>")
+@agentops.track_endpoint(name="get_user_profile")
+def get_user(user_id):
+    """Get user profile with custom trace name"""
+    return {
+        "user_id": user_id,
+        "name": f"User {user_id}",
+        "email": f"user{user_id}@example.com"
+    }
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+### With Configuration Options
+
+You can customize the tracing behavior with various parameters:
+
+```python
+@app.route("/api/generate", methods=["POST"])
+@agentops.track_endpoint(
+    name="content_generation",
+    tags=["openai", "gpt-4o-mini", "v1"],
+)
+def generate_content():
+    """Generate content with full HTTP tracing configuration"""
+    data = request.get_json()
+    prompt = data.get("prompt", "Default prompt")
+    
+    # Your application logic here
+    result = f"Generated content for: {prompt}"
+    
+    return {
+        "prompt": prompt,
+        "generated_content": result,
+        "model": "example-model"
+    }
+```
+
+## Span Hierarchy
+
+The `@track_endpoint` decorator creates the following span structure:
+
+```
+SESSION (main request span)
+├── http.request (request data)
+├── LLM (auto-instrumented AI calls)
+├── LLM (additional AI calls)
+└── http.response (response data)
+```
+
+Each span captures different aspects of the HTTP request lifecycle:
+- **SESSION**: The main trace for the entire HTTP request
+- **http.request**: Captures HTTP request data (method, URL, headers, body)
+- **LLM**: Auto-instrumented LLM calls (OpenAI, Anthropic, etc.)
+- **http.response**: Captures HTTP response data (status, headers, body)
+
+## Integration with LLM Calls
+
+The decorator seamlessly integrates with AgentOps' automatic LLM instrumentation:
+
+```python
+from openai import OpenAI
+import agentops
+
+# Initialize AgentOps
+agentops.init("your-api-key", auto_start_session=False)
+
+app = Flask(__name__)
+client = OpenAI()
+
+@app.route("/ai/generate", methods=["POST"])
+@agentops.track_endpoint(name="ai_text_generation", tags=["ai", "openai", "gpt-4o-mini"])
+def generate_text():
+    """Generate text using OpenAI with comprehensive tracing"""
+    data = request.get_json()
+    prompt = data.get("prompt", "Hello, how are you?")
+    
+    # This OpenAI call will be automatically instrumented
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    generated_text = response.choices[0].message.content
+    
+    return {
+        "prompt": prompt,
+        "generated_text": generated_text,
+        "model": "gpt-4o-mini",
+        "usage": {
+            "prompt_tokens": response.usage.prompt_tokens,
+            "completion_tokens": response.usage.completion_tokens,
+            "total_tokens": response.usage.total_tokens
+        }
+    }
+
+# Convert standalone function to tracked endpoint
+@app.route("/ai/simple", methods=["POST"])
+@agentops.track_endpoint(name="simple_text_generation")
+def generate_text_endpoint():
+    """Convert the original function to a tracked Flask endpoint"""
+    data = request.get_json()
+    prompt = data.get("prompt", "Hello, how are you?")
+    
+    # Use the original function logic
+    result = generate_text_function(prompt)
+    
+    return {"result": result}
+
+def generate_text_function(prompt):
+    """Original function converted to use within tracked endpoint"""
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+## Configuration Parameters
+
+### Core Parameters
+
+- **`name`** (str, optional): Custom name for the trace (defaults to function name)
+- **`tags`** (Union[list, dict], optional): Tags for categorizing traces
+
+### HTTP-Specific Parameters
+
+- **`capture_request`** (bool, default=True): Whether to capture HTTP request data
+- **`capture_response`** (bool, default=True): Whether to capture HTTP response data
+
+### Advanced Configuration Examples
+
+```python
+# Custom naming and tagging
+@app.route("/api/orders", methods=["POST"])
+@agentops.track_endpoint(
+    name="create_order",
+    tags=["ecommerce", "high", "v2.1.0"]
+)
+def create_order():
+    """Create a new order with detailed tracing"""
+    return {"order_id": "ord_123", "status": "created"}
+
+# Selective data capture
+@app.route("/api/sensitive-data")
+@agentops.track_endpoint(
+    name="sensitive_endpoint",
+    capture_request=False,  # Don't capture request data
+    capture_response=False  # Don't capture response data
+)
+def sensitive_endpoint():
+    """Endpoint with sensitive data - only trace execution, not data"""
+    return {"message": "Sensitive operation completed"}
+
+# Request-only tracking
+@app.route("/api/upload", methods=["POST"])
+@agentops.track_endpoint(
+    name="file_upload",
+    capture_request=True,
+    capture_response=False  # Don't capture large response data
+)
+def upload_file():
+    """Upload endpoint - track requests but not responses"""
+    return {"upload_id": "upload_123", "status": "processing"}
+```
+
+## HTTP Data Capture
+
+### Request Data Captured
+
+When `capture_request=True` (default), the `http.request` span captures:
+
+```python
+{
+    "method": "POST",
+    "url": "http://localhost:5000/api/generate",
+    "headers": {"Content-Type": "application/json", "User-Agent": "curl/7.68.0"},
+    "args": {"param": "value"},
+    "form": {"field": "value"},  # if form data
+    "json": {"prompt": "Hello world"},  # if JSON data
+    "data": "raw request body"   # if raw data
+}
+```
+
+### Response Data Captured
+
+When `capture_response=True` (default), the `http.response` span captures:
+
+```python
+{
+    "status_code": 200,
+    "headers": {"Content-Type": "application/json"},
+    "data": {"result": "Generated response", "status": "success"}
+}
+```
+
+## Advanced Usage Patterns
+
+### Multi-Step AI Workflows
+
+```python
+from openai import OpenAI
+import agentops
+
+agentops.init("your-api-key", auto_start_session=False)
+
+app = Flask(__name__)
+client = OpenAI()
+
+@app.route("/ai/article", methods=["POST"])
+@agentops.track_endpoint(name="article_generation", tags=["ai", "multi-step"])
+def generate_article():
+    """Multi-step AI workflow with comprehensive tracing"""
+    data = request.get_json()
+    topic = data.get("topic", "artificial intelligence")
+    
+    print(f"🚀 Starting article generation for: {topic}")
+    
+    # Step 1: Generate outline
+    print("📋 Step 1: Generating outline...")
+    outline_response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user", 
+            "content": f"Create a detailed outline for an article about {topic}"
+        }]
+    )
+    outline = outline_response.choices[0].message.content
+    
+    # Step 2: Generate content
+    print("📝 Step 2: Generating content...")
+    content_response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": f"Write an article based on this outline:\n{outline}"
+        }]
+    )
+    content = content_response.choices[0].message.content
+    
+    # Step 3: Generate summary
+    print("📄 Step 3: Generating summary...")
+    summary_response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": f"Summarize this article in 2-3 sentences:\n{content}"
+        }]
+    )
+    summary = summary_response.choices[0].message.content
+    
+    print("✅ Article generation completed successfully!")
+    
+    return {
+        "topic": topic,
+        "outline": outline,
+        "content": content,
+        "summary": summary,
+        "total_tokens": (
+            outline_response.usage.total_tokens +
+            content_response.usage.total_tokens +
+            summary_response.usage.total_tokens
+        )
+    }
+```
+
+### Error Handling and Monitoring
+
+```python
+@app.route("/api/process", methods=["POST"])
+@agentops.track_endpoint(name="data_processing", tags=["monitoring", "enabled"])
+def process_data():
+    """Endpoint with comprehensive error handling and monitoring"""
+    try:
+        data = request.get_json()
+        
+        # Validate input
+        if not data or 'input' not in data:
+            print("❌ Invalid input data")
+            return {"error": "Missing required 'input' field"}, 400
+        
+        input_data = data['input']
+        print(f"📊 Processing data: {input_data}")
+        
+        # Simulate processing
+        if input_data == "error":
+            raise ValueError("Simulated processing error")
+        
+        result = f"Processed: {input_data}"
+        print(f"✅ Processing successful: {result}")
+        
+        return {
+            "input": input_data,
+            "result": result,
+            "status": "success"
+        }
+        
+    except ValueError as e:
+        print(f"⚠️ Processing error: {e}")
+        return {"error": str(e), "status": "failed"}, 422
+    
+    except Exception as e:
+        print(f"💥 Unexpected error: {e}")
+        return {"error": "Internal server error", "status": "error"}, 500
+```
+
+### Async Endpoint Support
+
+```python
+import asyncio
+from flask import Flask
+import agentops
+
+agentops.init("your-api-key", auto_start_session=False)
+
+app = Flask(__name__)
+
+@app.route("/async/process")
+@agentops.track_endpoint(name="async_processing")
+async def async_process():
+    """Async endpoint with AgentOps tracing"""
+    print("🔄 Starting async processing...")
+    
+    # Simulate async work
+    await asyncio.sleep(0.5)
+    
+    print("✅ Async processing completed")
+    return {"message": "Async processing completed", "duration": "0.5s"}
+
+@app.route("/async/ai", methods=["POST"])
+@agentops.track_endpoint(name="async_ai_call", tags=["async", "true"])
+async def async_ai_call():
+    """Async AI endpoint with tracing"""
+    data = request.get_json()
+    prompt = data.get("prompt", "Hello!")
+    
+    print(f"🤖 Processing async AI request: {prompt}")
+    
+    # Simulate async AI call
+    await asyncio.sleep(0.2)
+    
+    result = f"Async AI response to: {prompt}"
+    print(f"✅ Async AI call completed: {result}")
+    
+    return {
+        "prompt": prompt,
+        "response": result,
+        "processing_type": "async"
+    }
+```
+
+## Real-World Example: API Gateway
+
+```python
+from flask import Flask, request, jsonify
+from openai import OpenAI
+import agentops
+import time
+
+# Initialize AgentOps
+agentops.init("your-api-key", auto_start_session=False)
+
+app = Flask(__name__)
+client = OpenAI()
+
+@app.route("/api/v1/chat", methods=["POST"])
+@agentops.track_endpoint(
+    name="chat_completion",
+    tags=["api", "v1", "service", "chat", "v1.0.0"]
+)
+def chat_completion():
+    """Production chat completion endpoint"""
+    start_time = time.time()
+    
+    try:
+        # Parse request
+        data = request.get_json()
+        messages = data.get("messages", [])
+        model = data.get("model", "gpt-4o-mini")
+        max_tokens = data.get("max_tokens", 150)
+        
+        print(f"🤖 Chat request: {len(messages)} messages, model: {model}")
+        
+        # Validate messages
+        if not messages:
+            return {"error": "Messages array is required"}, 400
+        
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens
+        )
+        
+        processing_time = time.time() - start_time
+        
+        result = {
+            "id": f"chat_{int(time.time())}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response.choices[0].message.content
+                },
+                "finish_reason": response.choices[0].finish_reason
+            }],
+            "usage": {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens
+            },
+            "processing_time": round(processing_time, 3)
+        }
+        
+        print(f"✅ Chat completion successful: {response.usage.total_tokens} tokens")
+        return result
+        
+    except Exception as e:
+        print(f"❌ Chat completion failed: {str(e)}")
+        return {
+            "error": {
+                "message": str(e),
+                "type": "api_error",
+                "code": "internal_error"
+            }
+        }, 500
+
+@app.route("/api/v1/health")
+@agentops.track_endpoint(
+    name="health_check",
+    tags=["api", "v1", "service", "health"],
+    capture_request=False,
+    capture_response=False
+)
+def health_check():
+    """Health check endpoint with minimal tracing"""
+    return {
+        "status": "healthy",
+        "timestamp": int(time.time()),
+        "version": "1.0.0"
+    }
+
+if __name__ == "__main__":
+    print("🚀 Starting API Gateway with AgentOps tracking...")
+    print("📊 All endpoints are automatically traced with request/response data")
+    print("🔍 View traces in your AgentOps dashboard")
+    app.run(debug=True, port=5000)
+```
+
+## Best Practices
+
+### 1. Use Appropriate Naming
+
+```python
+# ✅ Good - Descriptive names
+@agentops.track_endpoint(name="user_registration")
+@agentops.track_endpoint(name="payment_processing")
+@agentops.track_endpoint(name="content_generation")
+
+# ❌ Bad - Generic names
+@agentops.track_endpoint(name="endpoint1")
+@agentops.track_endpoint(name="function")
+```
+
+### 2. Organize with Tags
+
+```python
+# ✅ Good - Organized tagging
+@agentops.track_endpoint(
+    name="user_auth", 
+    tags=["domain", "auth", "priority", "high", "version", "v2"]
+)
+@agentops.track_endpoint(
+    name="content_gen", 
+    tags=["domain", "ai", "model", "gpt-4", "version", "v1"]
+)
+```
+
+### 3. Selective Data Capture
+
+```python
+# For sensitive endpoints
+@agentops.track_endpoint(
+    name="sensitive_operation",
+    capture_request=False,
+    capture_response=False
+)
+
+# For large file uploads
+@agentops.track_endpoint(
+    name="file_upload",
+    capture_response=False  # Don't capture large response data
+)
+```
+
+### 4. Version Tracking
+
+```python
+@agentops.track_endpoint(
+    name="api_endpoint",
+    version="2.1.0",
+    tags=["api", "v2"]
+)
+```
+
+## Comparison with @trace
+
+| Feature | @trace | @track_endpoint |
+|---------|--------|-----------------|
+| Session span | ✅ | ✅ |
+| Function I/O capture | ✅ | ✅ |
+| LLM auto-instrumentation | ✅ | ✅ |
+| Error tracking | ✅ | ✅ |
+| HTTP request capture | ❌ | ✅ |
+| HTTP response capture | ❌ | ✅ |
+| Flask integration | ❌ | ✅ |
+| Best for | General functions | HTTP endpoints |
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Missing HTTP data**: Ensure Flask is imported and available
+2. **Multiple sessions**: Set `auto_start_session=False` in `agentops.init()`
+3. **No LLM spans**: Ensure LLM instrumentation is enabled
+
+### Debug Mode
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+agentops.init(
+    "your-api-key",
+    auto_start_session=False,
+    # Enable debug logging
+)
+```
+
+The `@track_endpoint` decorator provides comprehensive HTTP tracing capabilities while maintaining full compatibility with AgentOps' existing features, making it perfect for API endpoints, web services, and any HTTP-based AI applications. 
