@@ -8,6 +8,7 @@ from agentops.client.api.base import BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
 from agentops.exceptions import ApiServerException
 from agentops.logging import logger
+from termcolor import colored
 
 
 class V3Client(BaseApiClient):
@@ -46,6 +47,15 @@ class V3Client(BaseApiClient):
             token = jr.get("token")
             if not token:
                 raise ApiServerException("No token in authentication response")
+
+            # Check project premium status
+            if jr.get("project_prem_status") != "pro":
+                logger.info(
+                    colored(
+                        "\x1b[34mYou're on the agentops free plan 📎 - Upgrade at https://app.agentops.ai/settings/billing\x1b[0m",
+                        "blue",
+                    )
+                )
 
             return jr
         except Exception as e:
