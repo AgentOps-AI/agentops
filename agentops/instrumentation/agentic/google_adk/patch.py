@@ -360,8 +360,10 @@ def extract_agent_attributes(instance):
         attributes["agent.instruction"] = instance.instruction
     if hasattr(instance, "tools"):
         for tool in instance.tools:
-            attributes[ToolAttributes.TOOL_NAME] = tool.name
-            attributes[ToolAttributes.TOOL_DESCRIPTION] = tool.description
+            if hasattr(tool, "name"):
+                attributes[ToolAttributes.TOOL_NAME] = tool.name
+            if hasattr(tool, "description"):
+                attributes[ToolAttributes.TOOL_DESCRIPTION] = tool.description
     if hasattr(instance, "output_key"):
         attributes["agent.output_key"] = instance.output_key
     # Subagents
