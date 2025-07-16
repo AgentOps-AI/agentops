@@ -28,16 +28,25 @@
     "icon": "lines-leaning"
   },
   "anchors": [],
-  "versions": ["v2", "v1", "v0"],
+  "versions": [
+    "v2",
+    "v1",
+    "v0"
+  ],
   "navigation": [
     {
       "group": "",
-      "pages": ["v1/introduction"],
+      "pages": [
+        "v1/introduction"
+      ],
       "version": "v1"
     },
     {
       "group": "Getting Started",
-      "pages": ["v1/quickstart", "v1/examples/examples"],
+      "pages": [
+        "v1/quickstart",
+        "v1/examples/examples"
+      ],
       "version": "v1"
     },
     {
@@ -94,17 +103,26 @@
     },
     {
       "group": "Other Info",
-      "pages": ["v1/concepts/host-env"],
+      "pages": [
+        "v1/concepts/host-env"
+      ],
       "version": "v1"
     },
     {
       "group": "",
-      "pages": ["v2/introduction"],
+      "pages": [
+        "v2/introduction"
+      ],
       "version": "v2"
     },
     {
       "group": "Getting Started",
-      "pages": ["v2/quickstart", "v2/examples/examples", "v2/usage/mcp-docs", "v2/usage/mcp-server"],
+      "pages": [
+        "v2/quickstart",
+        "v2/examples/examples",
+        "v2/usage/mcp-docs",
+        "v2/usage/mcp-server"
+      ],
       "version": "v2"
     },
     {
@@ -138,7 +156,8 @@
         "v2/integrations/openai_agents_js",
         "v2/integrations/smolagents",
         "v2/integrations/ibm_watsonx_ai",
-        "v2/integrations/xai"
+        "v2/integrations/xai",
+        "v2/integrations/xpander"
       ],
       "version": "v2"
     },
@@ -161,7 +180,9 @@
     },
     {
       "group": "Other Info",
-      "pages": ["v2/concepts/host-env"],
+      "pages": [
+        "v2/concepts/host-env"
+      ],
       "version": "v2"
     }
   ],

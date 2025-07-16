@@ -1,0 +1,191 @@
+---
+title: 'Xpander'
+description: 'Monitor and analyze your Xpander agent workflows with automatic AgentOps instrumentation'
+---
+
+[Xpander](https://xpander.ai/) is a powerful platform for building and deploying AI agents with sophisticated workflow management capabilities. AgentOps provides seamless integration with the Xpander SDK, automatically instrumenting all agent activities, tool executions, and LLM interactions without any manual setup.
+
+## Installation
+
+Install AgentOps and the Xpander SDK, along with the required dependencies:
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops xpander-sdk openai python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops xpander-sdk openai python-dotenv
+  ```
+  ```bash uv
+  uv add agentops xpander-sdk openai python-dotenv
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+You'll need API keys for AgentOps, Xpander, and OpenAI:
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+- **XPANDER_API_KEY**: From your [Xpander Dashboard](https://app.xpander.ai/)
+- **XPANDER_AGENT_ID**: The ID of your Xpander agent
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
+
+Set these as environment variables or in a `.env` file:
+
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  export XPANDER_API_KEY="your_xpander_api_key_here"
+  export XPANDER_AGENT_ID="your_xpander_agent_id_here"
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  XPANDER_API_KEY="your_xpander_api_key_here"
+  XPANDER_AGENT_ID="your_xpander_agent_id_here"
+  OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+</CodeGroup>
+
+## Quick Start
+
+The key to AgentOps + Xpander integration is **initialization order**: Initialize AgentOps **before** importing the Xpander SDK to enable automatic instrumentation.
+
+```python
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# 1. Initialize AgentOps FIRST (this enables auto-instrumentation)
+import agentops
+agentops.init(
+    api_key=os.getenv("AGENTOPS_API_KEY"),
+    default_tags=["xpander", "production"]
+)
+
+# 2. Now import Xpander SDK (instrumentation will automatically activate)
+from xpander_sdk import XpanderClient, LLMProvider
+from openai import OpenAI
+
+# 3. Set up your agent
+xpander_client = XpanderClient(api_key=os.getenv("XPANDER_API_KEY"))
+agent = xpander_client.agents.get(agent_id=os.getenv("XPANDER_AGENT_ID"))
+agent.select_llm_provider(LLMProvider.OPEN_AI)
+
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# 4. Execute a task (automatically instrumented!)
+execution = agent.add_task(input="What is the weather like today?")
+
+while not agent.is_finished():
+    # Call LLM
+    response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=agent.messages,
+        tools=agent.get_tools(),
+        tool_choice=agent.tool_choice
+    )
+    
+    # Add response to agent context
+    agent.add_messages(response.model_dump())
+    
+    # Execute any tool calls
+    tool_calls = agent.extract_tool_calls(response.model_dump())
+    if tool_calls:
+        agent.run_tools(tool_calls)
+
+# Get final result
+result = agent.retrieve_execution_result()
+print(f"Task completed: {result.result}")
+```
+
+## What's Automatically Tracked
+
+AgentOps automatically captures comprehensive telemetry from your Xpander agents:
+
+### 🤖 Agent Activities
+- Agent initialization and configuration
+- Task lifecycle (start, execution steps, completion)
+- Workflow phase transitions (planning → executing → finished)
+- Session management and context persistence
+
+### 🧠 LLM Interactions
+- All OpenAI API calls with full request/response data
+- Token usage and cost tracking across models
+- Conversation history and context management
+- Model parameters and settings
+
+### 🛠️ Tool Executions
+- Tool call detection with parameters and arguments
+- Tool execution results and success/failure status
+- Tool performance metrics and timing
+- Tool call hierarchies and dependencies
+
+### 📊 Performance Metrics
+- End-to-end execution duration and timing
+- Step-by-step workflow progression
+- Resource utilization and efficiency metrics
+- Error handling and exception tracking
+
+## Key Features
+
+### ✅ Zero-Configuration Setup
+No manual trace creation or span management required. Simply initialize AgentOps before importing Xpander SDK.
+
+### ✅ Complete Workflow Visibility
+Track the entire agent execution flow from task initiation to completion, including all intermediate steps.
+
+### ✅ Real-time Monitoring
+View your agent activities in real-time on the AgentOps dashboard as they execute.
+
+### ✅ Tool Execution Insights
+Monitor which tools are being called, their parameters, execution time, and results.
+
+### ✅ Cost Tracking
+Automatic token usage tracking for all LLM interactions with cost analysis.
+
+## Runtime-Specific Instrumentation
+
+Xpander SDK uses JSII to create methods at runtime, which requires specialized instrumentation. AgentOps handles this automatically by:
+
+- **Method Wrapping**: Dynamically wrapping agent methods as they're created
+- **Context Persistence**: Maintaining session context across runtime object lifecycle
+- **Agent Detection**: Automatically detecting and instrumenting new agent instances
+- **Tool Result Extraction**: Properly extracting results from JSII object references
+
+## Troubleshooting
+
+### Import Order Issues
+If you're not seeing traces, ensure AgentOps is initialized before importing Xpander SDK:
+
+```python
+# ✅ Correct order
+import agentops
+agentops.init()
+from xpander_sdk import XpanderClient
+
+# ❌ Incorrect order
+from xpander_sdk import XpanderClient
+import agentops
+agentops.init()  # Too late - instrumentation won't activate
+```
+
+### Missing Tool Results
+If tool results show `{"__jsii_ref__": "..."}` instead of actual content, ensure you're using the latest version of AgentOps, which includes improved JSII object handling.
+
+## Examples
+
+<CardGroup cols={2}>
+  <Card title="Basic Xpander Agent" icon="robot" href="https://github.com/AgentOps-AI/agentops/tree/main/examples/xpander" newTab={true}>
+    Complete example of a Xpander agent with automatic AgentOps instrumentation
+  </Card>
+  <Card title="Multi-Tool Workflow" icon="wrench" href="https://github.com/AgentOps-AI/agentops/tree/main/examples/xpander" newTab={true}>
+    Demonstrate complex workflows with multiple tool executions
+  </Card>
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script> 
