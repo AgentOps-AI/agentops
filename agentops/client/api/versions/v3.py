@@ -52,7 +52,7 @@ class V3Client(BaseApiClient):
             if jr.get("project_prem_status") != "pro":
                 logger.info(
                     colored(
-                        "\x1b[34mYou're on the agentops free plan 📎 - Upgrade at https://app.agentops.ai/settings/billing\x1b[0m",
+                        "\x1b[34mYou're on the agentops free plan 🤔\x1b[0m",
                         "blue",
                     )
                 )
