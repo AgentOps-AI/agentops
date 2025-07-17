@@ -700,7 +700,7 @@ class ResponsesAPIStreamWrapper:
                     response = event.response
                     if hasattr(response, "usage"):
                         self._usage = response.usage
-                    
+
                     # Extract output items from the completed response
                     if hasattr(response, "output"):
                         for output_item in response.output:
@@ -723,13 +723,21 @@ class ResponsesAPIStreamWrapper:
                                     # Extract text content from message items
                                     if isinstance(output_item.content, list):
                                         for content in output_item.content:
-                                            if hasattr(content, "type") and content.type == "text" and hasattr(content, "text"):
+                                            if (
+                                                hasattr(content, "type")
+                                                and content.type == "text"
+                                                and hasattr(content, "text")
+                                            ):
                                                 self._content_chunks.append(str(content.text))
                                     else:
                                         self._content_chunks.append(str(output_item.content))
 
         # Only add significant events, not every delta
-        if hasattr(event, "type") and event.type in ["response.created", "response.completed", "response.output_item.added"]:
+        if hasattr(event, "type") and event.type in [
+            "response.created",
+            "response.completed",
+            "response.output_item.added",
+        ]:
             self._span.add_event(
                 "responses_api_event",
                 {"event_type": event.type, "event_number": self._event_count},
@@ -743,7 +751,7 @@ class ResponsesAPIStreamWrapper:
         text_content = "".join(self._content_chunks)
         function_content = self._current_function_args or "".join(self._function_call_chunks)
         reasoning_content = "".join(self._reasoning_chunks)
-        
+
         # Combine all content types for the completion
         full_content = ""
         if reasoning_content:
@@ -758,10 +766,14 @@ class ResponsesAPIStreamWrapper:
                 full_content += f"\nResponse: {text_content}"
             else:
                 full_content = text_content
-        
+
         if full_content:
             self._span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), full_content)
-            logger.debug(f"[RESPONSES API] Setting completion content: {full_content[:100]}..." if len(full_content) > 100 else f"[RESPONSES API] Setting completion content: {full_content}")
+            logger.debug(
+                f"[RESPONSES API] Setting completion content: {full_content[:100]}..."
+                if len(full_content) > 100
+                else f"[RESPONSES API] Setting completion content: {full_content}"
+            )
 
         # Set timing
         if self._first_token_time:
@@ -809,7 +821,9 @@ class ResponsesAPIStreamWrapper:
         self._span.set_status(Status(StatusCode.OK))
         self._span.end()
         context_api.detach(self._token)
-        logger.debug(f"[RESPONSES API] Finalized streaming span after {self._event_count} events. Content length: {len(full_content)}")
+        logger.debug(
+            f"[RESPONSES API] Finalized streaming span after {self._event_count} events. Content length: {len(full_content)}"
+        )
 
 
 @_with_tracer_wrapper
@@ -836,7 +850,7 @@ def responses_stream_wrapper(tracer, wrapped, instance, args, kwargs):
     try:
         # Extract and set request attributes
         from agentops.instrumentation.providers.openai.wrappers.responses import handle_responses_attributes
-        
+
         request_attributes = handle_responses_attributes(kwargs=kwargs)
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
@@ -854,7 +868,7 @@ def responses_stream_wrapper(tracer, wrapped, instance, args, kwargs):
             for key, value in response_attributes.items():
                 if key not in request_attributes:  # Avoid overwriting request attributes
                     span.set_attribute(key, value)
-            
+
             span.set_status(Status(StatusCode.OK))
             span.end()
             context_api.detach(token)
@@ -893,7 +907,7 @@ async def async_responses_stream_wrapper(tracer, wrapped, instance, args, kwargs
     try:
         # Extract and set request attributes
         from agentops.instrumentation.providers.openai.wrappers.responses import handle_responses_attributes
-        
+
         request_attributes = handle_responses_attributes(kwargs=kwargs)
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
@@ -912,7 +926,7 @@ async def async_responses_stream_wrapper(tracer, wrapped, instance, args, kwargs
             for key, value in response_attributes.items():
                 if key not in request_attributes:  # Avoid overwriting request attributes
                     span.set_attribute(key, value)
-            
+
             span.set_status(Status(StatusCode.OK))
             span.end()
             context_api.detach(token)

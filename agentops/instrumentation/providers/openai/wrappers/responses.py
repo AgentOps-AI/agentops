@@ -12,7 +12,6 @@ from agentops.instrumentation.providers.openai.wrappers.shared import (
     model_as_dict,
     should_send_prompts,
 )
-from agentops.instrumentation.providers.openai.attributes.response import get_response_usage_attributes
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues
 
@@ -135,7 +134,7 @@ def handle_responses_attributes(
                         continue
                 else:
                     continue
-                
+
                 if item_type == "message":
                     # Extract message content
                     if isinstance(output_item, dict):
@@ -158,7 +157,7 @@ def handle_responses_attributes(
                             attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{completion_idx}.content"] = content
                             attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{completion_idx}.role"] = "assistant"
                             completion_idx += 1
-                        
+
                 elif item_type == "function_call" and isinstance(output_item, dict):
                     # Handle function calls
                     # The arguments contain the actual response content for function calls
@@ -174,12 +173,12 @@ def handle_responses_attributes(
                                 completion_idx += 1
                         except json.JSONDecodeError:
                             pass
-                    
+
                     # Also store tool call details
                     attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{i}.tool_calls.0.id"] = output_item.get("id", "")
                     attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{i}.tool_calls.0.name"] = output_item.get("name", "")
                     attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{i}.tool_calls.0.arguments"] = args_str
-                    
+
                 elif item_type == "reasoning" and isinstance(output_item, dict):
                     # Handle reasoning items (o3 models provide these)
                     summary = output_item.get("summary", "")
@@ -189,4 +188,4 @@ def handle_responses_attributes(
                         attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{completion_idx}.type"] = "reasoning"
                         completion_idx += 1
 
-    return attributes 
+    return attributes
