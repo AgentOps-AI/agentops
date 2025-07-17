@@ -120,7 +120,6 @@ class O3DecisionAgent:
             # Process streaming response
             tool_call = None
             tool_arguments = ""
-            current_call_id = None
 
             for event in response:
                 if hasattr(event, "type"):
@@ -134,7 +133,7 @@ class O3DecisionAgent:
                     elif event.type == "response.output_item.added":
                         # New tool call started
                         if hasattr(event, "output_item") and event.output_item.type == "function_call":
-                            current_call_id = event.output_item.call_id
+                            pass  # Tool call tracking handled elsewhere
                     elif event.type == "response.completed":
                         # Process final response
                         if hasattr(event, "response") and hasattr(event.response, "output"):
@@ -267,7 +266,6 @@ class O3DecisionAgent:
             # Process streaming response
             tool_call = None
             tool_arguments = ""
-            current_call_id = None
 
             async for event in response:
                 if hasattr(event, "type"):
@@ -281,7 +279,7 @@ class O3DecisionAgent:
                     elif event.type == "response.output_item.added":
                         # New tool call started
                         if hasattr(event, "output_item") and event.output_item.type == "function_call":
-                            current_call_id = event.output_item.call_id
+                            pass  # Tool call tracking handled elsewhere
                     elif event.type == "response.completed":
                         # Process final response
                         if hasattr(event, "response") and hasattr(event.response, "output"):
