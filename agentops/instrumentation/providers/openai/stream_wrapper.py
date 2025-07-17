@@ -10,7 +10,7 @@ from typing import Any, AsyncIterator, Iterator
 
 from opentelemetry import context as context_api
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode, set_span_in_context
-from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
+from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY
 
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
@@ -272,11 +272,11 @@ class OpenAIAsyncStreamWrapper:
 
             chunk = await self._stream.__anext__()
 
-            # Reuse the synchronous implementation
-            OpenaiStreamWrapper._process_chunk(self, chunk)
+            # Process the chunk
+            self._process_chunk(chunk)
             return chunk
         except StopAsyncIteration:
-            OpenaiStreamWrapper._finalize_stream(self)
+            self._finalize_stream()
             raise
         except Exception as e:
             logger.error(f"[OPENAI ASYNC WRAPPER] Error in __anext__: {e}")
@@ -300,6 +300,153 @@ class OpenAIAsyncStreamWrapper:
         self._span.end()
         context_api.detach(self._token)
         return False
+
+    def _process_chunk(self, chunk: Any) -> None:
+        """Process a single chunk from the stream.
+
+        Args:
+            chunk: A chunk from the OpenAI streaming response
+        """
+        self._chunk_count += 1
+
+        # Usage (may be in final chunk with a different structure)
+        if hasattr(chunk, "usage"):
+            self._usage = chunk.usage
+            # Check if this is a usage-only chunk (often the final chunk when stream_options.include_usage=true)
+            is_usage_only_chunk = not (hasattr(chunk, "choices") and chunk.choices)
+
+            # If this is a usage-only chunk, we don't need to process it as a content chunk
+            if is_usage_only_chunk:
+                return
+
+        # Skip processing if no choices are present
+        if not hasattr(chunk, "choices") or not chunk.choices:
+            return
+
+        # Track first token timing
+        if self._first_token_time is None:
+            if any(choice.delta.content for choice in chunk.choices if hasattr(choice.delta, "content")):
+                self._first_token_time = time.time()
+                time_to_first_token = self._first_token_time - self._start_time
+                self._span.set_attribute(SpanAttributes.LLM_STREAMING_TIME_TO_FIRST_TOKEN, time_to_first_token)
+                self._span.add_event("first_token_received", {"time_elapsed": time_to_first_token})
+            # Also check for tool_calls as first tokens
+            elif any(
+                choice.delta.tool_calls
+                for choice in chunk.choices
+                if hasattr(choice.delta, "tool_calls") and choice.delta.tool_calls
+            ):
+                self._first_token_time = time.time()
+                time_to_first_token = self._first_token_time - self._start_time
+                self._span.set_attribute(SpanAttributes.LLM_STREAMING_TIME_TO_FIRST_TOKEN, time_to_first_token)
+                self._span.add_event("first_tool_call_token_received", {"time_elapsed": time_to_first_token})
+
+        # Extract chunk data
+        if hasattr(chunk, "id") and chunk.id and not self._response_id:
+            self._response_id = chunk.id
+            if self._response_id is not None:
+                self._span.set_attribute(SpanAttributes.LLM_RESPONSE_ID, self._response_id)
+
+        if hasattr(chunk, "model") and chunk.model and not self._model:
+            self._model = chunk.model
+            if self._model is not None:
+                self._span.set_attribute(SpanAttributes.LLM_RESPONSE_MODEL, self._model)
+
+        # Process choices
+        for choice in chunk.choices:
+            if not hasattr(choice, "delta"):
+                continue
+
+            delta = choice.delta
+
+            # Content
+            if hasattr(delta, "content") and delta.content is not None:
+                self._content_chunks.append(delta.content)
+
+            # Tool calls
+            if hasattr(delta, "tool_calls") and delta.tool_calls:
+                for tool_call in delta.tool_calls:
+                    if hasattr(tool_call, "index"):
+                        idx = tool_call.index
+                        if idx not in self._tool_calls:
+                            self._tool_calls[idx] = {
+                                "id": "",
+                                "type": "function",
+                                "function": {"name": "", "arguments": ""},
+                            }
+
+                        if hasattr(tool_call, "id") and tool_call.id:
+                            self._tool_calls[idx]["id"] = tool_call.id
+
+                        if hasattr(tool_call, "function"):
+                            if hasattr(tool_call.function, "name") and tool_call.function.name:
+                                self._tool_calls[idx]["function"]["name"] = tool_call.function.name
+                            if hasattr(tool_call.function, "arguments") and tool_call.function.arguments:
+                                self._tool_calls[idx]["function"]["arguments"] += tool_call.function.arguments
+
+            # Finish reason
+            if hasattr(choice, "finish_reason") and choice.finish_reason:
+                self._finish_reason = choice.finish_reason
+
+    def _finalize_stream(self) -> None:
+        """Finalize the stream and set final attributes on the span."""
+        total_time = time.time() - self._start_time
+
+        # Aggregate content
+        full_content = "".join(self._content_chunks)
+
+        # Set generation time
+        if self._first_token_time:
+            generation_time = total_time - (self._first_token_time - self._start_time)
+            self._span.set_attribute(SpanAttributes.LLM_STREAMING_TIME_TO_GENERATE, generation_time)
+
+        # Add content attributes
+        if full_content:
+            self._span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), full_content)
+            self._span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
+
+        # Set finish reason
+        if self._finish_reason:
+            self._span.set_attribute(MessageAttributes.COMPLETION_FINISH_REASON.format(i=0), self._finish_reason)
+
+        # Create tool spans for each tool call
+        if len(self._tool_calls) > 0:
+            for idx, tool_call in self._tool_calls.items():
+                # Create a child span for this tool call
+                _create_tool_span(self._span, tool_call)
+
+        # Set usage if available from the API
+        if self._usage is not None:
+            # Only set token attributes if they exist and have non-None values
+            if hasattr(self._usage, "prompt_tokens") and self._usage.prompt_tokens is not None:
+                self._span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, int(self._usage.prompt_tokens))
+
+            if hasattr(self._usage, "completion_tokens") and self._usage.completion_tokens is not None:
+                self._span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, int(self._usage.completion_tokens))
+
+            if hasattr(self._usage, "total_tokens") and self._usage.total_tokens is not None:
+                self._span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, int(self._usage.total_tokens))
+
+        # Stream statistics
+        self._span.set_attribute("llm.openai.stream.chunk_count", self._chunk_count)
+        self._span.set_attribute("llm.openai.stream.content_length", len(full_content))
+        self._span.set_attribute("llm.openai.stream.total_duration", total_time)
+
+        # Add completion event
+        self._span.add_event(
+            "stream_completed",
+            {
+                "chunks_received": self._chunk_count,
+                "total_content_length": len(full_content),
+                "duration": total_time,
+                "had_tool_calls": len(self._tool_calls) > 0,
+            },
+        )
+
+        # Finalize span and context
+        self._span.set_status(Status(StatusCode.OK))
+        self._span.end()
+        context_api.detach(self._token)
 
 
 @_with_tracer_wrapper
@@ -456,9 +603,13 @@ class ResponsesAPIStreamWrapper:
         self._first_token_time = None
         self._event_count = 0
         self._content_chunks = []
+        self._function_call_chunks = []
+        self._reasoning_chunks = []
         self._response_id = None
         self._model = None
         self._usage = None
+        self._output_items = []
+        self._current_function_args = ""
 
         # Make sure the span is attached to the current context
         current_context = context_api.get_current()
@@ -517,7 +668,7 @@ class ResponsesAPIStreamWrapper:
 
         # Track first content event
         if self._first_token_time is None and hasattr(event, "type"):
-            if event.type == "response.output_text.delta":
+            if event.type in ["response.output_text.delta", "response.function_call_arguments.delta"]:
                 self._first_token_time = time.time()
                 time_to_first_token = self._first_token_time - self._start_time
                 self._span.set_attribute(SpanAttributes.LLM_STREAMING_TIME_TO_FIRST_TOKEN, time_to_first_token)
@@ -538,24 +689,79 @@ class ResponsesAPIStreamWrapper:
                 if hasattr(event, "delta"):
                     self._content_chunks.append(event.delta)
 
-            elif event.type == "response.done":
-                if hasattr(event, "response") and hasattr(event.response, "usage"):
-                    self._usage = event.response.usage
+            elif event.type == "response.function_call_arguments.delta":
+                # Accumulate function call arguments
+                if hasattr(event, "delta"):
+                    self._current_function_args += event.delta
 
-        # Add event tracking
-        self._span.add_event(
-            "responses_api_event",
-            {"event_type": event.type if hasattr(event, "type") else "unknown", "event_number": self._event_count},
-        )
+            elif event.type == "response.completed":
+                # Process the final response which contains all output items
+                if hasattr(event, "response"):
+                    response = event.response
+                    if hasattr(response, "usage"):
+                        self._usage = response.usage
+                    
+                    # Extract output items from the completed response
+                    if hasattr(response, "output"):
+                        for output_item in response.output:
+                            if hasattr(output_item, "type"):
+                                if output_item.type == "function_call" and hasattr(output_item, "arguments"):
+                                    self._function_call_chunks.append(output_item.arguments)
+                                elif output_item.type == "reasoning":
+                                    # Extract reasoning text - could be in summary or content
+                                    if hasattr(output_item, "summary"):
+                                        self._reasoning_chunks.append(str(output_item.summary))
+                                    elif hasattr(output_item, "content"):
+                                        # content might be a list of text items
+                                        if isinstance(output_item.content, list):
+                                            for content_item in output_item.content:
+                                                if hasattr(content_item, "text"):
+                                                    self._reasoning_chunks.append(str(content_item.text))
+                                        else:
+                                            self._reasoning_chunks.append(str(output_item.content))
+                                elif output_item.type == "message" and hasattr(output_item, "content"):
+                                    # Extract text content from message items
+                                    if isinstance(output_item.content, list):
+                                        for content in output_item.content:
+                                            if hasattr(content, "type") and content.type == "text" and hasattr(content, "text"):
+                                                self._content_chunks.append(str(content.text))
+                                    else:
+                                        self._content_chunks.append(str(output_item.content))
+
+        # Only add significant events, not every delta
+        if hasattr(event, "type") and event.type in ["response.created", "response.completed", "response.output_item.added"]:
+            self._span.add_event(
+                "responses_api_event",
+                {"event_type": event.type, "event_number": self._event_count},
+            )
 
     def _finalize_stream(self) -> None:
         """Finalize the Responses API stream."""
         total_time = time.time() - self._start_time
 
-        # Aggregate content
-        full_content = "".join(self._content_chunks)
+        # Aggregate different types of content
+        text_content = "".join(self._content_chunks)
+        function_content = self._current_function_args or "".join(self._function_call_chunks)
+        reasoning_content = "".join(self._reasoning_chunks)
+        
+        # Combine all content types for the completion
+        full_content = ""
+        if reasoning_content:
+            full_content = f"Reasoning: {reasoning_content}"
+        if function_content:
+            if full_content:
+                full_content += f"\nFunction Call: {function_content}"
+            else:
+                full_content = f"Function Call: {function_content}"
+        if text_content:
+            if full_content:
+                full_content += f"\nResponse: {text_content}"
+            else:
+                full_content = text_content
+        
         if full_content:
             self._span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), full_content)
+            logger.debug(f"[RESPONSES API] Setting completion content: {full_content[:100]}..." if len(full_content) > 100 else f"[RESPONSES API] Setting completion content: {full_content}")
 
         # Set timing
         if self._first_token_time:
@@ -586,10 +792,24 @@ class ResponsesAPIStreamWrapper:
         self._span.set_attribute("llm.openai.responses.content_length", len(full_content))
         self._span.set_attribute("llm.openai.responses.total_duration", total_time)
 
+        # Add completion event with summary
+        self._span.add_event(
+            "stream_completed",
+            {
+                "event_count": self._event_count,
+                "total_content_length": len(full_content),
+                "duration": total_time,
+                "had_function_calls": bool(function_content),
+                "had_reasoning": bool(reasoning_content),
+                "had_text": bool(text_content),
+            },
+        )
+
         # Finalize span and context
         self._span.set_status(Status(StatusCode.OK))
         self._span.end()
         context_api.detach(self._token)
+        logger.debug(f"[RESPONSES API] Finalized streaming span after {self._event_count} events. Content length: {len(full_content)}")
 
 
 @_with_tracer_wrapper
@@ -601,70 +821,51 @@ def responses_stream_wrapper(tracer, wrapped, instance, args, kwargs):
     # Check if streaming is enabled
     is_streaming = kwargs.get("stream", False)
 
-    # If not streaming, just call the wrapped method directly
-    # The normal instrumentation will handle it
-    if not is_streaming:
-        logger.debug("[RESPONSES API WRAPPER] Non-streaming call, delegating to normal instrumentation")
-        return wrapped(*args, **kwargs)
-
-    # Only create span for streaming responses
+    # Create span for both streaming and non-streaming
     span = tracer.start_span(
         "openai.responses.create",
         kind=SpanKind.CLIENT,
         attributes={SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.CHAT.value},
     )
+    logger.debug(f"[RESPONSES API WRAPPER] Created span for {'streaming' if is_streaming else 'non-streaming'} call")
+
+    # Make sure span is linked to the current trace context
+    current_context = context_api.get_current()
+    token = context_api.attach(set_span_in_context(span, current_context))
 
     try:
         # Extract and set request attributes
-        span.set_attribute(SpanAttributes.LLM_SYSTEM, "OpenAI")
-        span.set_attribute(SpanAttributes.LLM_REQUEST_STREAMING, is_streaming)
-
-        if "model" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs["model"])
-        if "messages" in kwargs:
-            # Set messages as prompts for consistency
-            messages = kwargs["messages"]
-            for i, msg in enumerate(messages):
-                prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
-                if isinstance(msg, dict):
-                    if "role" in msg:
-                        span.set_attribute(f"{prefix}.role", msg["role"])
-                    if "content" in msg:
-                        span.set_attribute(f"{prefix}.content", msg["content"])
-
-        # Tools
-        if "tools" in kwargs:
-            tools = kwargs["tools"]
-            if tools:
-                for i, tool in enumerate(tools):
-                    if isinstance(tool, dict) and "function" in tool:
-                        function = tool["function"]
-                        prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
-                        if "name" in function:
-                            span.set_attribute(f"{prefix}.name", function["name"])
-                        if "description" in function:
-                            span.set_attribute(f"{prefix}.description", function["description"])
-                        if "parameters" in function:
-                            import json
-
-                            span.set_attribute(f"{prefix}.parameters", json.dumps(function["parameters"]))
-
-        # Temperature and other parameters
-        if "temperature" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_REQUEST_TEMPERATURE, kwargs["temperature"])
-        if "top_p" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_REQUEST_TOP_P, kwargs["top_p"])
+        from agentops.instrumentation.providers.openai.wrappers.responses import handle_responses_attributes
+        
+        request_attributes = handle_responses_attributes(kwargs=kwargs)
+        for key, value in request_attributes.items():
+            span.set_attribute(key, value)
 
         # Call the original method
         response = wrapped(*args, **kwargs)
 
-        # For streaming, wrap the stream
-        return ResponsesAPIStreamWrapper(response, span, kwargs)
+        if is_streaming:
+            # For streaming, wrap the stream
+            context_api.detach(token)
+            return ResponsesAPIStreamWrapper(response, span, kwargs)
+        else:
+            # For non-streaming, handle response attributes and close span
+            response_attributes = handle_responses_attributes(kwargs=kwargs, return_value=response)
+            for key, value in response_attributes.items():
+                if key not in request_attributes:  # Avoid overwriting request attributes
+                    span.set_attribute(key, value)
+            
+            span.set_status(Status(StatusCode.OK))
+            span.end()
+            context_api.detach(token)
+            logger.debug("[RESPONSES API WRAPPER] Ended non-streaming span")
+            return response
 
     except Exception as e:
         span.record_exception(e)
         span.set_status(Status(StatusCode.ERROR, str(e)))
         span.end()
+        context_api.detach(token)
         raise
 
 
@@ -677,71 +878,50 @@ async def async_responses_stream_wrapper(tracer, wrapped, instance, args, kwargs
     # Check if streaming is enabled
     is_streaming = kwargs.get("stream", False)
 
-    # If not streaming, just call the wrapped method directly
-    # The normal instrumentation will handle it
-    if not is_streaming:
-        logger.debug("[RESPONSES API WRAPPER] Non-streaming call, delegating to normal instrumentation")
-        return await wrapped(*args, **kwargs)
-
-    # Only create span for streaming responses
+    # Create span for both streaming and non-streaming
     span = tracer.start_span(
         "openai.responses.create",
         kind=SpanKind.CLIENT,
         attributes={SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.CHAT.value},
     )
+    logger.debug(f"[RESPONSES API WRAPPER] Created span for {'streaming' if is_streaming else 'non-streaming'} call")
+
+    # Make sure span is linked to the current trace context
+    current_context = context_api.get_current()
+    token = context_api.attach(set_span_in_context(span, current_context))
 
     try:
         # Extract and set request attributes
-        span.set_attribute(SpanAttributes.LLM_SYSTEM, "OpenAI")
-        span.set_attribute(SpanAttributes.LLM_REQUEST_STREAMING, is_streaming)
-
-        if "model" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs["model"])
-
-        if "messages" in kwargs:
-            # Set messages as prompts for consistency
-            messages = kwargs["messages"]
-            for i, msg in enumerate(messages):
-                prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
-                if isinstance(msg, dict):
-                    if "role" in msg:
-                        span.set_attribute(f"{prefix}.role", msg["role"])
-                    if "content" in msg:
-                        span.set_attribute(f"{prefix}.content", msg["content"])
-
-        # Tools
-        if "tools" in kwargs:
-            tools = kwargs["tools"]
-            if tools:
-                for i, tool in enumerate(tools):
-                    if isinstance(tool, dict) and "function" in tool:
-                        function = tool["function"]
-                        prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
-                        if "name" in function:
-                            span.set_attribute(f"{prefix}.name", function["name"])
-                        if "description" in function:
-                            span.set_attribute(f"{prefix}.description", function["description"])
-                        if "parameters" in function:
-                            import json
-
-                            span.set_attribute(f"{prefix}.parameters", json.dumps(function["parameters"]))
-
-        # Temperature and other parameters
-        if "temperature" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_REQUEST_TEMPERATURE, kwargs["temperature"])
-        if "top_p" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_REQUEST_TOP_P, kwargs["top_p"])
+        from agentops.instrumentation.providers.openai.wrappers.responses import handle_responses_attributes
+        
+        request_attributes = handle_responses_attributes(kwargs=kwargs)
+        for key, value in request_attributes.items():
+            span.set_attribute(key, value)
 
         # Call the original method
         response = await wrapped(*args, **kwargs)
 
-        # For streaming, wrap the stream
-        logger.debug("[RESPONSES API WRAPPER] Wrapping streaming response with ResponsesAPIStreamWrapper")
-        wrapped_stream = ResponsesAPIStreamWrapper(response, span, kwargs)
-        return wrapped_stream
+        if is_streaming:
+            # For streaming, wrap the stream
+            context_api.detach(token)
+            logger.debug("[RESPONSES API WRAPPER] Wrapping streaming response with ResponsesAPIStreamWrapper")
+            return ResponsesAPIStreamWrapper(response, span, kwargs)
+        else:
+            # For non-streaming, handle response attributes and close span
+            response_attributes = handle_responses_attributes(kwargs=kwargs, return_value=response)
+            for key, value in response_attributes.items():
+                if key not in request_attributes:  # Avoid overwriting request attributes
+                    span.set_attribute(key, value)
+            
+            span.set_status(Status(StatusCode.OK))
+            span.end()
+            context_api.detach(token)
+            logger.debug("[RESPONSES API WRAPPER] Ended async non-streaming span")
+            return response
 
     except Exception as e:
         span.record_exception(e)
         span.set_status(Status(StatusCode.ERROR, str(e)))
         span.end()
+        context_api.detach(token)
         raise

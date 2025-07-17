@@ -37,6 +37,7 @@ from agentops.instrumentation.providers.openai.wrappers import (
     handle_run_retrieve_attributes,
     handle_run_stream_attributes,
     handle_messages_attributes,
+    handle_responses_attributes,
 )
 from agentops.instrumentation.providers.openai.stream_wrapper import (
     chat_completion_stream_wrapper,
