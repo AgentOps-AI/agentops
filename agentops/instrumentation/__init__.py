@@ -206,7 +206,7 @@ def _uninstrument_providers():
         if instrumented_key and instrumented_key in PROVIDERS:
             try:
                 instrumentor.uninstrument()
-                logger.info(
+                logger.debug(
                     f"AgentOps: Uninstrumented provider: {instrumentor.__class__.__name__} (for package '{instrumented_key}') due to agentic library activation."
                 )
                 uninstrumented_any = True
@@ -247,19 +247,19 @@ def _should_instrument_package(package_name: str) -> bool:
     if _has_agentic_library:
         # An agentic library is already active.
         if is_target_agentic:
-            logger.info(
+            logger.debug(
                 f"AgentOps: An agentic library is active. Skipping instrumentation for subsequent agentic library '{package_name}'."
             )
             return False
         if is_target_provider:
-            logger.info(
+            logger.debug(
                 f"AgentOps: An agentic library is active. Skipping instrumentation for provider '{package_name}'."
             )
             return False
     else:
         # No agentic library is active yet.
         if is_target_agentic:
-            logger.info(
+            logger.debug(
                 f"AgentOps: '{package_name}' is the first-targeted agentic library. Will uninstrument providers if any are/become active."
             )
             _uninstrument_providers()
@@ -351,7 +351,7 @@ def _perform_instrumentation(package_name: str):
                 if concurrent_instrumentor is not None:
                     concurrent_instrumentor._agentops_instrumented_package_key = "concurrent.futures"
                     _active_instrumentors.append(concurrent_instrumentor)
-                    logger.info("AgentOps: Instrumented concurrent.futures as a dependency of mem0.")
+                    logger.debug("AgentOps: Instrumented concurrent.futures as a dependency of mem0.")
             except Exception as e:
                 logger.debug(f"Could not instrument concurrent.futures for mem0: {e}")
     else:
@@ -413,7 +413,7 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
             if target_module_obj:
                 is_sdk = _is_installed_package(target_module_obj, package_to_check)
                 if not is_sdk:
-                    logger.info(
+                    logger.debug(
                         f"AgentOps: Target '{package_to_check}' appears to be a local module/directory. Skipping AgentOps SDK instrumentation for it."
                     )
                     continue
@@ -488,7 +488,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     """
     if not loader.should_activate:
         # This log is important for users to know why something wasn't instrumented.
-        logger.info(
+        logger.debug(
             f"AgentOps: Package '{loader.package_name or loader.module_name}' not found or version is less than minimum required ('{loader.min_version}'). Skipping instrumentation."
         )
         return None
@@ -497,7 +497,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     try:
         # Use the provider directly from the global tracer instance
         instrumentor.instrument(tracer_provider=tracer.provider)
-        logger.info(
+        logger.debug(
             f"AgentOps: Successfully instrumented '{loader.class_name}' for package '{loader.package_name or loader.module_name}'."
         )
     except Exception as e:
