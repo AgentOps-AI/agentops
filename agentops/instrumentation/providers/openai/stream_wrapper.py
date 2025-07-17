@@ -15,7 +15,7 @@ from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
 from agentops.instrumentation.providers.openai.utils import is_metrics_enabled
-from agentops.instrumentation.providers.openai.wrappers.chat import handle_chat_attributes
+from agentops.instrumentation.providers.openai.wrappers.chat import handle_chat_attributes, _create_tool_span
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, MessageAttributes
 
 
@@ -192,30 +192,11 @@ class OpenaiStreamWrapper:
         if self._finish_reason:
             self._span.set_attribute(MessageAttributes.COMPLETION_FINISH_REASON.format(i=0), self._finish_reason)
 
-        # Set tool calls
+        # Create tool spans for each tool call
         if len(self._tool_calls) > 0:
             for idx, tool_call in self._tool_calls.items():
-                # Only set attributes if values are not None
-                if tool_call["id"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=idx), tool_call["id"]
-                    )
-
-                if tool_call["type"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=0, j=idx), tool_call["type"]
-                    )
-
-                if tool_call["function"]["name"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=idx), tool_call["function"]["name"]
-                    )
-
-                if tool_call["function"]["arguments"] is not None:
-                    self._span.set_attribute(
-                        MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=idx),
-                        tool_call["function"]["arguments"],
-                    )
+                # Create a child span for this tool call
+                _create_tool_span(self._span, tool_call)
 
         # Set usage if available from the API
         if self._usage is not None:
@@ -374,7 +355,7 @@ def chat_completion_stream_wrapper(tracer, wrapped, instance, args, kwargs):
             return OpenaiStreamWrapper(response, span, kwargs)
         else:
             # Handle non-streaming response
-            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response)
+            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response, span=span)
 
             for key, value in response_attributes.items():
                 if key not in request_attributes:  # Avoid overwriting request attributes
@@ -439,7 +420,7 @@ async def async_chat_completion_stream_wrapper(tracer, wrapped, instance, args, 
             return OpenAIAsyncStreamWrapper(response, span, kwargs)
         else:
             # Handle non-streaming response
-            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response)
+            response_attributes = handle_chat_attributes(kwargs=kwargs, return_value=response, span=span)
 
             for key, value in response_attributes.items():
                 if key not in request_attributes:  # Avoid overwriting request attributes
