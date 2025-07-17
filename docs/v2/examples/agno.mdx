@@ -43,7 +43,6 @@ from dotenv import load_dotenv
 
 import agentops
 from agno.agent import Agent
-from agno.team import Team
 from agno.models.openai import OpenAIChat
 ```
 
@@ -64,20 +63,22 @@ agentops.init(auto_start_session=False, tags=["agno-example", "async-operation"]
 async def demonstrate_async_operations():
     """
     Demonstrate concurrent execution of multiple AI agent tasks.
-    
+
     This function creates multiple async tasks that execute concurrently rather than sequentially.
-    Each task makes an independent API call to the AI model, and asyncio.gather() 
+    Each task makes an independent API call to the AI model, and asyncio.gather()
     waits for all tasks to complete before returning results.
-    
+
     Performance benefit: Instead of 3 sequential calls taking ~90 seconds total,
     concurrent execution typically completes in ~30 seconds.
     """
-    tracer = agentops.start_trace(trace_name="Agno Async Operations Example",)
+    tracer = agentops.start_trace(
+        trace_name="Agno Async Operations Example",
+    )
 
     try:
         # Initialize AI agent with specified model
         agent = Agent(model=OpenAIChat(id="gpt-4o-mini"))
-        
+
         async def task1():
             """Query AI about Python programming language."""
             response = await agent.arun("Explain Python programming language in one paragraph")
@@ -95,7 +96,7 @@ async def demonstrate_async_operations():
 
         # Execute all tasks concurrently using asyncio.gather()
         results = await asyncio.gather(task1(), task2(), task3())
-        
+
         for i, result in enumerate(results, 1):
             print(f"\nTask {i} Result:")
             print(result)

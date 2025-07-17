@@ -44,12 +44,9 @@ Import the required libraries for local memory management with Mem0. We'll use b
 
 
 ```python
-
 from mem0 import Memory, AsyncMemory
 import os
 import asyncio
-import logging
-from dotenv import load_dotenv
 import agentops
 ```
 
@@ -118,7 +115,6 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
 
     agentops.start_trace("mem0_memory_example", tags=["mem0_memory_example"])
     try:
-        
         memory = Memory.from_config(local_config)
 
         result = memory.add(
@@ -127,7 +123,7 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
 
         for i, preference in enumerate(sample_preferences):
             result = memory.add(preference, user_id=user_id, metadata={"type": "preference", "index": i})
-       
+
         search_queries = [
             "What movies does the user like?",
             "What are the user's food preferences?",
@@ -136,10 +132,10 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
 
         for query in search_queries:
             results = memory.search(query, user_id=user_id)
-        
+
             if results and "results" in results:
-                for j, result in enumerate(results): 
-                    print(f"Result {j+1}: {result.get('memory', 'N/A')}")
+                for j, result in enumerate(results):
+                    print(f"Result {j + 1}: {result.get('memory', 'N/A')}")
             else:
                 print("No results found")
 
@@ -151,7 +147,7 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
         print(f"Delete all result: {delete_all_result}")
 
         agentops.end_trace(end_state="success")
-    except Exception as e:
+    except Exception:
         agentops.end_trace(end_state="error")
 ```
 
@@ -169,7 +165,6 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
 
     agentops.start_trace("mem0_memory_async_example", tags=["mem0_memory_async_example"])
     try:
-
         async_memory = await AsyncMemory.from_config(local_config)
 
         result = await async_memory.add(
@@ -185,7 +180,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
         tasks = [add_preference(pref, i) for i, pref in enumerate(sample_preferences)]
         results = await asyncio.gather(*tasks)
         for i, result in enumerate(results):
-            print(f"Added async preference {i+1}: {result}")
+            print(f"Added async preference {i + 1}: {result}")
 
         search_queries = [
             "What movies does the user like?",
@@ -203,7 +198,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
         for result, query in search_results:
             if result and "results" in result:
                 for j, res in enumerate(result["results"]):
-                    print(f"Result {j+1}: {res.get('memory', 'N/A')}")
+                    print(f"Result {j + 1}: {res.get('memory', 'N/A')}")
             else:
                 print("No results found")
 
@@ -216,7 +211,7 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
 
         agentops.end_trace(end_state="success")
 
-    except Exception as e:
+    except Exception:
         agentops.end_trace(end_state="error")
 ```
 
