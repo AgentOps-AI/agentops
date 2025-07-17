@@ -31,6 +31,7 @@ class ConfigDict(TypedDict):
     log_level: Optional[Union[str, int]]
     fail_safe: Optional[bool]
     prefetch_jwt_token: Optional[bool]
+    log_session_replay_url: Optional[bool]
 
 
 @dataclass
@@ -115,6 +116,11 @@ class Config:
         metadata={"description": "Whether to prefetch JWT token during initialization"},
     )
 
+    log_session_replay_url: bool = field(
+        default_factory=lambda: get_env_bool("AGENTOPS_LOG_SESSION_REPLAY_URL", True),
+        metadata={"description": "Whether to log session replay URLs to the console"},
+    )
+
     exporter_endpoint: Optional[str] = field(
         default_factory=lambda: os.getenv("AGENTOPS_EXPORTER_ENDPOINT", "https://otlp.agentops.ai/v1/traces"),
         metadata={
@@ -148,6 +154,7 @@ class Config:
         log_level: Optional[Union[str, int]] = None,
         fail_safe: Optional[bool] = None,
         prefetch_jwt_token: Optional[bool] = None,
+        log_session_replay_url: Optional[bool] = None,
         exporter: Optional[SpanExporter] = None,
         processor: Optional[SpanProcessor] = None,
         exporter_endpoint: Optional[str] = None,
@@ -213,6 +220,9 @@ class Config:
         if prefetch_jwt_token is not None:
             self.prefetch_jwt_token = prefetch_jwt_token
 
+        if log_session_replay_url is not None:
+            self.log_session_replay_url = log_session_replay_url
+
         if exporter is not None:
             self.exporter = exporter
 
@@ -243,6 +253,7 @@ class Config:
             "log_level": self.log_level,
             "fail_safe": self.fail_safe,
             "prefetch_jwt_token": self.prefetch_jwt_token,
+            "log_session_replay_url": self.log_session_replay_url,
             "exporter": self.exporter,
             "processor": self.processor,
             "exporter_endpoint": self.exporter_endpoint,

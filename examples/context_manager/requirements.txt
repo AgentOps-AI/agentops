@@ -1,2 +1,0 @@
-# Context manager examples only need agentops
-# python-dotenv and requests are installed as common deps 
