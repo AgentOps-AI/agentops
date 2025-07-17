@@ -26,7 +26,7 @@ import json
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail, track_endpoint
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
@@ -90,6 +90,7 @@ def init(
     env_data_opt_out: Optional[bool] = None,
     log_level: Optional[Union[str, int]] = None,
     fail_safe: Optional[bool] = None,
+    log_session_replay_url: Optional[bool] = None,
     exporter_endpoint: Optional[str] = None,
     **kwargs,
 ):
@@ -117,6 +118,7 @@ def init(
         env_data_opt_out (bool): Whether to opt out of collecting environment data.
         log_level (str, int): The log level to use for the client. Defaults to 'CRITICAL'.
         fail_safe (bool): Whether to suppress errors and continue execution when possible.
+        log_session_replay_url (bool): Whether to log session replay URLs to the console. Defaults to True.
         exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
             be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
         **kwargs: Additional configuration parameters to be passed to the client.
@@ -159,6 +161,7 @@ def init(
         "env_data_opt_out": env_data_opt_out,
         "log_level": log_level,
         "fail_safe": fail_safe,
+        "log_session_replay_url": log_session_replay_url,
         "exporter_endpoint": exporter_endpoint,
         **kwargs,
     }
@@ -472,6 +475,7 @@ __all__ = [
     "operation",
     "tool",
     "guardrail",
+    "track_endpoint",
     # Enums
     "TraceState",
     "SUCCESS",

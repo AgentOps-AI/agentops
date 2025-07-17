@@ -154,6 +154,7 @@
         "v2/usage/tracking-agents",
         "v2/usage/recording-operations",
         "v2/usage/trace-decorator",
+        "v2/usage/track-endpoint-decorator",
         "v2/usage/manual-trace-control",
         "v2/usage/public-api"
       ],
