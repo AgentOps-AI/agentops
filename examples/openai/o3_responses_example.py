@@ -123,7 +123,6 @@ class O3DecisionAgent:
 
             # Process streaming response
             tool_call = None
-            tool_arguments = ""
 
             for event in response:
                 if hasattr(event, "type"):
@@ -131,9 +130,8 @@ class O3DecisionAgent:
                         # Handle text deltas (if any)
                         pass
                     elif event.type == "response.function_call_arguments.delta":
-                        # Accumulate tool call arguments
-                        if hasattr(event, "delta"):
-                            tool_arguments += event.delta
+                        # Tool arguments are accumulated by the API
+                        pass
                     elif event.type == "response.output_item.added":
                         # New tool call started
                         if hasattr(event, "output_item") and event.output_item.type == "function_call":
@@ -146,8 +144,8 @@ class O3DecisionAgent:
                                     tool_call = output_item
                                     break
 
-            if tool_call and tool_arguments:
-                args = json.loads(tool_arguments)
+            if tool_call:
+                args = json.loads(tool_call.arguments)
                 chosen_action = args["action"]
                 reasoning = args["reasoning"]
 
@@ -269,7 +267,6 @@ class O3DecisionAgent:
 
             # Process streaming response
             tool_call = None
-            tool_arguments = ""
 
             async for event in response:
                 if hasattr(event, "type"):
@@ -277,9 +274,8 @@ class O3DecisionAgent:
                         # Handle text deltas (if any)
                         pass
                     elif event.type == "response.function_call_arguments.delta":
-                        # Accumulate tool call arguments
-                        if hasattr(event, "delta"):
-                            tool_arguments += event.delta
+                        # Tool arguments are accumulated by the API
+                        pass
                     elif event.type == "response.output_item.added":
                         # New tool call started
                         if hasattr(event, "output_item") and event.output_item.type == "function_call":
@@ -292,8 +288,8 @@ class O3DecisionAgent:
                                     tool_call = output_item
                                     break
 
-            if tool_call and tool_arguments:
-                args = json.loads(tool_arguments)
+            if tool_call:
+                args = json.loads(tool_call.arguments)
                 chosen_action = args["action"]
                 reasoning = args["reasoning"]
 
