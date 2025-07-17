@@ -56,12 +56,10 @@ class AG2Instrumentor(CommonInstrumentor):
 
     def _initialize(self, **kwargs):
         """Initialize attribute manager and AG2-specific concurrent.futures instrumentation."""
-        logger.debug("[AG2 DEBUG] Initializing AG2 instrumentor...")
         self._attribute_manager = SpanAttributeManager(service_name="agentops", deployment_environment="production")
 
     def _custom_wrap(self, **kwargs):
         """Perform custom wrapping for AG2 methods."""
-        logger.debug("[AG2 DEBUG] Starting custom wrapping for AG2 methods...")
 
         methods_to_wrap = [
             ("autogen.agentchat.conversable_agent", "ConversableAgent.__init__", self._agent_init_wrapper),
@@ -96,11 +94,9 @@ class AG2Instrumentor(CommonInstrumentor):
 
         for module, method, wrapper_factory in methods_to_wrap:
             try:
-                logger.debug(f"[AG2 DEBUG] Attempting to wrap: {module}.{method}")
                 wrap_function_wrapper(module, method, wrapper_factory(self._tracer))
-                logger.debug(f"[AG2 DEBUG] Successfully wrapped {method}")
             except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"[AG2 DEBUG] Failed to wrap {method}: {e}")
+                logger.debug(f"Failed to wrap {method}: {e}")
 
     def _custom_unwrap(self, **kwargs):
         """Remove instrumentation from AG2."""
@@ -609,7 +605,6 @@ class AG2Instrumentor(CommonInstrumentor):
                     try:
                         threading.Thread.__init__ = original_thread_init
                         threading.Thread.start = original_thread_start
-                        logger.debug("[AG2 DEBUG] Successfully restored original Thread methods")
                     except Exception as e:
                         logger.error(f"[AG2 DEBUG] Error restoring Thread methods: {e}")
                         # Force restore
@@ -668,7 +663,6 @@ class AG2Instrumentor(CommonInstrumentor):
 
                 result = wrapped(*args, **kwargs)
                 self._capture_group_chat_summary(span, instance, result)
-                logger.debug(f"[AG2 DEBUG] Group chat run completed - Result: {result}")
                 return result
 
         return wrapper
@@ -677,7 +671,7 @@ class AG2Instrumentor(CommonInstrumentor):
         """Wrapper for capturing tool execution."""
 
         def wrapper(wrapped, instance, args, kwargs):
-            span_name = f"ag2.tool.{tool_type}"
+            span_name = f"ag2.tool.{tool_type}.tool_usage"
 
             with create_span(
                 tracer, span_name, kind=SpanKind.CLIENT, attribute_manager=self._attribute_manager
