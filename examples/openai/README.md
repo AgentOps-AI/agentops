@@ -39,17 +39,15 @@ Example: `web_search`
 This example demonstrates:
 - Web search functionality
 
-### 5. o3 Responses API Integration
+### 5. o3 Responses API
 
-Example: `o3_responses_integration_test` and `test_o3_integration`
+Example: `o3_responses_example`
 
-These examples demonstrate:
+This example demonstrates:
 - OpenAI's o3 reasoning model with the Responses API
 - Tool calls and structured reasoning
 - Complex decision-making scenarios
 - AgentOps integration with reasoning models
-
-See `README_o3_integration.md` for detailed documentation.
 
 ## AgentOps Integration
 

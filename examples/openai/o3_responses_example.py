@@ -1,12 +1,12 @@
-# OpenAI o3 Responses API Integration Test
+# OpenAI o3 Responses API Example
 #
 # This example demonstrates AgentOps integration with OpenAI's o3 reasoning model
 # through the Responses API. The o3 model excels at complex problem solving and
 # multi-step reasoning with tool calls.
 #
-# This test creates a simple decision-making agent that uses the o3 model to
+# This example creates a simple decision-making agent that uses the o3 model to
 # make choices based on available options, similar to the Pokémon battle example
-# but simplified for testing purposes.
+# but simplified.
 
 import openai
 import agentops
@@ -22,10 +22,10 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 
 # Initialize AgentOps
-agentops.init(trace_name="o3-responses-test", tags=["o3", "responses-api", "integration-test"])
+agentops.init(trace_name="o3-responses-example", tags=["o3", "responses-api"])
 tracer = agentops.start_trace(
-    trace_name="o3 Responses API Integration Test", 
-    tags=["o3", "responses-api", "integration-test"]
+    trace_name="o3 Responses API Example", 
+    tags=["o3", "responses-api"]
 )
 
 # Initialize OpenAI client
@@ -154,14 +154,14 @@ class O3DecisionAgent:
                 "scenario": scenario
             }
 
-def run_integration_test():
-    """Run the integration test with multiple scenarios."""
+def run_example():
+    """Run the example with multiple scenarios."""
     
     # Create the agent
     agent = O3DecisionAgent(model="o3")
     
-    # Test scenarios
-    test_scenarios = [
+    # Example scenarios
+    scenarios = [
         {
             "scenario": "You're in a battle and your opponent has a strong defensive position. You need to choose your next move carefully.",
             "actions": ["attack_aggressively", "defend_and_wait", "use_special_ability", "retreat_temporarily"]
@@ -178,14 +178,14 @@ def run_integration_test():
     
     results = []
     
-    for i, test_case in enumerate(test_scenarios, 1):
+    for i, scenario in enumerate(scenarios, 1):
         print(f"\n{'='*60}")
-        print(f"Test Case {i}")
+        print(f"Scenario {i}")
         print(f"{'='*60}")
         
         result = agent.make_decision(
-            scenario=test_case["scenario"],
-            available_actions=test_case["actions"]
+            scenario=scenario["scenario"],
+            available_actions=scenario["actions"]
         )
         results.append(result)
         
@@ -195,19 +195,19 @@ def run_integration_test():
     return results
 
 def main():
-    """Main function to run the integration test."""
-    print("Starting OpenAI o3 Responses API Integration Test")
+    """Main function to run the example."""
+    print("Starting OpenAI o3 Responses API Example")
     print("=" * 60)
     
     try:
-        results = run_integration_test()
+        results = run_example()
         
         print(f"\n{'='*60}")
-        print("Integration Test Summary")
+        print("Example Summary")
         print(f"{'='*60}")
         
         for i, result in enumerate(results, 1):
-            print(f"Test {i}: {result['action']}")
+            print(f"Scenario {i}: {result['action']}")
         
         # End the trace
         agentops.end_trace(tracer, end_state="Success")
@@ -220,13 +220,13 @@ def main():
         try:
             validation_result = agentops.validate_trace_spans(trace_context=tracer)
             agentops.print_validation_summary(validation_result)
-            print("✅ Integration test completed successfully!")
+            print("✅ Example completed successfully!")
         except agentops.ValidationError as e:
             print(f"❌ Error validating spans: {e}")
             raise
             
     except Exception as e:
-        print(f"❌ Integration test failed: {e}")
+        print(f"❌ Example failed: {e}")
         agentops.end_trace(tracer, end_state="Error")
         raise
 
