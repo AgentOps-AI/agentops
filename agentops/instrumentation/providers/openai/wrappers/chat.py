@@ -31,29 +31,29 @@ LLM_REQUEST_TYPE = LLMRequestTypeValues.CHAT
 def _create_tool_span(parent_span, tool_call_data):
     """
     Create a distinct span for each tool call.
-    
+
     Args:
         parent_span: The parent LLM span
         tool_call_data: The tool call data dictionary
     """
     # Get the tracer for this module
     tracer = get_tracer(__name__)
-    
+
     # Create a child span for the tool call
     with tracer.start_as_current_span(
         name=f"tool_call.{tool_call_data['function']['name']}",
         kind=SpanKind.INTERNAL,
-        context=context_api.set_value("current_span", parent_span)
+        context=context_api.set_value("current_span", parent_span),
     ) as tool_span:
         # Set the span kind to TOOL
         tool_span.set_attribute("agentops.span.kind", AgentOpsSpanKindValues.TOOL)
-        
+
         # Set tool-specific attributes
-        tool_span.set_attribute(ToolAttributes.TOOL_NAME, tool_call_data['function']['name'])
-        tool_span.set_attribute(ToolAttributes.TOOL_PARAMETERS, tool_call_data['function']['arguments'])
-        tool_span.set_attribute("tool.call.id", tool_call_data['id'])
-        tool_span.set_attribute("tool.call.type", tool_call_data['type'])
-        
+        tool_span.set_attribute(ToolAttributes.TOOL_NAME, tool_call_data["function"]["name"])
+        tool_span.set_attribute(ToolAttributes.TOOL_PARAMETERS, tool_call_data["function"]["arguments"])
+        tool_span.set_attribute("tool.call.id", tool_call_data["id"])
+        tool_span.set_attribute("tool.call.type", tool_call_data["type"])
+
         # Set status to OK for successful tool call creation
         tool_span.set_status(Status(StatusCode.OK))
 
@@ -68,7 +68,7 @@ def handle_chat_attributes(
 
     This function is designed to work with the common wrapper pattern,
     extracting attributes from the method arguments and return value.
-    
+
     Args:
         args: Method arguments (not used in this implementation)
         kwargs: Method keyword arguments
@@ -244,8 +244,8 @@ def handle_chat_attributes(
                                     "type": tool_call.get("type", "function"),
                                     "function": {
                                         "name": function.get("name", ""),
-                                        "arguments": function.get("arguments", "")
-                                    }
+                                        "arguments": function.get("arguments", ""),
+                                    },
                                 }
                                 # Create a child span for this tool call
                                 _create_tool_span(span, tool_call_data)

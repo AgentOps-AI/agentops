@@ -9,7 +9,7 @@ import time
 from typing import Any, AsyncIterator, Iterator
 
 from opentelemetry import context as context_api
-from opentelemetry.trace import Span, SpanKind, Status, StatusCode, set_span_in_context, get_tracer
+from opentelemetry.trace import Span, SpanKind, Status, StatusCode, set_span_in_context
 from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 
 from agentops.logging import logger
