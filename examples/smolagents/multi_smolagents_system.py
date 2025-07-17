@@ -96,6 +96,8 @@ print(visit_webpage("https://en.wikipedia.org/wiki/Hugging_Face")[:500])
 web_agent = ToolCallingAgent(
     tools=[DuckDuckGoSearchTool(), visit_webpage],
     model=model,
+    name="web_research",
+    description="Runs web searches for you. Give it your query as an argument. Please NOTE that the argument name is `task`.",
 )
 
 manager_agent = CodeAgent(
