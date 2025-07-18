@@ -1,12 +1,11 @@
 # Define a separate class for the authenticated OTLP exporter
 # This is imported conditionally to avoid dependency issues
-from typing import Dict, Optional, Sequence, Callable
 import threading
+from typing import Callable, Dict, Optional, Sequence
 import time
 
 import requests
-from opentelemetry.exporter.otlp.proto.http import Compression
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter, Compression
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 
@@ -26,6 +25,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
     def __init__(
         self,
         endpoint: str,
+        jwt: Optional[str] = None,
         jwt_provider: Optional[Callable[[], Optional[str]]] = None,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None,
@@ -33,31 +33,37 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         **kwargs,
     ):
         """
-        Initialize the dynamic JWT OTLP exporter.
+        Initialize the authenticated OTLP exporter.
 
         Args:
             endpoint: The OTLP endpoint URL
-            jwt_provider: A callable that returns the current JWT token
+            jwt: Initial JWT token (optional)
+            jwt_provider: Function to get JWT token dynamically (optional)
             headers: Additional headers to include
             timeout: Request timeout
             compression: Compression type
-            **kwargs: Additional arguments passed to parent
+            **kwargs: Additional arguments (stored but not passed to parent)
         """
+        # Store JWT-related parameters separately
+        self._jwt = jwt
         self._jwt_provider = jwt_provider
         self._lock = threading.Lock()
         self._last_auth_failure = 0
         self._auth_failure_threshold = 60  # Don't retry auth failures more than once per minute
 
-        # Initialize parent without Authorization header - we'll add it dynamically
-        base_headers = headers or {}
+        # Store any additional kwargs for potential future use
+        self._custom_kwargs = kwargs
 
-        super().__init__(
-            endpoint=endpoint,
-            headers=base_headers,
-            timeout=timeout,
-            compression=compression,
-            **kwargs,
-        )
+        # Initialize parent with only known parameters
+        parent_kwargs = {}
+        if headers is not None:
+            parent_kwargs["headers"] = headers
+        if timeout is not None:
+            parent_kwargs["timeout"] = timeout
+        if compression is not None:
+            parent_kwargs["compression"] = compression
+
+        super().__init__(endpoint=endpoint, **parent_kwargs)
 
     def _get_current_jwt(self) -> Optional[str]:
         """Get the current JWT token from the provider."""

@@ -172,8 +172,16 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
         is_llm_span = False
 
         if span_attributes:
-            # Check for LLM span kind
+            # Check for LLM span kind - handle both flat and nested structures
             span_kind = span_attributes.get("agentops.span.kind", "")
+            if not span_kind:
+                # Check nested structure: agentops.span.kind or agentops -> span -> kind
+                agentops_attrs = span_attributes.get("agentops", {})
+                if isinstance(agentops_attrs, dict):
+                    span_attrs = agentops_attrs.get("span", {})
+                    if isinstance(span_attrs, dict):
+                        span_kind = span_attrs.get("kind", "")
+
             is_llm_span = span_kind == "llm"
 
             # Alternative check: Look for gen_ai attributes
@@ -185,7 +193,10 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
 
             # Check for LLM request type
             if not is_llm_span:
-                llm_request_type = span_attributes.get("llm.request.type", "")
+                llm_request_type = span_attributes.get("gen_ai.request.type", "")
+                if not llm_request_type:
+                    # Also check for older llm.request.type format
+                    llm_request_type = span_attributes.get("llm.request.type", "")
                 if llm_request_type in ["chat", "completion"]:
                     is_llm_span = True
 
