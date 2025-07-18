@@ -1,8 +1,7 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
-from opentelemetry import attributes
 from opentelemetry.context import attach, detach
-from opentelemetry.trace import SpanContext, NonRecordingSpan, set_span_in_context
+from opentelemetry.trace import set_span_in_context
 from opentelemetry.sdk.trace import Span as SDKSpan
 
 from agentops.logging import logger
@@ -12,14 +11,10 @@ from agentops.semconv import AgentOpsSpanKindValues, SpanAttributes
 from dspy.utils.callback import BaseCallback
 import dspy
 
-# compile todo!
-#
-# fix terminal logs (unable to load logs)
-# fix api/mcp (request failed, 404)
-# semconv ... 🤢
-# try/except
-# caching
-# farm attributes 🧑‍🌾
+DSPY_INPUT = "dspy.input.{key}"
+DSPY_OUTPUT = "dspy.output.{key}"
+DSPY_ATTRIBUTE = "dspy.attribute.{key}"
+DSPY_EVALUATE = "evaluate"
 
 class DSPyCallbackHandler(BaseCallback):
     """
@@ -30,10 +25,10 @@ class DSPyCallbackHandler(BaseCallback):
         self,
         api_key: str | None = None,
         tags: List[str] | None = None,
-        cache: bool = False,
+        cache: bool = True,
         auto_session: bool = True,
     ):
-        self.active_spans: Dict[str, SDKSpan] = {}
+        self.active_spans: dict[str, SDKSpan] = {}
         self.api_key = api_key
         self.tags = tags or []
         self.session_span = None
@@ -44,7 +39,7 @@ class DSPyCallbackHandler(BaseCallback):
         if auto_session:
             self._initialize_agentops()
 
-        # configure caching
+        # Configure caching
         dspy.configure_cache(
             enable_disk_cache=cache,
             enable_memory_cache=cache,
@@ -91,7 +86,6 @@ class DSPyCallbackHandler(BaseCallback):
 
         logger.debug("Created trace as root span for DSPy")
 
-    # def utility for determining module/etc type and mapping it to agentops semconv equivalent
     def _create_span(
         self,
         operation_name: str,
@@ -117,7 +111,7 @@ class DSPyCallbackHandler(BaseCallback):
         """
         if not tracer.initialized:
             logger.warning("AgentOps not initialized, spans will not be created")
-            return # no valid context for non-recording span
+            return # No valid context for non-recording span
 
         otel_tracer = tracer.get_tracer()
 
@@ -131,10 +125,10 @@ class DSPyCallbackHandler(BaseCallback):
             logger.warning(f"No inputs recorded on span {run_id}")
             inputs = {}
 
-        inputs = {f"inputs.{key}": value for key, value in inputs.items()}
+        inputs = {DSPY_INPUT.format(key=key): value for key, value in inputs.items()}
 
         attributes = {**attributes, **inputs}
-        attributes["agentops.span.kind"] = span_kind
+        attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
         attributes["agentops.operation.name"] = operation_name
 
         if run_id is None:
@@ -183,8 +177,6 @@ class DSPyCallbackHandler(BaseCallback):
             outputs: The DSPy output
             exception: The DSPy exception
         """
-        # deal with exceptions
-        # deal with outputs, span attributes <- output
         if run_id not in self.active_spans:
             logger.warning(f"No span found for call {run_id}")
             return
@@ -204,14 +196,9 @@ class DSPyCallbackHandler(BaseCallback):
             )
 
         attributes = {}
-        if span.attributes:
-            attributes = {key: value for key, value in span.attributes.items()}
-
         if isinstance(outputs, dict):
-            outputs = {f"outputs.{key}": value for key, value in outputs.items()}
-
-            attributes = {**attributes, **outputs}
-            span.set_attributes(attributes)
+            outputs = {DSPY_OUTPUT.format(key=key): value for key, value in outputs.items()}
+            span.set_attributes(outputs)
 
         if token is not None:
             detach(token)
@@ -226,16 +213,7 @@ class DSPyCallbackHandler(BaseCallback):
         if run_id in self.token_counts:
             del self.token_counts[run_id]
 
-    # modules, adapters, evaluate, tool, lm
-
-    # maybe a better way to do this?
-    # includes:
-        #   multiple inheritance in python?
-        # BestOfN, ChainOfThought, ChainOfThoughtWithHint
-        # MultiChainComparison, Predict
-        # ProgramOfThought, ReAct, Refine, SmartSearch
-        # RulesInductionProgram
-    # modules also include teleprompt (non lm ... what)
+    # does this type check break on things?
     def _get_span_kind(self, instance: dspy.Module) -> str:
         if isinstance(instance, (dspy.ReAct, dspy.ProgramOfThought)):
             return AgentOpsSpanKindValues.AGENT.value
@@ -249,18 +227,11 @@ class DSPyCallbackHandler(BaseCallback):
             logger.warning(f"Instance's span type not found: {instance}")
             return AgentOpsSpanKindValues.UNKNOWN.value
 
-    # might have to make it on a per-class basis
-    # this sucks cuz it only unpacks lm basically
-    def _get_span_attributes(self, instance: Any) -> dict:
-        attributes = {}
-        attributes = {**attributes, **instance.__dict__}  # append dict, should probably delete some, organize/name
-        return attributes
-
     def on_module_start(
         self,
         call_id: str,
         instance: Any,
-        inputs: Dict[str, Any],
+        inputs: dict[str, Any],
     ):
         """A handler triggered when forward() method of a module (subclass of dspy.Module) is called.
 
@@ -270,23 +241,15 @@ class DSPyCallbackHandler(BaseCallback):
             inputs: The inputs to the module's forward() method. Each arguments is stored as
                 a key-value pair in a dictionary.
         """
-        span_kind = self._get_span_kind(instance)  # make it check for various types
-        span_attributes = self._get_span_attributes(instance)
-
-        #m logger.warning(f"module start, {instance.__class__.__name__}, {instance}, {inputs}") # delete
-        if isinstance(instance, dspy.Module):
-            pass
-
-        # avoid recording empty "args" key
-        if "args" in inputs and not inputs["args"]:
-            inputs.pop("args")
+        span_kind = self._get_span_kind(instance)
+        attributes = {"instance": instance.__dict__}
 
         self._create_span(
             operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
-            attributes=span_attributes,
+            attributes=attributes,
         )
 
     def on_module_end(
@@ -314,7 +277,7 @@ class DSPyCallbackHandler(BaseCallback):
         self,
         call_id: str,
         instance: Any,
-        inputs: Dict[str, Any],
+        inputs: dict[str, Any],
     ):
         """A handler triggered when __call__ method of dspy.LM instance is called.
 
@@ -324,38 +287,21 @@ class DSPyCallbackHandler(BaseCallback):
             inputs: The inputs to the LM's __call__ method. Each arguments is stored as
                 a key-value pair in a dictionary.
         """
-        _instance: dspy.LM = instance
-        _instance.cache # (cache_in_memory is deprecated)
-        _instance.model # might be redundant
-        _instance.provider # def redundant?
-        _instance.finetuning_model
-
-        p_instance: dspy.Predict = instance
-        dspy.ReAct
-
-        # duck type to collect?
-
         span_kind = self._get_span_kind(instance)
-        span_attributes = self._get_span_attributes(instance)
-
-        #m logger.warning(f"lm start, {instance.__class__.__name__}, {instance}, {inputs}")
-
-        attributes = {
-            **instance.kwargs,
-        }
+        attributes = {"instance": instance.__dict__}
 
         self._create_span(
             operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
-            attributes=span_attributes,
+            attributes=attributes,
         )
 
     def on_lm_end(
         self,
         call_id: str,
-        outputs: Dict[str, Any] | None,
+        outputs: dict[str, Any] | None,
         exception: Exception | None = None,
     ):
         """A handler triggered after __call__ method of dspy.LM instance is executed.
@@ -372,7 +318,7 @@ class DSPyCallbackHandler(BaseCallback):
         self,
         call_id: str,
         instance: Any,
-        inputs: Dict[str, Any],
+        inputs: dict[str, Any],
     ):
         """A handler triggered when format() method of an adapter (subclass of dspy.Adapter) is called.
 
@@ -382,24 +328,21 @@ class DSPyCallbackHandler(BaseCallback):
             inputs: The inputs to the Adapter's format() method. Each arguments is stored as
                 a key-value pair in a dictionary.
         """
-        span_kind = AgentOpsSpanKindValues.OPERATION.value # custom semconv?
-        span_attributes = {"lm_instance": instance.__class__.__name__}
-        # semconv for parser
-
-        #m logger.warning(f"adapter format start, {instance.__class__.__name__}, {instance}, {inputs}")
+        span_kind = AgentOpsSpanKindValues.OPERATION.value
+        attributes = {"instance": instance.__dict__}
 
         self._create_span(
             operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
-            attributes=span_attributes,
+            attributes=attributes,
         )
 
     def on_adapter_format_end(
         self,
         call_id: str,
-        outputs: Dict[str, Any] | None,
+        outputs: dict[str, Any] | None,
         exception: Exception | None = None,
     ):
         """A handler triggered after format() method of an adapter (subclass of dspy.Adapter) is called..
@@ -416,7 +359,7 @@ class DSPyCallbackHandler(BaseCallback):
         self,
         call_id: str,
         instance: Any,
-        inputs: Dict[str, Any],
+        inputs: dict[str, Any],
     ):
         """A handler triggered when parse() method of an adapter (subclass of dspy.Adapter) is called.
 
@@ -427,22 +370,20 @@ class DSPyCallbackHandler(BaseCallback):
                 a key-value pair in a dictionary.
         """
         span_kind = AgentOpsSpanKindValues.OPERATION.value
-        span_attributes = {"adapter": instance.__class__.__name__}
-
-        #m logger.warning(f"adapter parser start, {instance.__class__.__name__}, {instance}, {inputs}")
+        attributes = {"instance": instance.__dict__}
 
         self._create_span(
             operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
-            attributes=span_attributes,
+            attributes=attributes,
         )
 
     def on_adapter_parse_end(
         self,
         call_id: str,
-        outputs: Dict[str, Any] | None,
+        outputs: dict[str, Any] | None,
         exception: Exception | None = None,
     ):
         """A handler triggered after parse() method of an adapter (subclass of dspy.Adapter) is called.
@@ -459,7 +400,7 @@ class DSPyCallbackHandler(BaseCallback):
         self,
         call_id: str,
         instance: Any,
-        inputs: Dict[str, Any],
+        inputs: dict[str, Any],
     ):
         """A handler triggered when a tool is called.
 
@@ -469,23 +410,21 @@ class DSPyCallbackHandler(BaseCallback):
             inputs: The inputs to the Tool's __call__ method. Each arguments is stored as
                 a key-value pair in a dictionary.
         """
-        span_kind = "tool"
-        span_attributes = {"tool": instance.__class__.__name__}
-
-        #m logger.warning(f"tool start, {instance.__class__.__name__}, {instance}, {inputs}")
+        span_kind = AgentOpsSpanKindValues.TOOL.value
+        attributes = {"instance": instance.__dict__}
 
         self._create_span(
             operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
-            attributes=span_attributes,
+            attributes=attributes,
         )
 
     def on_tool_end(
         self,
         call_id: str,
-        outputs: Dict[str, Any] | None,
+        outputs: dict[str, Any] | None,
         exception: Exception | None = None,
     ):
         """A handler triggered after a tool is executed.
@@ -502,7 +441,7 @@ class DSPyCallbackHandler(BaseCallback):
         self,
         call_id: str,
         instance: Any,
-        inputs: Dict[str, Any],
+        inputs: dict[str, Any],
     ):
         """A handler triggered when evaluation is started.
 
@@ -512,17 +451,15 @@ class DSPyCallbackHandler(BaseCallback):
             inputs: The inputs to the Evaluate's __call__ method. Each arguments is stored as
                 a key-value pair in a dictionary.
         """
-        span_kind = "evalute"
-        span_attributes = {"evalute": instance.__class__.__name__}
-
-        _instance: dspy.Evaluate = instance
+        span_kind = DSPY_EVALUATE
+        attributes = {"instance": instance.__dict__}
 
         self._create_span(
             operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
-            attributes=span_attributes,
+            attributes=attributes,
         )
 
     def on_evaluate_end(
