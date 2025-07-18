@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from opentelemetry import attributes
 from opentelemetry.context import attach, detach
-from opentelemetry.trace import SpanContext, set_span_in_context
+from opentelemetry.trace import SpanContext, NonRecordingSpan, set_span_in_context
 from opentelemetry.sdk.trace import Span as SDKSpan
 
 from agentops.logging import logger
@@ -117,7 +117,7 @@ class DSPyCallbackHandler(BaseCallback):
         """
         if not tracer.initialized:
             logger.warning("AgentOps not initialized, spans will not be created")
-            return trace.NonRecordingSpan(SpanContext.INVALID)  # type: ignore
+            return # no valid context for non-recording span
 
         otel_tracer = tracer.get_tracer()
 
@@ -388,7 +388,7 @@ class DSPyCallbackHandler(BaseCallback):
         logger.warning(f"adapter format start, {instance.__class__.__name__}, {instance}, {inputs}")
 
         self._create_span(
-            operation_name=f"lm_call_{instance.__class__.__name__}",
+            operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
@@ -431,7 +431,7 @@ class DSPyCallbackHandler(BaseCallback):
         logger.warning(f"adapter parser start, {instance.__class__.__name__}, {instance}, {inputs}")
 
         self._create_span(
-            operation_name=f"adapter_parser_{instance.__class__.__name__}",
+            operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
@@ -474,7 +474,7 @@ class DSPyCallbackHandler(BaseCallback):
         logger.warning(f"tool start, {instance.__class__.__name__}, {instance}, {inputs}")
 
         self._create_span(
-            operation_name=f"tool_{instance.__class__.__name__}",
+            operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
@@ -517,7 +517,7 @@ class DSPyCallbackHandler(BaseCallback):
         _instance: dspy.Evaluate = instance
 
         self._create_span(
-            operation_name=f"evaluate_{instance.__class__.__name__}",
+            operation_name=f"{instance.__class__.__name__}",
             span_kind=span_kind,
             run_id=call_id,
             inputs=inputs,
