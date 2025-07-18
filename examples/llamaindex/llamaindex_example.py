@@ -8,7 +8,7 @@ from llama_index.instrumentation.agentops import AgentOpsHandler
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.huggingface import HuggingFaceLLM
 
-handler = AgentOpsHandler()
+handler = AgentOpsHandler(tags=["llamaindex", "rag", "agentops-example"])
 handler.init()
 
 load_dotenv()
@@ -64,3 +64,15 @@ print("\n" + "=" * 50)
 print("🎉 Example completed successfully!")
 print("📊 Check your AgentOps dashboard to see the recorded session with LLM calls and operations.")
 print("🔗 The session link should be printed above by AgentOps.")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    import agentops
+
+    agentops.validate_trace_spans(trace_context=None)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise

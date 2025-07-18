@@ -27,38 +27,7 @@
     "name": "Docs",
     "icon": "lines-leaning"
   },
-  "anchors": [
-    {
-      "name": "Chat With Docs",
-      "icon": "user-doctor-message",
-      "url": "https://entelligence.ai/AgentOps-AI&agentops"
-    },
-    {
-      "name": "Your Dashboard",
-      "icon": "chart-tree-map",
-      "url": "https://app.agentops.ai"
-    },
-    {
-      "name": "Discord",
-      "icon": "discord",
-      "url": "https://discord.gg/UgJyyxx7uc"
-    },
-    {
-      "name": "GitHub",
-      "icon": "github",
-      "url": "https://github.com/AgentOps-AI"
-    },
-    {
-      "name": "Call my Agent (Support)",
-      "icon": "headset",
-      "url": "https://agentops.ai/contact"
-    },
-    {
-      "name": "Give Feedback",
-      "icon": "comment-smile",
-      "url": "https://agentops.ai/contact"
-    }
-  ],
+  "anchors": [],
   "versions": ["v2", "v1", "v0"],
   "navigation": [
     {
@@ -135,7 +104,7 @@
     },
     {
       "group": "Getting Started",
-      "pages": ["v2/quickstart", "v2/examples/examples"],
+      "pages": ["v2/quickstart", "v2/examples/examples", "v2/usage/mcp-docs", "v2/usage/mcp-server"],
       "version": "v2"
     },
     {
@@ -179,7 +148,6 @@
         "v2/usage/dashboard-info",
         "v2/usage/sdk-reference",
         "v2/usage/typescript-sdk",
-        "v2/usage/mcp-server",
         "v2/usage/advanced-configuration",
         "v2/usage/context-managers",
         "v2/usage/tracking-llm-calls",

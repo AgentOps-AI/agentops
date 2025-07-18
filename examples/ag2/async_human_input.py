@@ -25,7 +25,7 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
-agentops.init(auto_start_session=False)
+agentops.init(auto_start_session=False, trace_name="AG2 Async Human Input")
 tracer = agentops.start_trace(
     trace_name="AG2 Agent chat with Async Human Inputs", tags=["ag2-chat-async-human-inputs", "agentops-example"]
 )
@@ -104,3 +104,13 @@ async def main():
 
 # await main()
 agentops.end_trace(tracer, end_state="Success")
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise

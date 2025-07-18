@@ -77,3 +77,17 @@ agent_executor.invoke({"input": "What comedies are playing?"}, config={"callback
 
 # ## Check your session
 # Finally, check your run on [AgentOps](https://app.agentops.ai). You will see a session recorded with the LLM calls and tool usage.
+
+# Let's check programmatically that spans were recorded in AgentOps
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    import agentops
+
+    agentops.validate_trace_spans(trace_context=None)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except ImportError:
+    print("\n❌ Error: agentops library not installed. Please install it to validate spans.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise

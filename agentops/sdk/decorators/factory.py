@@ -45,13 +45,20 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 def __init__(self, *args: Any, **kwargs: Any):
                     op_name = name or wrapped.__name__
                     self._agentops_span_context_manager = _create_as_current_span(op_name, entity_kind, version)
-
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
                     try:
                         _record_entity_input(self._agentops_active_span, args, kwargs)
                     except Exception as e:
                         logger.warning(f"Failed to record entity input for class {op_name}: {e}")
                     super().__init__(*args, **kwargs)
+
+                def __del__(self):
+                    """Ensure span is properly ended when object is destroyed."""
+                    if hasattr(self, "_agentops_span_context_manager") and self._agentops_span_context_manager:
+                        try:
+                            self._agentops_span_context_manager.__exit__(None, None, None)
+                        except Exception:
+                            pass
 
                 async def __aenter__(self) -> "WrappedClass":
                     if hasattr(self, "_agentops_active_span") and self._agentops_active_span is not None:
@@ -95,6 +102,34 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                         f"@agentops.trace on generator '{operation_name}' creates a single span, not a full trace."
                     )
                     # Fallthrough to existing generator logic which creates a single span.
+
+                    # !! was previously not implemented, checking with @dwij if this was intentional or if my implementation should go in
+                    if is_generator:
+                        span, _, token = tracer.make_span(
+                            operation_name,
+                            entity_kind,
+                            version=version,
+                            attributes={CoreAttributes.TAGS: tags} if tags else None,
+                        )
+                        try:
+                            _record_entity_input(span, args, kwargs, entity_kind=entity_kind)
+                        except Exception as e:
+                            logger.warning(f"Input recording failed for '{operation_name}': {e}")
+                        result = wrapped_func(*args, **kwargs)
+                        return _process_sync_generator(span, result)
+                    elif is_async_generator:
+                        span, _, token = tracer.make_span(
+                            operation_name,
+                            entity_kind,
+                            version=version,
+                            attributes={CoreAttributes.TAGS: tags} if tags else None,
+                        )
+                        try:
+                            _record_entity_input(span, args, kwargs, entity_kind=entity_kind)
+                        except Exception as e:
+                            logger.warning(f"Input recording failed for '{operation_name}': {e}")
+                        result = wrapped_func(*args, **kwargs)
+                        return _process_async_generator(span, token, result)
                 elif is_async:
 
                     async def _wrapped_session_async() -> Any:

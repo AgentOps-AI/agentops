@@ -40,10 +40,14 @@ def basic_context_manager_example():
     print("Basic Context Manager Example")
 
     # Initialize AgentOps
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Basic Example",
+        tags=["context-manager", "agentops-example"],
+    )
 
     # Use native TraceContext context manager
-    with agentops.start_trace("basic_example", tags=["basic", "demo"]):
+    with agentops.start_trace("Context Manager Basic Example", tags=["basic", "demo"]):
         print("Trace started")
 
         # Create and use agent
@@ -58,10 +62,14 @@ def multiple_parallel_traces():
     """Example showing multiple parallel traces."""
     print("\nMultiple Parallel Traces")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Multiple Parallel Traces",
+        tags=["context-manager", "agentops-example"],
+    )
 
     # First trace
-    with agentops.start_trace("task_1", tags=["parallel", "task-1"]):
+    with agentops.start_trace("Context Manager Task 1", tags=["parallel", "task-1"]):
         print("Task 1 started")
         agent1 = SimpleAgent("Agent1")
         result1 = agent1.process_data("task 1 data")
@@ -81,7 +89,11 @@ def error_handling_example():
     """Example showing error handling with context manager."""
     print("\nError Handling Example")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Error Handling",
+        tags=["context-manager", "agentops-example"],
+    )
 
     try:
         with agentops.start_trace("error_example", tags=["error-handling"]):
@@ -103,7 +115,11 @@ def nested_traces_example():
     """Example showing nested traces (which are parallel, not parent-child)."""
     print("\nNested Traces Example")
 
-    agentops.init(api_key=AGENTOPS_API_KEY)
+    agentops.init(
+        api_key=AGENTOPS_API_KEY,
+        trace_name="Context Manager Nested Traces",
+        tags=["context-manager", "agentops-example"],
+    )
 
     # Outer trace
     with agentops.start_trace("main_workflow", tags=["workflow", "main"]):
@@ -138,3 +154,13 @@ if __name__ == "__main__":
     nested_traces_example()
 
     print("\nAll examples completed!")
+
+    # Let's check programmatically that spans were recorded in AgentOps
+    print("\n" + "=" * 50)
+    print("Now let's verify that our LLM calls were tracked properly...")
+    try:
+        agentops.validate_trace_spans(trace_context=None)
+        print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+    except agentops.ValidationError as e:
+        print(f"\n❌ Error validating spans: {e}")
+        raise
