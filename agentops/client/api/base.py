@@ -21,10 +21,10 @@ class TokenFetcher(Protocol):
 
 class BaseApiClient:
     """
-    Base class for API communication with connection pooling.
+    Base class for API communication with async HTTP methods.
 
     This class provides the core HTTP functionality without authentication.
-    It should be used for APIs that don't require authentication.
+    All HTTP methods are asynchronous.
     """
 
     def __init__(self, endpoint: str):
@@ -72,16 +72,16 @@ class BaseApiClient:
         """
         return f"{self.endpoint}{path}"
 
-    def request(
+    async def async_request(
         self,
         method: str,
         path: str,
         data: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
         timeout: int = 30,
-    ) -> requests.Response:
+    ) -> Optional[Dict[str, Any]]:
         """
-        Make a generic HTTP request
+        Make a generic async HTTP request
 
         Args:
             method: HTTP method (e.g., 'get', 'post', 'put', 'delete')
@@ -91,7 +91,7 @@ class BaseApiClient:
             timeout: Request timeout in seconds
 
         Returns:
-            Response from the API
+            JSON response as dictionary, or None if request failed
 
         Raises:
             Exception: If the request fails
@@ -99,17 +99,16 @@ class BaseApiClient:
         url = self._get_full_url(path)
 
         try:
-            response = self.http_client.request(method=method, url=url, data=data, headers=headers, timeout=timeout)
-
-            self.last_response = response
-            return response
-        except requests.RequestException as e:
-            self.last_response = None
+            response_data = await HttpClient.async_request(
+                method=method, url=url, data=data, headers=headers, timeout=timeout
+            )
+            return response_data
+        except Exception as e:
             raise Exception(f"{method.upper()} request failed: {str(e)}") from e
 
-    def post(self, path: str, data: Dict[str, Any], headers: Dict[str, str]) -> requests.Response:
+    async def post(self, path: str, data: Dict[str, Any], headers: Dict[str, str]) -> Optional[Dict[str, Any]]:
         """
-        Make POST request
+        Make async POST request
 
         Args:
             path: API endpoint path
@@ -117,26 +116,26 @@ class BaseApiClient:
             headers: Request headers
 
         Returns:
-            Response from the API
+            JSON response as dictionary, or None if request failed
         """
-        return self.request("post", path, data=data, headers=headers)
+        return await self.async_request("post", path, data=data, headers=headers)
 
-    def get(self, path: str, headers: Dict[str, str]) -> requests.Response:
+    async def get(self, path: str, headers: Dict[str, str]) -> Optional[Dict[str, Any]]:
         """
-        Make GET request
+        Make async GET request
 
         Args:
             path: API endpoint path
             headers: Request headers
 
         Returns:
-            Response from the API
+            JSON response as dictionary, or None if request failed
         """
-        return self.request("get", path, headers=headers)
+        return await self.async_request("get", path, headers=headers)
 
-    def put(self, path: str, data: Dict[str, Any], headers: Dict[str, str]) -> requests.Response:
+    async def put(self, path: str, data: Dict[str, Any], headers: Dict[str, str]) -> Optional[Dict[str, Any]]:
         """
-        Make PUT request
+        Make async PUT request
 
         Args:
             path: API endpoint path
@@ -144,19 +143,19 @@ class BaseApiClient:
             headers: Request headers
 
         Returns:
-            Response from the API
+            JSON response as dictionary, or None if request failed
         """
-        return self.request("put", path, data=data, headers=headers)
+        return await self.async_request("put", path, data=data, headers=headers)
 
-    def delete(self, path: str, headers: Dict[str, str]) -> requests.Response:
+    async def delete(self, path: str, headers: Dict[str, str]) -> Optional[Dict[str, Any]]:
         """
-        Make DELETE request
+        Make async DELETE request
 
         Args:
             path: API endpoint path
             headers: Request headers
 
         Returns:
-            Response from the API
+            JSON response as dictionary, or None if request failed
         """
-        return self.request("delete", path, headers=headers)
+        return await self.async_request("delete", path, headers=headers)

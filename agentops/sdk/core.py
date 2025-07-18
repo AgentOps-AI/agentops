@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import atexit
 import threading
-from typing import Optional, Any, Dict, Union
+from typing import Optional, Any, Dict, Union, Callable
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -18,6 +17,7 @@ from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger, setup_print_logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
+from agentops.sdk.exporters import AuthenticatedOTLPExporter
 from agentops.sdk.attributes import (
     get_global_resource_attributes,
     get_trace_attributes,
@@ -83,7 +83,7 @@ def setup_telemetry(
     max_queue_size: int = 512,
     max_wait_time: int = 5000,
     export_flush_interval: int = 1000,
-    jwt: Optional[str] = None,
+    jwt_provider: Optional[Callable[[], Optional[str]]] = None,
 ) -> tuple[TracerProvider, MeterProvider]:
     """
     Setup the telemetry system.
@@ -96,7 +96,7 @@ def setup_telemetry(
         max_queue_size: Maximum number of spans to queue before forcing a flush
         max_wait_time: Maximum time in milliseconds to wait before flushing
         export_flush_interval: Time interval in milliseconds between automatic exports of telemetry data
-        jwt: JWT token for authentication
+        jwt_provider: Function that returns the current JWT token
 
     Returns:
         Tuple of (TracerProvider, MeterProvider)
@@ -113,8 +113,8 @@ def setup_telemetry(
     # Set as global provider
     trace.set_tracer_provider(provider)
 
-    # Create exporter with authentication
-    exporter = OTLPSpanExporter(endpoint=exporter_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {})
+    # Create exporter with dynamic JWT support
+    exporter = AuthenticatedOTLPExporter(endpoint=exporter_endpoint, jwt_provider=jwt_provider)
 
     # Regular processor for normal spans and immediate export
     processor = BatchSpanProcessor(
@@ -126,10 +126,13 @@ def setup_telemetry(
     internal_processor = InternalSpanProcessor()  # Catches spans for AgentOps on-terminal printing
     provider.add_span_processor(internal_processor)
 
-    # Setup metrics
-    metric_exporter = OTLPMetricExporter(
-        endpoint=metrics_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
-    )
+    # Setup metrics with JWT provider
+    def get_metrics_headers():
+        token = jwt_provider() if jwt_provider else None
+        return {"Authorization": f"Bearer {token}"} if token else {}
+
+    metric_exporter = OTLPMetricExporter(endpoint=metrics_endpoint, headers=get_metrics_headers())
+
     metric_reader = PeriodicExportingMetricReader(metric_exporter)
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
@@ -162,16 +165,17 @@ class TracingCore:
         self._span_processors: list = []
         self._active_traces: dict = {}
         self._traces_lock = threading.Lock()
+        self._jwt_provider: Optional[Callable[[], Optional[str]]] = None
 
         # Register shutdown handler
         atexit.register(self.shutdown)
 
-    def initialize(self, jwt: Optional[str] = None, **kwargs: Any) -> None:
+    def initialize(self, jwt_provider: Optional[Callable[[], Optional[str]]] = None, **kwargs: Any) -> None:
         """
         Initialize the tracing core with the given configuration.
 
         Args:
-            jwt: JWT token for authentication
+            jwt_provider: Function that returns the current JWT token
             **kwargs: Configuration parameters for tracing
                 service_name: Name of the service
                 exporter: Custom span exporter
@@ -184,6 +188,9 @@ class TracingCore:
         """
         if self._initialized:
             return
+
+        # Store JWT provider for potential updates
+        self._jwt_provider = jwt_provider
 
         # Set default values for required fields
         kwargs.setdefault("service_name", "agentops")
@@ -216,7 +223,7 @@ class TracingCore:
             max_queue_size=config["max_queue_size"],
             max_wait_time=config["max_wait_time"],
             export_flush_interval=config["export_flush_interval"],
-            jwt=jwt,
+            jwt_provider=jwt_provider,
         )
 
         self.provider = provider
@@ -224,6 +231,29 @@ class TracingCore:
 
         self._initialized = True
         logger.debug("Tracing core initialized")
+
+    def update_config(self, config_updates: Dict[str, Any]) -> None:
+        """
+        Update the tracing configuration.
+
+        Args:
+            config_updates: Dictionary of configuration updates
+        """
+        if not self._initialized:
+            logger.warning("Cannot update config: tracer not initialized")
+            return
+
+        if self._config:
+            # Update the stored config
+            self._config.update(config_updates)
+
+            # Update resource attributes if project_id changed
+            if "project_id" in config_updates:
+                new_project_id = config_updates["project_id"]
+                if new_project_id and new_project_id != "temporary":
+                    logger.debug(f"Updating tracer project_id to: {new_project_id}")
+                    # Note: OpenTelemetry doesn't easily support updating resource attributes
+                    # after initialization, but we can log the change for debugging
 
     @property
     def initialized(self) -> bool:
@@ -239,29 +269,39 @@ class TracingCore:
         return self._config
 
     def shutdown(self) -> None:
-        """Shutdown the tracing core."""
-
-        if not self._initialized or not self.provider:
+        """Shutdown the tracing core and clean up resources."""
+        if not self._initialized:
             return
 
-        logger.debug("Attempting to flush span processors during shutdown...")
-        self._flush_span_processors()
-
-        # Shutdown provider
         try:
-            self.provider.shutdown()
-        except Exception as e:
-            logger.warning(f"Error shutting down provider: {e}")
+            # End all active traces
+            with self._traces_lock:
+                active_traces = list(self._active_traces.values())
+                logger.debug(f"Shutting down tracer with {len(active_traces)} active traces")
 
-        # Shutdown meter_provider
-        if hasattr(self, "_meter_provider") and self._meter_provider:
-            try:
+            for trace_context in active_traces:
+                try:
+                    self._end_single_trace(trace_context, "Shutdown")
+                except Exception as e:
+                    logger.error(f"Error ending trace during shutdown: {e}")
+
+            # Force flush all processors
+            self._flush_span_processors()
+
+            # Shutdown providers
+            if self.provider:
+                self.provider.shutdown()
+
+            if self._meter_provider:
                 self._meter_provider.shutdown()
-            except Exception as e:
-                logger.warning(f"Error shutting down meter provider: {e}")
 
-        self._initialized = False
-        logger.debug("Tracing core shut down")
+            logger.debug("Tracing core shutdown complete")
+
+        except Exception as e:
+            logger.error(f"Error during tracing core shutdown: {e}")
+
+        finally:
+            self._initialized = False
 
     def _flush_span_processors(self) -> None:
         """Helper to force flush all span processors."""
@@ -291,12 +331,15 @@ class TracingCore:
         return trace.get_tracer(name)
 
     @classmethod
-    def initialize_from_config(cls, config_obj: Any, **kwargs: Any) -> None:
+    def initialize_from_config(
+        cls, config_obj: Any, jwt_provider: Optional[Callable[[], Optional[str]]] = None, **kwargs: Any
+    ) -> None:
         """
         Initialize the tracing core from a configuration object.
 
         Args:
             config: Configuration object (dict or object with dict method)
+            jwt_provider: Function that returns the current JWT token
             **kwargs: Additional keyword arguments to pass to initialize
         """
         # Use the global tracer instance instead of getting singleton
@@ -330,7 +373,7 @@ class TracingCore:
         tracing_kwargs.update(kwargs)
 
         # Initialize with the extracted configuration
-        instance.initialize(**tracing_kwargs)
+        instance.initialize(jwt_provider=jwt_provider, **tracing_kwargs)
 
         # Span types are registered in the constructor
         # No need to register them here anymore
