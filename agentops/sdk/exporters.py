@@ -1,6 +1,8 @@
 # Define a separate class for the authenticated OTLP exporter
 # This is imported conditionally to avoid dependency issues
-from typing import Dict, Optional, Sequence
+from typing import Dict, Optional, Sequence, Callable
+import threading
+import time
 
 import requests
 from opentelemetry.exporter.otlp.proto.http import Compression
@@ -14,64 +16,147 @@ from agentops.logging import logger
 
 class AuthenticatedOTLPExporter(OTLPSpanExporter):
     """
-    OTLP exporter with JWT authentication support.
+    OTLP exporter with dynamic JWT authentication support.
 
-    This exporter automatically handles JWT authentication and token refresh
-    for telemetry data sent to the AgentOps API using a dedicated HTTP session
-    with authentication retry logic built in.
+    This exporter allows for updating JWT tokens dynamically without recreating
+    the exporter. It maintains a reference to a JWT token that can be updated
+    by external code, and automatically includes the latest token in requests.
     """
 
     def __init__(
         self,
         endpoint: str,
-        jwt: str,
+        jwt_provider: Optional[Callable[[], Optional[str]]] = None,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None,
         compression: Optional[Compression] = None,
         **kwargs,
     ):
-        # TODO: Implement re-authentication
-        # FIXME: endpoint here is not "endpoint" from config
-        # self._session = HttpClient.get_authenticated_session(endpoint, api_key)
+        """
+        Initialize the dynamic JWT OTLP exporter.
 
-        # Initialize the parent class
+        Args:
+            endpoint: The OTLP endpoint URL
+            jwt_provider: A callable that returns the current JWT token
+            headers: Additional headers to include
+            timeout: Request timeout
+            compression: Compression type
+            **kwargs: Additional arguments passed to parent
+        """
+        self._jwt_provider = jwt_provider
+        self._lock = threading.Lock()
+        self._last_auth_failure = 0
+        self._auth_failure_threshold = 60  # Don't retry auth failures more than once per minute
+
+        # Initialize parent without Authorization header - we'll add it dynamically
+        base_headers = headers or {}
+
         super().__init__(
             endpoint=endpoint,
-            headers={
-                "Authorization": f"Bearer {jwt}",
-            },  # Base headers
+            headers=base_headers,
             timeout=timeout,
             compression=compression,
-            # session=self._session,  # Use our authenticated session
+            **kwargs,
         )
+
+    def _get_current_jwt(self) -> Optional[str]:
+        """Get the current JWT token from the provider."""
+        if self._jwt_provider:
+            try:
+                return self._jwt_provider()
+            except Exception as e:
+                logger.warning(f"Failed to get JWT token: {e}")
+        return None
+
+    def _prepare_headers(self, headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+        """Prepare headers with current JWT token."""
+        # Start with base headers
+        prepared_headers = dict(self._headers)
+
+        # Add any additional headers
+        if headers:
+            prepared_headers.update(headers)
+
+        # Add current JWT token if available
+        jwt_token = self._get_current_jwt()
+        if jwt_token:
+            prepared_headers["Authorization"] = f"Bearer {jwt_token}"
+
+        return prepared_headers
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         """
-        Export spans with automatic authentication handling
+        Export spans with dynamic JWT authentication.
 
-        The authentication and retry logic is now handled by the underlying
-        HTTP session adapter, so we just need to call the parent export method.
-
-        Args:
-            spans: The list of spans to export
-
-        Returns:
-            The result of the export
+        This method overrides the parent's export to ensure we always use
+        the latest JWT token and handle authentication failures gracefully.
         """
+        # Check if we should skip due to recent auth failure
+        with self._lock:
+            current_time = time.time()
+            if self._last_auth_failure > 0 and current_time - self._last_auth_failure < self._auth_failure_threshold:
+                logger.debug("Skipping export due to recent authentication failure")
+                return SpanExportResult.FAILURE
+
         try:
-            return super().export(spans)
+            # Get current JWT and prepare headers
+            current_headers = self._prepare_headers()
+
+            # Temporarily update the session headers for this request
+            original_headers = dict(self._session.headers)
+            self._session.headers.update(current_headers)
+
+            try:
+                # Call parent export method
+                result = super().export(spans)
+
+                # Reset auth failure timestamp on success
+                if result == SpanExportResult.SUCCESS:
+                    with self._lock:
+                        self._last_auth_failure = 0
+
+                return result
+
+            finally:
+                # Restore original headers
+                self._session.headers.clear()
+                self._session.headers.update(original_headers)
+
+        except requests.exceptions.HTTPError as e:
+            if e.response and e.response.status_code in (401, 403):
+                # Authentication error - record timestamp and warn
+                with self._lock:
+                    self._last_auth_failure = time.time()
+
+                logger.warning(
+                    f"Authentication failed during span export: {e}. "
+                    f"Will retry in {self._auth_failure_threshold} seconds."
+                )
+                return SpanExportResult.FAILURE
+            else:
+                logger.error(f"HTTP error during span export: {e}")
+                return SpanExportResult.FAILURE
+
         except AgentOpsApiJwtExpiredException as e:
-            # Authentication token expired or invalid
-            logger.warning(f"Authentication error during span export: {e}")
+            # JWT expired - record timestamp and warn
+            with self._lock:
+                self._last_auth_failure = time.time()
+
+            logger.warning(
+                f"JWT token expired during span export: {e}. " f"Will retry in {self._auth_failure_threshold} seconds."
+            )
             return SpanExportResult.FAILURE
+
         except ApiServerException as e:
             # Server-side error
             logger.error(f"API server error during span export: {e}")
             return SpanExportResult.FAILURE
+
         except requests.RequestException as e:
             # Network or HTTP error
             logger.error(f"Network error during span export: {e}")
             return SpanExportResult.FAILURE
+
         except Exception as e:
             # Any other error
             logger.error(f"Unexpected error during span export: {e}")
