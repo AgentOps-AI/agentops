@@ -16,6 +16,7 @@ DSPY_OUTPUT = "dspy.output.{key}"
 DSPY_ATTRIBUTE = "dspy.attribute.{key}"
 DSPY_EVALUATE = "evaluate"
 
+
 class DSPyCallbackHandler(BaseCallback):
     """
     AgentOps callback handler for DSPy.
@@ -51,11 +52,7 @@ class DSPyCallbackHandler(BaseCallback):
         import agentops
 
         if not tracer.initialized:
-            init_kwargs = {
-                "auto_start_session": False,
-                "instrument_llm_calls": True,
-                "api_key": None
-            }
+            init_kwargs = {"auto_start_session": False, "instrument_llm_calls": True, "api_key": None}
 
             if self.api_key:
                 init_kwargs["api_key"] = self.api_key
@@ -111,7 +108,7 @@ class DSPyCallbackHandler(BaseCallback):
         """
         if not tracer.initialized:
             logger.warning("AgentOps not initialized, spans will not be created")
-            return # No valid context for non-recording span
+            return  # No valid context for non-recording span
 
         otel_tracer = tracer.get_tracer()
 
@@ -184,18 +181,13 @@ class DSPyCallbackHandler(BaseCallback):
         span: SDKSpan = self.active_spans.pop(run_id)
         token = self.context_tokens.pop(run_id, None)
 
-
         if exception:
             logger.warning(f"Exception {str(exception)}")
             span.add_event(
                 name="exception",
-                attributes={
-                    "exception.type": exception.__class__.__name__,
-                    "exception.message": str(exception)
-                },
+                attributes={"exception.type": exception.__class__.__name__, "exception.message": str(exception)},
             )
 
-        attributes = {}
         if isinstance(outputs, dict):
             outputs = {DSPY_OUTPUT.format(key=key): value for key, value in outputs.items()}
             span.set_attributes(outputs)
@@ -205,7 +197,7 @@ class DSPyCallbackHandler(BaseCallback):
 
         try:
             span.end()
-            logger.debug(f"Ended span: {span.update_name('test')}") # ugh
+            logger.debug(f"Ended span: {span.update_name('test')}")  # ugh
         except Exception as e:
             logger.warning(f"Error ending span: {e}")
 
