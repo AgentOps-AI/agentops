@@ -376,10 +376,21 @@ class XpanderInstrumentor(CommonInstrumentor):
             logger.error(f"Error extracting OpenAI message attributes: {e}")
 
     def _wrap_init_task(self, original_method):
-        """Wrap init_task to create agent span hierarchy."""
+        """Wrap init_task and add_task to create agent span hierarchy."""
         instrumentor = self
 
-        def wrapper(self, execution):
+        def wrapper(self, execution=None, input=None, **kwargs):
+            # Normalize parameters - handle both add_task(input=...) and init_task(execution=...)
+            if execution is None and input is not None:
+                # add_task call with input parameter - normalize to execution format
+                if isinstance(input, str):
+                    execution = {"input": {"text": input}}
+                else:
+                    execution = {"input": input}
+            elif execution is None:
+                # Neither execution nor input provided - create empty execution
+                execution = {}
+            
             # Extract session ID and agent info
             session_id = instrumentor._extract_session_id(execution)
             agent_name = getattr(self, "name", "unknown")
@@ -389,7 +400,11 @@ class XpanderInstrumentor(CommonInstrumentor):
             existing_session = instrumentor._context.get_session(session_id)
             if existing_session:
                 # Session already exists, just continue
-                result = original_method(self, execution)
+                # Call with original parameters
+                if input is not None:
+                    result = original_method(self, input=input, **kwargs)
+                else:
+                    result = original_method(self, execution)
                 return result
 
             # Extract task input
@@ -454,7 +469,11 @@ class XpanderInstrumentor(CommonInstrumentor):
 
             try:
                 # Execute original method - don't end agent span here, it will be ended in retrieve_execution_result
-                result = original_method(self, execution)
+                # Call with original parameters
+                if input is not None:
+                    result = original_method(self, input=input, **kwargs)
+                else:
+                    result = original_method(self, execution)
                 return result
             except Exception as e:
                 # Use existing AgentOps error handling utilities
