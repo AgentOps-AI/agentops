@@ -73,12 +73,14 @@ def safe_set_attribute(span, key: str, value: Any) -> None:
 
 
 class XpanderContext:
-    """Context manager for Xpander sessions."""
+    """Context manager for Xpander sessions with nested conversation spans."""
 
     def __init__(self):
         self._sessions = {}  # session_id -> session_data
         self._workflow_spans = {}  # session_id -> active workflow span
         self._agent_spans = {}  # session_id -> active agent span
+        self._conversation_spans = {}  # session_id -> active conversation span
+        self._conversation_counters = {}  # session_id -> conversation counter
         self._lock = threading.Lock()
 
     def start_session(self, session_id: str, agent_info: Dict[str, Any], workflow_span=None, agent_span=None) -> None:
@@ -98,6 +100,31 @@ class XpanderContext:
                 self._workflow_spans[session_id] = workflow_span
             if agent_span:
                 self._agent_spans[session_id] = agent_span
+            
+            # Initialize conversation counter
+            self._conversation_counters[session_id] = 0
+
+    def start_conversation(self, session_id: str, conversation_span) -> None:
+        """Start a new conversation within the session."""
+        with self._lock:
+            self._conversation_spans[session_id] = conversation_span
+            self._conversation_counters[session_id] = self._conversation_counters.get(session_id, 0) + 1
+
+    def end_conversation(self, session_id: str) -> None:
+        """End the current conversation."""
+        with self._lock:
+            if session_id in self._conversation_spans:
+                del self._conversation_spans[session_id]
+    
+    def has_active_conversation(self, session_id: str) -> bool:
+        """Check if there's an active conversation for this session."""
+        with self._lock:
+            return session_id in self._conversation_spans
+
+    def get_conversation_counter(self, session_id: str) -> int:
+        """Get the current conversation counter."""
+        with self._lock:
+            return self._conversation_counters.get(session_id, 0)
 
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get session data."""
@@ -119,6 +146,10 @@ class XpanderContext:
                 del self._workflow_spans[session_id]
             if session_id in self._agent_spans:
                 del self._agent_spans[session_id]
+            if session_id in self._conversation_spans:
+                del self._conversation_spans[session_id]
+            if session_id in self._conversation_counters:
+                del self._conversation_counters[session_id]
 
     def get_workflow_phase(self, session_id: str) -> str:
         """Detect current workflow phase based on state."""
@@ -141,6 +172,11 @@ class XpanderContext:
         """Get the active agent span for a session."""
         with self._lock:
             return self._agent_spans.get(session_id)
+    
+    def get_conversation_span(self, session_id: str):
+        """Get the active conversation span for a session."""
+        with self._lock:
+            return self._conversation_spans.get(session_id)
 
 
 def extract_current_message_content(messages) -> str:
@@ -236,6 +272,15 @@ class XpanderInstrumentor(CommonInstrumentor):
 
     def _get_session_id_from_agent(self, agent) -> str:
         """Generate consistent session ID from agent."""
+        # First try to get memory_thread_id from agent context if available
+        if hasattr(agent, 'memory_thread_id'):
+            return f"session_{agent.memory_thread_id}"
+        
+        # Check for execution context
+        if hasattr(agent, 'execution') and hasattr(agent.execution, 'memory_thread_id'):
+            return f"session_{agent.execution.memory_thread_id}"
+        
+        # Fallback to agent-based ID
         agent_name = getattr(agent, 'name', 'unknown')
         agent_id = getattr(agent, 'id', 'unknown')
         return f"agent_{agent_name}_{agent_id}"
@@ -243,12 +288,18 @@ class XpanderInstrumentor(CommonInstrumentor):
     def _extract_session_id(self, execution, agent=None) -> str:
         """Extract session ID from execution data."""
         if isinstance(execution, dict):
-            if 'thread_id' in execution:
+            if 'memory_thread_id' in execution:
+                return f"session_{execution['memory_thread_id']}"
+            elif 'thread_id' in execution:
                 return f"session_{execution['thread_id']}"
             elif 'session_id' in execution:
                 return f"session_{execution['session_id']}"
         
-        # Fallback to timestamp
+        # Fallback to agent-based ID if available
+        if agent:
+            return self._get_session_id_from_agent(agent)
+        
+        # Last resort fallback
         return f"session_{int(time.time())}"
 
     def _extract_tool_name(self, tool_call) -> str:
@@ -492,6 +543,13 @@ class XpanderInstrumentor(CommonInstrumentor):
             agent_name = getattr(self, 'name', 'unknown')
             agent_id = getattr(self, 'id', 'unknown')
             
+            # Check if session already exists
+            existing_session = instrumentor._context.get_session(session_id)
+            if existing_session:
+                # Session already exists, just continue
+                result = original_method(self, execution)
+                return result
+            
             # Extract task input
             task_input = None
             if isinstance(execution, dict):
@@ -502,53 +560,56 @@ class XpanderInstrumentor(CommonInstrumentor):
                     elif isinstance(input_data, str):
                         task_input = input_data
             
-            # Create top-level agent span using existing AgentOps utility
-            agent_span_attributes = {
-                SpanAttributes.AGENTOPS_ENTITY_NAME: agent_name,
-                "xpander.span.type": "agent",
+            
+            # Create top-level conversation/session span - this is the ROOT span
+            conversation_span_attributes = {
+                SpanAttributes.AGENTOPS_ENTITY_NAME: f"Session - {agent_name}",
+                "xpander.span.type": "session",
+                "xpander.session.name": f"Session - {agent_name}",
                 "xpander.agent.name": agent_name,
                 "xpander.agent.id": agent_id,
                 "xpander.session.id": session_id,
-                "agent.name": agent_name,
-                "agent.id": agent_id,
             }
-            agent_span, agent_ctx, agent_token = tracer.make_span(
-                operation_name=agent_name,
-                span_kind=SpanKind.AGENT,
-                attributes=agent_span_attributes
+            session_span, session_ctx, session_token = tracer.make_span(
+                operation_name=f"session.{agent_name}",
+                span_kind=SpanKind.AGENT,  # Use AGENT kind for the root session span
+                attributes=conversation_span_attributes
             )
             
-            
-            # Set task input on agent span
+            # Set task input on session span
             if task_input:
-                safe_set_attribute(agent_span, SpanAttributes.AGENTOPS_ENTITY_INPUT, task_input[:1000])
-                safe_set_attribute(agent_span, "xpander.agent.task_input", task_input[:500])
+                safe_set_attribute(session_span, SpanAttributes.AGENTOPS_ENTITY_INPUT, task_input[:1000])
+                safe_set_attribute(session_span, "xpander.session.initial_input", task_input[:500])
             
-            # Create workflow span as child of agent span using existing utility
+            # Create workflow span as child of session span (this will be the main execution span)
+            trace.set_span_in_context(session_span)
             workflow_span_attributes = {
                 "xpander.span.type": "workflow",
                 "xpander.workflow.phase": "planning",
                 "xpander.agent.name": agent_name,
                 "xpander.agent.id": agent_id,
                 "xpander.session.id": session_id,
+                "agent.name": agent_name,
+                "agent.id": agent_id,
             }
-            # Set agent span as current context for proper nesting
-            trace.set_span_in_context(agent_span)
             workflow_span, workflow_ctx, workflow_token = tracer.make_span(
                 operation_name=f"workflow.{agent_name}",
                 span_kind=SpanKind.WORKFLOW,
                 attributes=workflow_span_attributes
             )
             
+            # No separate agent span - workflow span contains all agent info
+            
             # Initialize workflow state with persistent spans
             agent_info = {
                 "agent_name": agent_name,
                 "agent_id": agent_id,
                 "task_input": task_input,
-                "thread_id": execution.get('thread_id') if isinstance(execution, dict) else None
+                "thread_id": execution.get('memory_thread_id') if isinstance(execution, dict) else None
             }
-            instrumentor._context.start_session(session_id, agent_info, workflow_span, agent_span)
-            
+            instrumentor._context.start_session(session_id, agent_info, workflow_span, None)  # No agent span
+            # Store the session span as well
+            instrumentor._context.start_conversation(session_id, session_span)
             
             try:
                 # Execute original method - don't end agent span here, it will be ended in retrieve_execution_result
@@ -601,9 +662,15 @@ class XpanderInstrumentor(CommonInstrumentor):
                 
                 # Execute tools and create individual tool spans
                 results = []
+                conversation_finished = False
+                
                 for i, tool_call in enumerate(tool_calls):
                     tool_name = instrumentor._extract_tool_name(tool_call)
                     tool_params = instrumentor._extract_tool_params(tool_call)
+                    
+                    # Check if this is the conversation finish tool
+                    if tool_name == "xpfinish-agent-execution-finished":
+                        conversation_finished = True
                     
                     start_time = time.time()
                     
@@ -694,6 +761,12 @@ class XpanderInstrumentor(CommonInstrumentor):
                         else:
                             safe_set_attribute(tool_span, "xpander.tool.result_summary", "No results returned")
                 
+                # If conversation is finished, mark for session closure
+                if conversation_finished:
+                    # Since session span is now the conversation span, we need to close all spans
+                    # when the conversation finishes
+                    logger.info(f"Conversation finished for session {session_id} - marking for closure")
+                
                 return results
         
         return wrapper
@@ -707,12 +780,13 @@ class XpanderInstrumentor(CommonInstrumentor):
             current_session = instrumentor._context.get_session(session_id)
             current_phase = instrumentor._context.get_workflow_phase(session_id)
             workflow_span = instrumentor._context.get_workflow_span(session_id)
+            conversation_span = instrumentor._context.get_conversation_span(session_id)
             
             # Extract and clean message content
             message_content = extract_current_message_content(messages)
             
-            
-            # Create LLM span as child of workflow span
+            # Create LLM span as child of workflow span (not conversation span)
+            # The hierarchy should be: session -> agent/workflow -> LLM -> execution -> tools
             llm_span_context = trace.set_span_in_context(workflow_span) if workflow_span else None
             
             # Call original method first to get the actual OpenAI response
@@ -814,7 +888,7 @@ class XpanderInstrumentor(CommonInstrumentor):
             session_id = instrumentor._get_session_id_from_agent(self)
             current_session = instrumentor._context.get_session(session_id)
             workflow_span = instrumentor._context.get_workflow_span(session_id)
-            agent_span = instrumentor._context.get_agent_span(session_id)
+            session_span = instrumentor._context.get_conversation_span(session_id)  # This is now the root session span
             
             try:
                 # Execute and capture result
@@ -832,58 +906,55 @@ class XpanderInstrumentor(CommonInstrumentor):
                     safe_set_attribute(workflow_span, "xpander.workflow.execution_time", execution_time)
                     safe_set_attribute(workflow_span, "xpander.workflow.phase", "completed")
                 
-                # Set result details on both workflow and agent spans
+                # Set result details on session and workflow spans
                 if result:
                     result_content = ""
                     if hasattr(result, 'result'):
                         result_content = str(result.result)[:1000]
+                    
+                    # Set on session span (root span)
+                    if session_span and result_content:
+                        safe_set_attribute(session_span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, result_content)
+                        safe_set_attribute(session_span, "xpander.session.final_result", result_content)
+                        if hasattr(result, 'memory_thread_id'):
+                            safe_set_attribute(session_span, "xpander.session.thread_id", result.memory_thread_id)
                     
                     if workflow_span:
                         if result_content:
                             safe_set_attribute(workflow_span, "xpander.result.content", result_content)
                         if hasattr(result, 'memory_thread_id'):
                             safe_set_attribute(workflow_span, "xpander.result.thread_id", result.memory_thread_id)
-                    
-                    if agent_span:
-                        if result_content:
-                            safe_set_attribute(agent_span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, result_content)
-                            safe_set_attribute(agent_span, "xpander.agent.final_result", result_content)
-                        if hasattr(result, 'memory_thread_id'):
-                            safe_set_attribute(agent_span, "xpander.agent.thread_id", result.memory_thread_id)
-                        
-                        # Add agent summary
-                        if current_session:
-                            safe_set_attribute(agent_span, "xpander.agent.total_steps", current_session.get('step_count', 0))
-                            safe_set_attribute(agent_span, "xpander.agent.total_tokens", current_session.get('total_tokens', 0))
-                            safe_set_attribute(agent_span, "xpander.agent.tools_used", len(current_session.get('tools_executed', [])))
-                            
-                            start_time = current_session.get('start_time', time.time())
-                            execution_time = time.time() - start_time
-                            safe_set_attribute(agent_span, "xpander.agent.execution_time", execution_time)
-                    
                 
+                # Add session summary to session span
+                if session_span and current_session:
+                    safe_set_attribute(session_span, "xpander.session.total_steps", current_session.get('step_count', 0))
+                    safe_set_attribute(session_span, "xpander.session.total_tokens", current_session.get('total_tokens', 0))
+                    safe_set_attribute(session_span, "xpander.session.tools_used", len(current_session.get('tools_executed', [])))
+                    
+                    start_time = current_session.get('start_time', time.time())
+                    execution_time = time.time() - start_time
+                    safe_set_attribute(session_span, "xpander.session.execution_time", execution_time)
                 
-                # Mark spans as successful and close them using existing utilities
+                # Close all spans - session span should be closed last
                 if workflow_span:
                     _finish_span_success(workflow_span)
                     workflow_span.end()
                 
-                if agent_span:
-                    _finish_span_success(agent_span)
-                    agent_span.end()
+                if session_span:
+                    _finish_span_success(session_span)
+                    session_span.end()
                 
                 return result
                 
             except Exception as e:
-                # Mark spans as failed and close them using existing utilities
+                # Mark spans as failed and close them in proper order
                 if workflow_span:
                     _finish_span_error(workflow_span, e)
                     workflow_span.end()
                 
-                if agent_span:
-                    _finish_span_error(agent_span, e)
-                    agent_span.end()
-                    
+                if session_span:
+                    _finish_span_error(session_span, e)
+                    session_span.end()
                 raise
             finally:
                 # Clean up session
