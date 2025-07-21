@@ -16,6 +16,7 @@ class AgentOpsSpanKindValues(Enum):
     CHAIN = "chain"
     TEXT = "text"
     GUARDRAIL = "guardrail"
+    HTTP = "http"
     UNKNOWN = "unknown"
 
 
@@ -44,3 +45,4 @@ class SpanKind:
     CHAIN = AgentOpsSpanKindValues.CHAIN.value
     TEXT = AgentOpsSpanKindValues.TEXT.value
     GUARDRAIL = AgentOpsSpanKindValues.GUARDRAIL.value
+    HTTP = AgentOpsSpanKindValues.HTTP.value

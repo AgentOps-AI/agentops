@@ -8,6 +8,8 @@ import json
 import logging
 from typing import Any, Dict, Optional, Tuple
 
+from opentelemetry.trace import Span
+
 from agentops.instrumentation.providers.openai.utils import is_openai_v1
 from agentops.instrumentation.providers.openai.wrappers.shared import (
     model_as_dict,
@@ -15,21 +17,63 @@ from agentops.instrumentation.providers.openai.wrappers.shared import (
 )
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues
+from agentops.semconv.tool import ToolAttributes
+from agentops.semconv.span_kinds import AgentOpsSpanKindValues
+
+from opentelemetry import context as context_api
+from opentelemetry.trace import SpanKind, Status, StatusCode, get_tracer
 
 logger = logging.getLogger(__name__)
 
 LLM_REQUEST_TYPE = LLMRequestTypeValues.CHAT
 
 
+def _create_tool_span(parent_span, tool_call_data):
+    """
+    Create a distinct span for each tool call.
+
+    Args:
+        parent_span: The parent LLM span
+        tool_call_data: The tool call data dictionary
+    """
+    # Get the tracer for this module
+    tracer = get_tracer(__name__)
+
+    # Create a child span for the tool call
+    with tracer.start_as_current_span(
+        name=f"tool_call.{tool_call_data['function']['name']}",
+        kind=SpanKind.INTERNAL,
+        context=context_api.set_value("current_span", parent_span),
+    ) as tool_span:
+        # Set the span kind to TOOL
+        tool_span.set_attribute("agentops.span.kind", AgentOpsSpanKindValues.TOOL)
+
+        # Set tool-specific attributes
+        tool_span.set_attribute(ToolAttributes.TOOL_NAME, tool_call_data["function"]["name"])
+        tool_span.set_attribute(ToolAttributes.TOOL_PARAMETERS, tool_call_data["function"]["arguments"])
+        tool_span.set_attribute("tool.call.id", tool_call_data["id"])
+        tool_span.set_attribute("tool.call.type", tool_call_data["type"])
+
+        # Set status to OK for successful tool call creation
+        tool_span.set_status(Status(StatusCode.OK))
+
+
 def handle_chat_attributes(
     args: Optional[Tuple] = None,
     kwargs: Optional[Dict] = None,
     return_value: Optional[Any] = None,
+    span: Optional[Span] = None,
 ) -> AttributeMap:
     """Extract attributes from chat completion calls.
 
     This function is designed to work with the common wrapper pattern,
     extracting attributes from the method arguments and return value.
+
+    Args:
+        args: Method arguments (not used in this implementation)
+        kwargs: Method keyword arguments
+        return_value: Method return value
+        span: The parent span for creating tool spans
     """
     attributes = {
         SpanAttributes.LLM_REQUEST_TYPE: LLM_REQUEST_TYPE.value,
@@ -191,12 +235,20 @@ def handle_chat_attributes(
                     # Tool calls
                     if "tool_calls" in message:
                         tool_calls = message["tool_calls"]
-                        if tool_calls:  # Check if tool_calls is not None
+                        if tool_calls and span is not None:
                             for i, tool_call in enumerate(tool_calls):
+                                # Convert tool_call to the format expected by _create_tool_span
                                 function = tool_call.get("function", {})
-                                attributes[f"{prefix}.tool_calls.{i}.id"] = tool_call.get("id")
-                                attributes[f"{prefix}.tool_calls.{i}.name"] = function.get("name")
-                                attributes[f"{prefix}.tool_calls.{i}.arguments"] = function.get("arguments")
+                                tool_call_data = {
+                                    "id": tool_call.get("id", ""),
+                                    "type": tool_call.get("type", "function"),
+                                    "function": {
+                                        "name": function.get("name", ""),
+                                        "arguments": function.get("arguments", ""),
+                                    },
+                                }
+                                # Create a child span for this tool call
+                                _create_tool_span(span, tool_call_data)
 
         # Prompt filter results
         if "prompt_filter_results" in response_dict:

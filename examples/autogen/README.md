@@ -7,7 +7,7 @@ This directory contains examples of using Microsoft AutoGen with AgentOps instru
 - Python >= 3.10 < 3.13
 - Install required dependencies:
   ```
-  pip install agentops "pyautogen[retrievechat]"
+  pip install agentops "ag2[retrievechat]"
   ```
 
 ## Examples
