@@ -22,9 +22,8 @@ RUNTIME-SPECIFIC LOGIC KEPT (Cannot be replaced):
 
 import logging
 import time
-import threading
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from opentelemetry.metrics import Meter
 from opentelemetry.trace import SpanKind as OTelSpanKind
 from opentelemetry import trace
@@ -35,22 +34,11 @@ from agentops.instrumentation.common import (
     InstrumentorConfig,
     StandardMetrics,
 )
-from agentops.instrumentation.common.span_management import (
-    SpanAttributeManager,
-    create_span
-)
-from agentops.instrumentation.common.wrappers import (
-    _finish_span_success,
-    _finish_span_error,
-    _update_span
-)
-from agentops.instrumentation.common.attributes import (
-    _extract_attributes_from_mapping,
-    get_common_attributes
-)
+from agentops.instrumentation.common.span_management import SpanAttributeManager
+from agentops.instrumentation.common.wrappers import _finish_span_success, _finish_span_error, _update_span
 from agentops.helpers.serialization import safe_serialize, model_to_dict
 from agentops.sdk.core import tracer
-from agentops.instrumentation.agentic.xpander.version import __version__
+from agentops.instrumentation.agentic.xpander.context import XpanderContext
 from agentops.semconv import SpanAttributes, SpanKind, ToolAttributes
 from agentops.semconv.message import MessageAttributes
 
@@ -63,6 +51,7 @@ logger = logging.getLogger(__name__)
 
 _instruments = ("xpander-sdk >= 1.0.0",)
 
+
 # Use existing AgentOps utility instead of custom implementation
 def safe_set_attribute(span, key: str, value: Any) -> None:
     """Set attribute on span using existing AgentOps utility."""
@@ -72,197 +61,13 @@ def safe_set_attribute(span, key: str, value: Any) -> None:
         logger.warning(f"Failed to set attribute {key}: {e}")
 
 
-class XpanderContext:
-    """Context manager for Xpander sessions with nested conversation spans."""
-
-    def __init__(self):
-        self._sessions = {}  # session_id -> session_data
-        self._workflow_spans = {}  # session_id -> active workflow span
-        self._agent_spans = {}  # session_id -> active agent span
-        self._conversation_spans = {}  # session_id -> active conversation span
-        self._conversation_counters = {}  # session_id -> conversation counter
-        self._lock = threading.Lock()
-
-    def start_session(self, session_id: str, agent_info: Dict[str, Any], workflow_span=None, agent_span=None) -> None:
-        """Start a new session with agent info."""
-        with self._lock:
-            self._sessions[session_id] = {
-                "agent_name": agent_info.get("agent_name", "unknown"),
-                "agent_id": agent_info.get("agent_id", "unknown"),
-                "task_input": agent_info.get("task_input"),
-                "phase": "planning",
-                "step_count": 0,
-                "total_tokens": 0,
-                "tools_executed": [],
-                "start_time": time.time(),
-            }
-            if workflow_span:
-                self._workflow_spans[session_id] = workflow_span
-            if agent_span:
-                self._agent_spans[session_id] = agent_span
-            
-            # Initialize conversation counter
-            self._conversation_counters[session_id] = 0
-
-    def start_conversation(self, session_id: str, conversation_span) -> None:
-        """Start a new conversation within the session."""
-        with self._lock:
-            self._conversation_spans[session_id] = conversation_span
-            self._conversation_counters[session_id] = self._conversation_counters.get(session_id, 0) + 1
-
-    def end_conversation(self, session_id: str) -> None:
-        """End the current conversation."""
-        with self._lock:
-            if session_id in self._conversation_spans:
-                del self._conversation_spans[session_id]
-    
-    def has_active_conversation(self, session_id: str) -> bool:
-        """Check if there's an active conversation for this session."""
-        with self._lock:
-            return session_id in self._conversation_spans
-
-    def get_conversation_counter(self, session_id: str) -> int:
-        """Get the current conversation counter."""
-        with self._lock:
-            return self._conversation_counters.get(session_id, 0)
-
-    def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """Get session data."""
-        with self._lock:
-            return self._sessions.get(session_id)
-
-    def update_session(self, session_id: str, updates: Dict[str, Any]) -> None:
-        """Update session data."""
-        with self._lock:
-            if session_id in self._sessions:
-                self._sessions[session_id].update(updates)
-
-    def end_session(self, session_id: str) -> None:
-        """End a session."""
-        with self._lock:
-            if session_id in self._sessions:
-                del self._sessions[session_id]
-            if session_id in self._workflow_spans:
-                del self._workflow_spans[session_id]
-            if session_id in self._agent_spans:
-                del self._agent_spans[session_id]
-            if session_id in self._conversation_spans:
-                del self._conversation_spans[session_id]
-            if session_id in self._conversation_counters:
-                del self._conversation_counters[session_id]
-
-    def get_workflow_phase(self, session_id: str) -> str:
-        """Detect current workflow phase based on state."""
-        with self._lock:
-            session = self._sessions.get(session_id, {})
-            
-            if session.get('tools_executed', []):
-                return "executing"
-            elif session.get('step_count', 0) > 0:
-                return "executing"
-            else:
-                return "planning"
-    
-    def get_workflow_span(self, session_id: str):
-        """Get the active workflow span for a session."""
-        with self._lock:
-            return self._workflow_spans.get(session_id)
-    
-    def get_agent_span(self, session_id: str):
-        """Get the active agent span for a session."""
-        with self._lock:
-            return self._agent_spans.get(session_id)
-    
-    def get_conversation_span(self, session_id: str):
-        """Get the active conversation span for a session."""
-        with self._lock:
-            return self._conversation_spans.get(session_id)
-
-
-def extract_current_message_content(messages) -> str:
-    """Extract current response content using existing AgentOps serialization utilities."""
-    if not messages:
-        return ""
-    
-    try:
-        # Use existing AgentOps serialization for consistent handling
-        if hasattr(messages, '__dict__'):
-            # Convert Pydantic/object to dict using existing utility
-            messages_dict = model_to_dict(messages)
-        else:
-            messages_dict = messages
-            
-        # Use safe_serialize for consistent string conversion
-        content = safe_serialize(messages_dict)
-        
-        # Apply consistent truncation following AgentOps patterns
-        max_length = 1500
-        if len(content) > max_length:
-            content = content[:max_length - 3] + "..."
-            
-        return content
-        
-    except Exception as e:
-        logger.warning(f"Failed to extract message content: {e}")
-        # Fallback to safe string conversion
-        try:
-            return safe_serialize(messages)[:1000]
-        except Exception:
-            return str(messages)[:1000] if messages else ""
-
-
-def clean_llm_content(content: str) -> str:
-    """Clean LLM content for display using robust, pattern-agnostic approach."""
-    if not isinstance(content, str):
-        return str(content)[:1000]
-    
-    if not content or not content.strip():
-        return ""
-    
-    # Basic content cleaning without hardcoded patterns
-    cleaned_content = content.strip()
-    
-    # Remove excessive whitespace and normalize line breaks
-    lines = []
-    for line in cleaned_content.split('\n'):
-        line = line.strip()
-        if line:  # Skip empty lines
-            lines.append(line)
-    
-    # Join with single newlines
-    cleaned_content = '\n'.join(lines)
-    
-    # General heuristic: if content is very long and contains structured data patterns,
-    # try to extract the main response by taking the first substantial paragraph
-    if len(cleaned_content) > 3000:
-        paragraphs = cleaned_content.split('\n\n')
-        if len(paragraphs) > 1:
-            # Find the first substantial paragraph (more than 50 chars)
-            for paragraph in paragraphs:
-                if len(paragraph.strip()) > 50:
-                    cleaned_content = paragraph.strip()
-                    break
-    
-    # Apply consistent truncation with ellipsis (following AgentOps patterns)
-    max_length = 1500
-    if len(cleaned_content) > max_length:
-        cleaned_content = cleaned_content[:max_length - 3] + "..."
-    
-    return cleaned_content
-
-
-
-
 class XpanderInstrumentor(CommonInstrumentor):
     """Instrumentor for Xpander SDK interactions."""
 
     def __init__(self, config: Optional[InstrumentorConfig] = None):
         if config is None:
             config = InstrumentorConfig(
-                library_name="xpander-sdk",
-                library_version="1.0.0",
-                dependencies=_instruments,
-                metrics_enabled=True
+                library_name="xpander-sdk", library_version="1.0.0", dependencies=_instruments, metrics_enabled=True
             )
         super().__init__(config)
         self._context = XpanderContext()
@@ -273,73 +78,74 @@ class XpanderInstrumentor(CommonInstrumentor):
     def _get_session_id_from_agent(self, agent) -> str:
         """Generate consistent session ID from agent."""
         # First try to get memory_thread_id from agent context if available
-        if hasattr(agent, 'memory_thread_id'):
+        if hasattr(agent, "memory_thread_id"):
             return f"session_{agent.memory_thread_id}"
-        
+
         # Check for execution context
-        if hasattr(agent, 'execution') and hasattr(agent.execution, 'memory_thread_id'):
+        if hasattr(agent, "execution") and hasattr(agent.execution, "memory_thread_id"):
             return f"session_{agent.execution.memory_thread_id}"
-        
+
         # Fallback to agent-based ID
-        agent_name = getattr(agent, 'name', 'unknown')
-        agent_id = getattr(agent, 'id', 'unknown')
+        agent_name = getattr(agent, "name", "unknown")
+        agent_id = getattr(agent, "id", "unknown")
         return f"agent_{agent_name}_{agent_id}"
 
     def _extract_session_id(self, execution, agent=None) -> str:
         """Extract session ID from execution data."""
         if isinstance(execution, dict):
-            if 'memory_thread_id' in execution:
+            if "memory_thread_id" in execution:
                 return f"session_{execution['memory_thread_id']}"
-            elif 'thread_id' in execution:
+            elif "thread_id" in execution:
                 return f"session_{execution['thread_id']}"
-            elif 'session_id' in execution:
+            elif "session_id" in execution:
                 return f"session_{execution['session_id']}"
-        
+
         # Fallback to agent-based ID if available
         if agent:
             return self._get_session_id_from_agent(agent)
-        
+
         # Last resort fallback
         return f"session_{int(time.time())}"
 
     def _extract_tool_name(self, tool_call) -> str:
         """Extract tool name from tool call."""
         # Handle different tool call formats
-        if hasattr(tool_call, 'function_name'):
+        if hasattr(tool_call, "function_name"):
             return tool_call.function_name
-        elif hasattr(tool_call, 'function') and hasattr(tool_call.function, 'name'):
+        elif hasattr(tool_call, "function") and hasattr(tool_call.function, "name"):
             return tool_call.function.name
-        elif hasattr(tool_call, 'name'):
+        elif hasattr(tool_call, "name"):
             return tool_call.name
         elif isinstance(tool_call, dict):
-            if 'function' in tool_call:
-                return tool_call['function'].get('name', 'unknown')
-            elif 'function_name' in tool_call:
-                return tool_call['function_name']
-            elif 'name' in tool_call:
-                return tool_call['name']
-        
+            if "function" in tool_call:
+                return tool_call["function"].get("name", "unknown")
+            elif "function_name" in tool_call:
+                return tool_call["function_name"]
+            elif "name" in tool_call:
+                return tool_call["name"]
+
         # Try to extract from string representation
         import re
+
         patterns = [
             r'function[\'"]\s*:\s*[\'"]([^\'"]+)[\'"]',
             r'name[\'"]\s*:\s*[\'"]([^\'"]+)[\'"]',
-            r'([a-zA-Z_][a-zA-Z0-9_]*)\.tool',
-            r'function_name[\'"]\s*:\s*[\'"]([^\'"]+)[\'"]'
+            r"([a-zA-Z_][a-zA-Z0-9_]*)\.tool",
+            r'function_name[\'"]\s*:\s*[\'"]([^\'"]+)[\'"]',
         ]
-        
+
         tool_str = str(tool_call)
         for pattern in patterns:
             match = re.search(pattern, tool_str, re.IGNORECASE)
             if match:
                 return match.group(1)
-        
-        return 'unknown'
+
+        return "unknown"
 
     def _extract_tool_params(self, tool_call) -> dict:
         """Extract tool parameters from tool call."""
         # Handle different parameter formats
-        if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'arguments'):
+        if hasattr(tool_call, "function") and hasattr(tool_call.function, "arguments"):
             try:
                 args = tool_call.function.arguments
                 if isinstance(args, str):
@@ -348,7 +154,7 @@ class XpanderInstrumentor(CommonInstrumentor):
                     return args
             except (json.JSONDecodeError, AttributeError):
                 pass
-        elif hasattr(tool_call, 'arguments'):
+        elif hasattr(tool_call, "arguments"):
             try:
                 args = tool_call.arguments
                 if isinstance(args, str):
@@ -358,97 +164,94 @@ class XpanderInstrumentor(CommonInstrumentor):
             except (json.JSONDecodeError, AttributeError):
                 pass
         elif isinstance(tool_call, dict):
-            if 'function' in tool_call:
-                args = tool_call['function'].get('arguments', '{}')
+            if "function" in tool_call:
+                args = tool_call["function"].get("arguments", "{}")
                 try:
                     return json.loads(args) if isinstance(args, str) else args
                 except json.JSONDecodeError:
                     pass
-            elif 'arguments' in tool_call:
-                args = tool_call['arguments']
+            elif "arguments" in tool_call:
+                args = tool_call["arguments"]
                 try:
                     return json.loads(args) if isinstance(args, str) else args
                 except json.JSONDecodeError:
                     pass
-        
+
         return {}
 
     def _extract_llm_data_from_messages(self, messages) -> dict:
         """Extract LLM metadata from messages."""
         data = {}
-        
+
         if isinstance(messages, dict):
             # Direct model and usage fields
-            if 'model' in messages:
-                data['model'] = messages['model']
-            if 'usage' in messages:
-                data['usage'] = messages['usage']
-            
+            if "model" in messages:
+                data["model"] = messages["model"]
+            if "usage" in messages:
+                data["usage"] = messages["usage"]
+
             # Check in choices array (OpenAI format)
-            if 'choices' in messages and messages['choices']:
-                choice = messages['choices'][0]
-                if 'message' in choice:
-                    message = choice['message']
-                    if 'model' in message:
-                        data['model'] = message['model']
-        
+            if "choices" in messages and messages["choices"]:
+                choice = messages["choices"][0]
+                if "message" in choice:
+                    message = choice["message"]
+                    if "model" in message:
+                        data["model"] = message["model"]
+
         elif isinstance(messages, list):
             # Look for assistant messages with metadata
             for msg in messages:
-                if isinstance(msg, dict) and msg.get('role') == 'assistant':
-                    if 'model' in msg:
-                        data['model'] = msg['model']
-                    if 'usage' in msg:
-                        data['usage'] = msg['usage']
+                if isinstance(msg, dict) and msg.get("role") == "assistant":
+                    if "model" in msg:
+                        data["model"] = msg["model"]
+                    if "usage" in msg:
+                        data["usage"] = msg["usage"]
                     break
-        
+
         # Try to extract from any nested structures
-        if not data and hasattr(messages, '__dict__'):
+        if not data and hasattr(messages, "__dict__"):
             msg_dict = messages.__dict__
-            if 'model' in msg_dict:
-                data['model'] = msg_dict['model']
-            if 'usage' in msg_dict:
-                data['usage'] = msg_dict['usage']
-        
+            if "model" in msg_dict:
+                data["model"] = msg_dict["model"]
+            if "usage" in msg_dict:
+                data["usage"] = msg_dict["usage"]
+
         return data
 
     def _extract_and_set_openai_message_attributes(self, span, messages, result, agent=None):
         """Extract and set OpenAI message attributes from messages and response."""
         try:
-            # Lazy import to avoid circular imports
-            try:
-                from agentops.instrumentation.providers.openai.attributes.common import get_response_attributes
-            except ImportError:
-                logger.debug("OpenAI attributes module not available, using fallback")
-                # Continue with manual extraction as fallback
+            # Manual extraction since we don't need the OpenAI module for this
             # Try to get the agent's current message history for prompts
             agent_messages = []
-            if agent and hasattr(agent, 'messages'):
-                agent_messages = getattr(agent, 'messages', [])
-            elif agent and hasattr(agent, 'conversation_history'):
-                agent_messages = getattr(agent, 'conversation_history', [])
-            elif agent and hasattr(agent, 'history'):
-                agent_messages = getattr(agent, 'history', [])
-            
+            if agent and hasattr(agent, "messages"):
+                agent_messages = getattr(agent, "messages", [])
+            elif agent and hasattr(agent, "conversation_history"):
+                agent_messages = getattr(agent, "conversation_history", [])
+            elif agent and hasattr(agent, "history"):
+                agent_messages = getattr(agent, "history", [])
+
             # Also try to extract messages from the messages parameter itself
             if isinstance(messages, list):
                 # If messages is a list of messages, use it directly
                 agent_messages.extend(messages)
-            elif isinstance(messages, dict) and 'messages' in messages:
+            elif isinstance(messages, dict) and "messages" in messages:
                 # If messages contains a messages key
-                agent_messages.extend(messages.get('messages', []))
-            
+                agent_messages.extend(messages.get("messages", []))
+
             # Set prompt messages (input to LLM)
             prompt_index = 0
             for msg in agent_messages[-10:]:  # Get last 10 messages to avoid huge context
                 if isinstance(msg, dict):
-                    role = msg.get('role', 'user')
-                    content = msg.get('content', '')
-                    
+                    role = msg.get("role", "user")
+                    content = msg.get("content", "")
+
                     # Handle different content formats
                     if content and isinstance(content, str) and content.strip():
                         safe_set_attribute(span, MessageAttributes.PROMPT_ROLE.format(i=prompt_index), role)
-                        safe_set_attribute(span, MessageAttributes.PROMPT_CONTENT.format(i=prompt_index), content[:2000])
+                        safe_set_attribute(
+                            span, MessageAttributes.PROMPT_CONTENT.format(i=prompt_index), content[:2000]
+                        )
                         prompt_index += 1
                     elif content and isinstance(content, list):
                         # Handle multi-modal content
@@ -456,111 +259,149 @@ class XpanderInstrumentor(CommonInstrumentor):
                         safe_set_attribute(span, MessageAttributes.PROMPT_ROLE.format(i=prompt_index), role)
                         safe_set_attribute(span, MessageAttributes.PROMPT_CONTENT.format(i=prompt_index), content_str)
                         prompt_index += 1
-                elif hasattr(msg, 'content'):
+                elif hasattr(msg, "content"):
                     # Handle object with content attribute
-                    content = getattr(msg, 'content', '')
-                    role = getattr(msg, 'role', 'user')
+                    content = getattr(msg, "content", "")
+                    role = getattr(msg, "role", "user")
                     if content and isinstance(content, str) and content.strip():
                         safe_set_attribute(span, MessageAttributes.PROMPT_ROLE.format(i=prompt_index), role)
-                        safe_set_attribute(span, MessageAttributes.PROMPT_CONTENT.format(i=prompt_index), str(content)[:2000])
+                        safe_set_attribute(
+                            span, MessageAttributes.PROMPT_CONTENT.format(i=prompt_index), str(content)[:2000]
+                        )
                         prompt_index += 1
-            
+
             # Set completion messages (response from LLM)
             completion_index = 0
             response_data = result if result else messages
-            
+
             # Handle different response formats
             if isinstance(response_data, dict):
-                choices = response_data.get('choices', [])
+                choices = response_data.get("choices", [])
                 for choice in choices:
-                    message = choice.get('message', {})
-                    role = message.get('role', 'assistant')
-                    content = message.get('content', '')
-                    
+                    message = choice.get("message", {})
+                    role = message.get("role", "assistant")
+                    content = message.get("content", "")
+
                     if content:
                         safe_set_attribute(span, MessageAttributes.COMPLETION_ROLE.format(i=completion_index), role)
-                        safe_set_attribute(span, MessageAttributes.COMPLETION_CONTENT.format(i=completion_index), content[:2000])
-                    
+                        safe_set_attribute(
+                            span, MessageAttributes.COMPLETION_CONTENT.format(i=completion_index), content[:2000]
+                        )
+
                     # Handle tool calls in the response
-                    tool_calls = message.get('tool_calls', [])
+                    tool_calls = message.get("tool_calls", [])
                     for j, tool_call in enumerate(tool_calls):
-                        tool_id = tool_call.get('id', '')
-                        tool_name = tool_call.get('function', {}).get('name', '')
-                        tool_args = tool_call.get('function', {}).get('arguments', '')
-                        
+                        tool_id = tool_call.get("id", "")
+                        tool_name = tool_call.get("function", {}).get("name", "")
+                        tool_args = tool_call.get("function", {}).get("arguments", "")
+
                         if tool_id:
-                            safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=completion_index, j=j), tool_id)
+                            safe_set_attribute(
+                                span, MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=completion_index, j=j), tool_id
+                            )
                         if tool_name:
-                            safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=completion_index, j=j), tool_name)
+                            safe_set_attribute(
+                                span,
+                                MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=completion_index, j=j),
+                                tool_name,
+                            )
                         if tool_args:
-                            safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=completion_index, j=j), tool_args[:500])
-                        safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=completion_index, j=j), "function")
-                    
+                            safe_set_attribute(
+                                span,
+                                MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=completion_index, j=j),
+                                tool_args[:500],
+                            )
+                        safe_set_attribute(
+                            span,
+                            MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=completion_index, j=j),
+                            "function",
+                        )
+
                     completion_index += 1
-            elif hasattr(response_data, 'choices'):
+            elif hasattr(response_data, "choices"):
                 # Handle response object with choices attribute
-                choices = getattr(response_data, 'choices', [])
+                choices = getattr(response_data, "choices", [])
                 for choice in choices:
-                    message = getattr(choice, 'message', None)
+                    message = getattr(choice, "message", None)
                     if message:
-                        role = getattr(message, 'role', 'assistant')
-                        content = getattr(message, 'content', '')
-                        
+                        role = getattr(message, "role", "assistant")
+                        content = getattr(message, "content", "")
+
                         if content:
                             safe_set_attribute(span, MessageAttributes.COMPLETION_ROLE.format(i=completion_index), role)
-                            safe_set_attribute(span, MessageAttributes.COMPLETION_CONTENT.format(i=completion_index), str(content)[:2000])
-                        
+                            safe_set_attribute(
+                                span,
+                                MessageAttributes.COMPLETION_CONTENT.format(i=completion_index),
+                                str(content)[:2000],
+                            )
+
                         # Handle tool calls
-                        tool_calls = getattr(message, 'tool_calls', [])
+                        tool_calls = getattr(message, "tool_calls", [])
                         for j, tool_call in enumerate(tool_calls):
-                            tool_id = getattr(tool_call, 'id', '')
-                            function = getattr(tool_call, 'function', None)
+                            tool_id = getattr(tool_call, "id", "")
+                            function = getattr(tool_call, "function", None)
                             if function:
-                                tool_name = getattr(function, 'name', '')
-                                tool_args = getattr(function, 'arguments', '')
-                                
+                                tool_name = getattr(function, "name", "")
+                                tool_args = getattr(function, "arguments", "")
+
                                 if tool_id:
-                                    safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=completion_index, j=j), tool_id)
+                                    safe_set_attribute(
+                                        span,
+                                        MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=completion_index, j=j),
+                                        tool_id,
+                                    )
                                 if tool_name:
-                                    safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=completion_index, j=j), tool_name)
+                                    safe_set_attribute(
+                                        span,
+                                        MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=completion_index, j=j),
+                                        tool_name,
+                                    )
                                 if tool_args:
-                                    safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=completion_index, j=j), str(tool_args)[:500])
-                                safe_set_attribute(span, MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=completion_index, j=j), "function")
-                        
+                                    safe_set_attribute(
+                                        span,
+                                        MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(
+                                            i=completion_index, j=j
+                                        ),
+                                        str(tool_args)[:500],
+                                    )
+                                safe_set_attribute(
+                                    span,
+                                    MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=completion_index, j=j),
+                                    "function",
+                                )
+
                         completion_index += 1
-            
-                        
+
         except Exception as e:
             logger.error(f"Error extracting OpenAI message attributes: {e}")
 
     def _wrap_init_task(self, original_method):
         """Wrap init_task to create agent span hierarchy."""
         instrumentor = self
+
         def wrapper(self, execution):
-            
             # Extract session ID and agent info
             session_id = instrumentor._extract_session_id(execution)
-            agent_name = getattr(self, 'name', 'unknown')
-            agent_id = getattr(self, 'id', 'unknown')
-            
+            agent_name = getattr(self, "name", "unknown")
+            agent_id = getattr(self, "id", "unknown")
+
             # Check if session already exists
             existing_session = instrumentor._context.get_session(session_id)
             if existing_session:
                 # Session already exists, just continue
                 result = original_method(self, execution)
                 return result
-            
+
             # Extract task input
             task_input = None
             if isinstance(execution, dict):
-                if 'input' in execution:
-                    input_data = execution['input']
-                    if isinstance(input_data, dict) and 'text' in input_data:
-                        task_input = input_data['text']
+                if "input" in execution:
+                    input_data = execution["input"]
+                    if isinstance(input_data, dict) and "text" in input_data:
+                        task_input = input_data["text"]
                     elif isinstance(input_data, str):
                         task_input = input_data
-            
-            
+
             # Create top-level conversation/session span - this is the ROOT span
             conversation_span_attributes = {
                 SpanAttributes.AGENTOPS_ENTITY_NAME: f"Session - {agent_name}",
@@ -573,14 +414,14 @@ class XpanderInstrumentor(CommonInstrumentor):
             session_span, session_ctx, session_token = tracer.make_span(
                 operation_name=f"session.{agent_name}",
                 span_kind=SpanKind.AGENT,  # Use AGENT kind for the root session span
-                attributes=conversation_span_attributes
+                attributes=conversation_span_attributes,
             )
-            
+
             # Set task input on session span
             if task_input:
                 safe_set_attribute(session_span, SpanAttributes.AGENTOPS_ENTITY_INPUT, task_input[:1000])
                 safe_set_attribute(session_span, "xpander.session.initial_input", task_input[:500])
-            
+
             # Create workflow span as child of session span (this will be the main execution span)
             trace.set_span_in_context(session_span)
             workflow_span_attributes = {
@@ -595,22 +436,22 @@ class XpanderInstrumentor(CommonInstrumentor):
             workflow_span, workflow_ctx, workflow_token = tracer.make_span(
                 operation_name=f"workflow.{agent_name}",
                 span_kind=SpanKind.WORKFLOW,
-                attributes=workflow_span_attributes
+                attributes=workflow_span_attributes,
             )
-            
+
             # No separate agent span - workflow span contains all agent info
-            
+
             # Initialize workflow state with persistent spans
             agent_info = {
                 "agent_name": agent_name,
                 "agent_id": agent_id,
                 "task_input": task_input,
-                "thread_id": execution.get('memory_thread_id') if isinstance(execution, dict) else None
+                "thread_id": execution.get("memory_thread_id") if isinstance(execution, dict) else None,
             }
             instrumentor._context.start_session(session_id, agent_info, workflow_span, None)  # No agent span
             # Store the session span as well
             instrumentor._context.start_conversation(session_id, session_span)
-            
+
             try:
                 # Execute original method - don't end agent span here, it will be ended in retrieve_execution_result
                 result = original_method(self, execution)
@@ -618,36 +459,38 @@ class XpanderInstrumentor(CommonInstrumentor):
             except Exception as e:
                 # Use existing AgentOps error handling utilities
                 _finish_span_error(workflow_span, e)
-                _finish_span_error(agent_span, e)
                 raise
-        
+
         return wrapper
 
     def _wrap_run_tools(self, original_method):
         """Wrap run_tools to create execution phase tool spans."""
         instrumentor = self
+
         def wrapper(self, tool_calls, payload_extension=None):
-            
             session_id = instrumentor._get_session_id_from_agent(self)
             current_session = instrumentor._context.get_session(session_id)
-            
+
             # Update workflow state
-            step_num = (current_session.get('step_count', 0) + 1) if current_session else 1
-            instrumentor._context.update_session(session_id, {
-                'step_count': step_num,
-                'phase': 'executing',
-                'tools_executed': (current_session.get('tools_executed', []) if current_session else []) + 
-                                 [instrumentor._extract_tool_name(tc) for tc in tool_calls]
-            })
-            
+            step_num = (current_session.get("step_count", 0) + 1) if current_session else 1
+            instrumentor._context.update_session(
+                session_id,
+                {
+                    "step_count": step_num,
+                    "phase": "executing",
+                    "tools_executed": (current_session.get("tools_executed", []) if current_session else [])
+                    + [instrumentor._extract_tool_name(tc) for tc in tool_calls],
+                },
+            )
+
             # Get current span context (should be the LLM span)
             current_span = trace.get_current_span()
-            
+
             # Create execution phase span as child of current LLM span
             execution_span_context = trace.set_span_in_context(current_span) if current_span else None
-            
+
             with instrumentor._tracer.start_as_current_span(
-                f"xpander.execution",
+                "xpander.execution",
                 kind=OTelSpanKind.INTERNAL,
                 context=execution_span_context,
                 attributes={
@@ -657,26 +500,25 @@ class XpanderInstrumentor(CommonInstrumentor):
                     "xpander.step.number": step_num,
                     "xpander.step.tool_count": len(tool_calls),
                     "xpander.session.id": session_id,
-                }
+                },
             ) as execution_span:
-                
                 # Execute tools and create individual tool spans
                 results = []
                 conversation_finished = False
-                
+
                 for i, tool_call in enumerate(tool_calls):
                     tool_name = instrumentor._extract_tool_name(tool_call)
                     tool_params = instrumentor._extract_tool_params(tool_call)
-                    
+
                     # Check if this is the conversation finish tool
                     if tool_name == "xpfinish-agent-execution-finished":
                         conversation_finished = True
-                    
+
                     start_time = time.time()
-                    
+
                     # Create tool span as child of execution span
                     tool_span_context = trace.set_span_in_context(execution_span)
-                    
+
                     with instrumentor._tracer.start_as_current_span(
                         f"tool.{tool_name}",
                         kind=OTelSpanKind.CLIENT,
@@ -689,43 +531,41 @@ class XpanderInstrumentor(CommonInstrumentor):
                             "xpander.workflow.phase": "executing",
                             "xpander.tool.step": step_num,
                             "xpander.tool.index": i,
-                        }
+                        },
                     ) as tool_span:
-                        
-                        
                         # Execute single tool
                         single_result = original_method(self, [tool_call], payload_extension)
                         results.extend(single_result)
-                        
+
                         # Record tool execution details
                         execution_time = time.time() - start_time
                         safe_set_attribute(tool_span, "xpander.tool.execution_time", execution_time)
-                        
+
                         # Add tool result if available
                         if single_result:
                             result_summary = f"Executed successfully with {len(single_result)} results"
                             safe_set_attribute(tool_span, "xpander.tool.result_summary", result_summary)
-                            
+
                             # Store actual result data using existing AgentOps utilities
                             try:
                                 result_content = ""
-                                
+
                                 for i, result_item in enumerate(single_result):
                                     # Handle xpander_sdk.ToolCallResult objects specifically
-                                    if hasattr(result_item, '__class__') and 'ToolCallResult' in str(type(result_item)):
+                                    if hasattr(result_item, "__class__") and "ToolCallResult" in str(type(result_item)):
                                         # Extract the actual result content from ToolCallResult
                                         try:
-                                            if hasattr(result_item, 'result') and result_item.result is not None:
+                                            if hasattr(result_item, "result") and result_item.result is not None:
                                                 actual_result = result_item.result
                                                 if isinstance(actual_result, str):
                                                     result_content += actual_result[:1000] + "\n"
                                                 else:
                                                     result_content += safe_serialize(actual_result)[:1000] + "\n"
-                                            elif hasattr(result_item, 'data') and result_item.data is not None:
+                                            elif hasattr(result_item, "data") and result_item.data is not None:
                                                 result_content += safe_serialize(result_item.data)[:1000] + "\n"
                                             else:
                                                 # Fallback: try to find any content attribute
-                                                for attr_name in ['content', 'output', 'value', 'response']:
+                                                for attr_name in ["content", "output", "value", "response"]:
                                                     if hasattr(result_item, attr_name):
                                                         attr_value = getattr(result_item, attr_name)
                                                         if attr_value is not None:
@@ -733,65 +573,65 @@ class XpanderInstrumentor(CommonInstrumentor):
                                                             break
                                                 else:
                                                     # If no content attributes found, indicate this
-                                                    result_content += f"ToolCallResult object (no extractable content)\n"
+                                                    result_content += "ToolCallResult object (no extractable content)\n"
                                         except Exception as attr_e:
                                             logger.debug(f"Error extracting from ToolCallResult: {attr_e}")
-                                            result_content += f"ToolCallResult object (extraction failed)\n"
-                                    
+                                            result_content += "ToolCallResult object (extraction failed)\n"
+
                                     # Handle regular objects and primitives
                                     elif isinstance(result_item, (str, int, float, bool)):
                                         result_content += str(result_item)[:1000] + "\n"
-                                    elif hasattr(result_item, '__dict__'):
+                                    elif hasattr(result_item, "__dict__"):
                                         # Convert objects to dict using existing utility
                                         result_dict = model_to_dict(result_item)
                                         result_content += safe_serialize(result_dict)[:1000] + "\n"
                                     else:
                                         # Use safe_serialize for consistent conversion
                                         result_content += safe_serialize(result_item)[:1000] + "\n"
-                                
+
                                 if result_content.strip():
                                     final_content = result_content.strip()[:2000]
                                     safe_set_attribute(tool_span, ToolAttributes.TOOL_RESULT, final_content)
                                 else:
-                                    safe_set_attribute(tool_span, ToolAttributes.TOOL_RESULT, "No extractable content found")
-                                    
+                                    safe_set_attribute(
+                                        tool_span, ToolAttributes.TOOL_RESULT, "No extractable content found"
+                                    )
+
                             except Exception as e:
                                 logger.error(f"Error setting tool result: {e}")
-                                safe_set_attribute(tool_span, ToolAttributes.TOOL_RESULT, f"Error capturing result: {e}")
+                                safe_set_attribute(
+                                    tool_span, ToolAttributes.TOOL_RESULT, f"Error capturing result: {e}"
+                                )
                         else:
                             safe_set_attribute(tool_span, "xpander.tool.result_summary", "No results returned")
-                
+
                 # If conversation is finished, mark for session closure
                 if conversation_finished:
                     # Since session span is now the conversation span, we need to close all spans
                     # when the conversation finishes
-                    logger.info(f"Conversation finished for session {session_id} - marking for closure")
-                
+                    pass  # Session closure will be handled in retrieve_execution_result
+
                 return results
-        
+
         return wrapper
 
     def _wrap_add_messages(self, original_method):
         """Wrap add_messages to create LLM spans with proper parent-child relationship."""
         instrumentor = self
+
         def wrapper(self, messages):
-            
             session_id = instrumentor._get_session_id_from_agent(self)
             current_session = instrumentor._context.get_session(session_id)
             current_phase = instrumentor._context.get_workflow_phase(session_id)
             workflow_span = instrumentor._context.get_workflow_span(session_id)
-            conversation_span = instrumentor._context.get_conversation_span(session_id)
-            
-            # Extract and clean message content
-            message_content = extract_current_message_content(messages)
-            
+
             # Create LLM span as child of workflow span (not conversation span)
             # The hierarchy should be: session -> agent/workflow -> LLM -> execution -> tools
             llm_span_context = trace.set_span_in_context(workflow_span) if workflow_span else None
-            
+
             # Call original method first to get the actual OpenAI response
             result = original_method(self, messages)
-            
+
             # Now create a span that captures the LLM interaction with the actual response data
             with instrumentor._tracer.start_as_current_span(
                 f"llm.{current_phase}",
@@ -804,154 +644,158 @@ class XpanderInstrumentor(CommonInstrumentor):
                     "xpander.session.id": session_id,
                 },
             ) as llm_span:
-                
                 # Extract and set OpenAI message data from the messages and response
                 instrumentor._extract_and_set_openai_message_attributes(llm_span, messages, result, self)
-                
-                # Set cleaned content for legacy compatibility
-                if message_content:
-                    cleaned_content = clean_llm_content(message_content)
-                    safe_set_attribute(llm_span, "xpander.llm.content", cleaned_content)
-                
+
                 # Extract and set LLM metadata from the result if possible
                 llm_data = instrumentor._extract_llm_data_from_messages(result if result else messages)
                 if llm_data:
-                    if 'model' in llm_data:
-                        safe_set_attribute(llm_span, SpanAttributes.LLM_REQUEST_MODEL, llm_data['model'])
-                        safe_set_attribute(llm_span, SpanAttributes.LLM_RESPONSE_MODEL, llm_data['model'])
-                    
-                    if 'usage' in llm_data:
-                        usage = llm_data['usage']
-                        if 'prompt_tokens' in usage:
-                            safe_set_attribute(llm_span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage['prompt_tokens'])
-                        if 'completion_tokens' in usage:
-                            safe_set_attribute(llm_span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, usage['completion_tokens'])
-                        if 'total_tokens' in usage:
-                            safe_set_attribute(llm_span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage['total_tokens'])
+                    if "model" in llm_data:
+                        safe_set_attribute(llm_span, SpanAttributes.LLM_REQUEST_MODEL, llm_data["model"])
+                        safe_set_attribute(llm_span, SpanAttributes.LLM_RESPONSE_MODEL, llm_data["model"])
+
+                    if "usage" in llm_data:
+                        usage = llm_data["usage"]
+                        if "prompt_tokens" in usage:
+                            safe_set_attribute(llm_span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage["prompt_tokens"])
+                        if "completion_tokens" in usage:
+                            safe_set_attribute(
+                                llm_span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, usage["completion_tokens"]
+                            )
+                        if "total_tokens" in usage:
+                            safe_set_attribute(llm_span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage["total_tokens"])
                             # Update workflow state
-                            instrumentor._context.update_session(session_id, {
-                                "total_tokens": (current_session.get("total_tokens", 0) if current_session else 0) + usage['total_tokens']
-                            })
-            
+                            instrumentor._context.update_session(
+                                session_id,
+                                {
+                                    "total_tokens": (current_session.get("total_tokens", 0) if current_session else 0)
+                                    + usage["total_tokens"]
+                                },
+                            )
+
             return result
-        
+
         return wrapper
 
     def _wrap_is_finished(self, original_method):
         """Wrap is_finished to track workflow completion."""
         instrumentor = self
+
         def wrapper(self):
             result = original_method(self)
-            
+
             if result:
                 session_id = instrumentor._get_session_id_from_agent(self)
-                
+
                 # Update session to finished state
-                instrumentor._context.update_session(session_id, {
-                    "phase": "finished",
-                    "end_time": time.time()
-                })
-            
+                instrumentor._context.update_session(session_id, {"phase": "finished", "end_time": time.time()})
+
             return result
-        
+
         return wrapper
 
     def _wrap_extract_tool_calls(self, original_method):
         """Wrap extract_tool_calls to track tool planning."""
-        instrumentor = self
+
         def wrapper(self, messages):
             result = original_method(self, messages)
-            
-            if result:
-                session_id = instrumentor._get_session_id_from_agent(self)
-            
             return result
-        
+
         return wrapper
 
     def _wrap_report_execution_metrics(self, original_method):
         """Wrap report_execution_metrics to track metrics."""
-        instrumentor = self
+
         def wrapper(self, llm_tokens=None, ai_model=None):
             result = original_method(self, llm_tokens, ai_model)
-            
-            session_id = instrumentor._get_session_id_from_agent(self)
-            
             return result
-        
+
         return wrapper
 
     def _wrap_retrieve_execution_result(self, original_method):
         """Wrap retrieve_execution_result to finalize agent and workflow spans."""
         instrumentor = self
+
         def wrapper(self):
             session_id = instrumentor._get_session_id_from_agent(self)
             current_session = instrumentor._context.get_session(session_id)
             workflow_span = instrumentor._context.get_workflow_span(session_id)
             session_span = instrumentor._context.get_conversation_span(session_id)  # This is now the root session span
-            
+
             try:
                 # Execute and capture result
                 result = original_method(self)
-                
+
                 # Add workflow summary to the persistent workflow span
                 if workflow_span and current_session:
-                    safe_set_attribute(workflow_span, "xpander.workflow.total_steps", current_session.get('step_count', 0))
-                    safe_set_attribute(workflow_span, "xpander.workflow.total_tokens", current_session.get('total_tokens', 0))
-                    safe_set_attribute(workflow_span, "xpander.workflow.tools_used", len(current_session.get('tools_executed', [])))
-                    
+                    safe_set_attribute(
+                        workflow_span, "xpander.workflow.total_steps", current_session.get("step_count", 0)
+                    )
+                    safe_set_attribute(
+                        workflow_span, "xpander.workflow.total_tokens", current_session.get("total_tokens", 0)
+                    )
+                    safe_set_attribute(
+                        workflow_span, "xpander.workflow.tools_used", len(current_session.get("tools_executed", []))
+                    )
+
                     # Calculate total execution time
-                    start_time = current_session.get('start_time', time.time())
+                    start_time = current_session.get("start_time", time.time())
                     execution_time = time.time() - start_time
                     safe_set_attribute(workflow_span, "xpander.workflow.execution_time", execution_time)
                     safe_set_attribute(workflow_span, "xpander.workflow.phase", "completed")
-                
+
                 # Set result details on session and workflow spans
                 if result:
                     result_content = ""
-                    if hasattr(result, 'result'):
+                    if hasattr(result, "result"):
                         result_content = str(result.result)[:1000]
-                    
+
                     # Set on session span (root span)
                     if session_span and result_content:
                         safe_set_attribute(session_span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, result_content)
                         safe_set_attribute(session_span, "xpander.session.final_result", result_content)
-                        if hasattr(result, 'memory_thread_id'):
+                        if hasattr(result, "memory_thread_id"):
                             safe_set_attribute(session_span, "xpander.session.thread_id", result.memory_thread_id)
-                    
+
                     if workflow_span:
                         if result_content:
                             safe_set_attribute(workflow_span, "xpander.result.content", result_content)
-                        if hasattr(result, 'memory_thread_id'):
+                        if hasattr(result, "memory_thread_id"):
                             safe_set_attribute(workflow_span, "xpander.result.thread_id", result.memory_thread_id)
-                
+
                 # Add session summary to session span
                 if session_span and current_session:
-                    safe_set_attribute(session_span, "xpander.session.total_steps", current_session.get('step_count', 0))
-                    safe_set_attribute(session_span, "xpander.session.total_tokens", current_session.get('total_tokens', 0))
-                    safe_set_attribute(session_span, "xpander.session.tools_used", len(current_session.get('tools_executed', [])))
-                    
-                    start_time = current_session.get('start_time', time.time())
+                    safe_set_attribute(
+                        session_span, "xpander.session.total_steps", current_session.get("step_count", 0)
+                    )
+                    safe_set_attribute(
+                        session_span, "xpander.session.total_tokens", current_session.get("total_tokens", 0)
+                    )
+                    safe_set_attribute(
+                        session_span, "xpander.session.tools_used", len(current_session.get("tools_executed", []))
+                    )
+
+                    start_time = current_session.get("start_time", time.time())
                     execution_time = time.time() - start_time
                     safe_set_attribute(session_span, "xpander.session.execution_time", execution_time)
-                
+
                 # Close all spans - session span should be closed last
                 if workflow_span:
                     _finish_span_success(workflow_span)
                     workflow_span.end()
-                
+
                 if session_span:
                     _finish_span_success(session_span)
                     session_span.end()
-                
+
                 return result
-                
+
             except Exception as e:
                 # Mark spans as failed and close them in proper order
                 if workflow_span:
                     _finish_span_error(workflow_span, e)
                     workflow_span.end()
-                
+
                 if session_span:
                     _finish_span_error(session_span, e)
                     session_span.end()
@@ -959,7 +803,7 @@ class XpanderInstrumentor(CommonInstrumentor):
             finally:
                 # Clean up session
                 instrumentor._context.end_session(session_id)
-        
+
         return wrapper
 
     def _instrument(self, **kwargs):
@@ -967,11 +811,11 @@ class XpanderInstrumentor(CommonInstrumentor):
         try:
             # Import xpander modules
             from xpander_sdk import Agent
-            
+
             # Set up tracing using existing AgentOps tracer
             self._tracer = tracer.get_tracer()
             # Attribute manager already initialized in __init__
-            
+
             # Wrap Agent methods
             Agent.add_task = self._wrap_init_task(Agent.add_task)
             Agent.init_task = self._wrap_init_task(Agent.init_task)  # Also wrap init_task for completeness
@@ -981,9 +825,7 @@ class XpanderInstrumentor(CommonInstrumentor):
             Agent.extract_tool_calls = self._wrap_extract_tool_calls(Agent.extract_tool_calls)
             Agent.report_execution_metrics = self._wrap_report_execution_metrics(Agent.report_execution_metrics)
             Agent.retrieve_execution_result = self._wrap_retrieve_execution_result(Agent.retrieve_execution_result)
-            
-            logger.info("Xpander SDK instrumentation activated")
-            
+
         except ImportError:
             logger.debug("Xpander SDK not available")
         except Exception as e:
@@ -991,7 +833,7 @@ class XpanderInstrumentor(CommonInstrumentor):
 
     def _uninstrument(self, **kwargs):
         """Uninstrument the Xpander SDK."""
-        logger.info("Xpander SDK instrumentation deactivated")
+        pass
 
     def _create_metrics(self, meter: Meter) -> StandardMetrics:
         """Create metrics for Xpander instrumentation."""
@@ -1014,36 +856,3 @@ class XpanderInstrumentor(CommonInstrumentor):
                 description="Number of Xpander request errors",
             ),
         )
-
-
-def create_xpander_llm_span(tracer, model_name, purpose, session_id, attribute_manager=None):
-    """Create a standardized LLM span for Xpander operations."""
-    span = tracer.start_span(
-        f"xpander.llm.{purpose}",
-        kind=OTelSpanKind.CLIENT,
-        attributes={
-            SpanAttributes.AGENTOPS_SPAN_KIND: SpanKind.LLM,
-            SpanAttributes.LLM_REQUEST_MODEL: model_name,
-            SpanAttributes.LLM_RESPONSE_MODEL: model_name,
-            "xpander.span.type": "llm",
-            "xpander.llm.purpose": purpose,
-            "xpander.session.id": session_id,
-        }
-    )
-    if attribute_manager:
-        attribute_manager.set_common_attributes(span)
-    return span
-
-
-# Backward compatibility functions
-def wrap_openai_call_for_xpander(openai_call_func, purpose="general"):
-    """Backward compatibility stub - functionality now handled by auto-instrumentation."""
-    return openai_call_func
-
-def is_xpander_session_active():
-    """Check if xpander session is active."""
-    return True  # Always return True since auto-instrumentation is active
-
-def get_active_xpander_session():
-    """Get active xpander session."""
-    return None  # Return None since we don't expose internal context
