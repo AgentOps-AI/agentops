@@ -33,7 +33,7 @@ class XpanderContext:
                 self._workflow_spans[session_id] = workflow_span
             if agent_span:
                 self._agent_spans[session_id] = agent_span
-            
+
             # Initialize conversation counter
             self._conversation_counters[session_id] = 0
 
@@ -48,7 +48,7 @@ class XpanderContext:
         with self._lock:
             if session_id in self._conversation_spans:
                 del self._conversation_spans[session_id]
-    
+
     def has_active_conversation(self, session_id: str) -> bool:
         """Check if there's an active conversation for this session."""
         with self._lock:
@@ -88,24 +88,24 @@ class XpanderContext:
         """Detect current workflow phase based on state."""
         with self._lock:
             session = self._sessions.get(session_id, {})
-            
-            if session.get('tools_executed', []):
+
+            if session.get("tools_executed", []):
                 return "executing"
-            elif session.get('step_count', 0) > 0:
+            elif session.get("step_count", 0) > 0:
                 return "executing"
             else:
                 return "planning"
-    
+
     def get_workflow_span(self, session_id: str):
         """Get the active workflow span for a session."""
         with self._lock:
             return self._workflow_spans.get(session_id)
-    
+
     def get_agent_span(self, session_id: str):
         """Get the active agent span for a session."""
         with self._lock:
             return self._agent_spans.get(session_id)
-    
+
     def get_conversation_span(self, session_id: str):
         """Get the active conversation span for a session."""
         with self._lock:

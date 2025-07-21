@@ -390,7 +390,7 @@ class XpanderInstrumentor(CommonInstrumentor):
             elif execution is None:
                 # Neither execution nor input provided - create empty execution
                 execution = {}
-            
+
             # Extract session ID and agent info
             session_id = instrumentor._extract_session_id(execution)
             agent_name = getattr(self, "name", "unknown")

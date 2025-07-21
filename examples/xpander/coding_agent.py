@@ -3,6 +3,7 @@ Copyright (c) 2025 Xpander, Inc. All rights reserved.
 Modified to use AgentOps callback handlers for tool instrumentation.
 Single-file implementation combining MyAgent and XpanderEventListener.
 """
+# ruff: noqa: E402
 
 import asyncio
 import json
