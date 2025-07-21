@@ -54,10 +54,13 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         # Store any additional kwargs for potential future use
         self._custom_kwargs = kwargs
 
+        # Filter headers to prevent override of critical headers
+        filtered_headers = self._filter_user_headers(headers) if headers else None
+
         # Initialize parent with only known parameters
         parent_kwargs = {}
-        if headers is not None:
-            parent_kwargs["headers"] = headers
+        if filtered_headers is not None:
+            parent_kwargs["headers"] = filtered_headers
         if timeout is not None:
             parent_kwargs["timeout"] = timeout
         if compression is not None:
@@ -66,24 +69,49 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         super().__init__(endpoint=endpoint, **parent_kwargs)
 
     def _get_current_jwt(self) -> Optional[str]:
-        """Get the current JWT token from the provider."""
+        """Get the current JWT token from the provider or stored JWT."""
         if self._jwt_provider:
             try:
                 return self._jwt_provider()
             except Exception as e:
                 logger.warning(f"Failed to get JWT token: {e}")
-        return None
+        return self._jwt
+
+    def _filter_user_headers(self, headers: Optional[Dict[str, str]]) -> Optional[Dict[str, str]]:
+        """Filter user-supplied headers to prevent override of critical headers."""
+        if not headers:
+            return None
+
+        # Define critical headers that cannot be overridden by user-supplied headers
+        PROTECTED_HEADERS = {
+            "authorization",
+            "content-type",
+            "user-agent",
+            "x-api-key",
+            "api-key",
+            "bearer",
+            "x-auth-token",
+            "x-session-token",
+        }
+
+        filtered_headers = {}
+        for key, value in headers.items():
+            if key.lower() not in PROTECTED_HEADERS:
+                filtered_headers[key] = value
+
+        return filtered_headers if filtered_headers else None
 
     def _prepare_headers(self, headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """Prepare headers with current JWT token."""
         # Start with base headers
         prepared_headers = dict(self._headers)
 
-        # Add any additional headers
-        if headers:
-            prepared_headers.update(headers)
+        # Add any additional headers, but only allow non-critical headers
+        filtered_headers = self._filter_user_headers(headers)
+        if filtered_headers:
+            prepared_headers.update(filtered_headers)
 
-        # Add current JWT token if available
+        # Add current JWT token if available (this ensures Authorization cannot be overridden)
         jwt_token = self._get_current_jwt()
         if jwt_token:
             prepared_headers["Authorization"] = f"Bearer {jwt_token}"

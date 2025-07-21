@@ -99,7 +99,7 @@ class BaseApiClient:
         url = self._get_full_url(path)
 
         try:
-            response_data = await HttpClient.async_request(
+            response_data = await self.http_client.async_request(
                 method=method, url=url, data=data, headers=headers, timeout=timeout
             )
             return response_data
