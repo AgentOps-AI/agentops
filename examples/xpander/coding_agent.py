@@ -22,7 +22,7 @@ print("🔧 Initializing AgentOps...")
 agentops.init(
     api_key=os.getenv("AGENTOPS_API_KEY"),
     trace_name="my-xpander-coding-agent-callbacks",
-    default_tags=["xpander", "coding-agent", "callbacks"]
+    default_tags=["xpander", "coding-agent", "callbacks"],
 )
 print("✅ AgentOps initialized")
 
@@ -75,24 +75,24 @@ class MyAgent:
                     messages=self.agent_backend.messages,
                     tools=self.agent_backend.get_tools(),
                     tool_choice=self.agent_backend.tool_choice,
-                    temperature=0
+                    temperature=0,
                 )
-                if hasattr(response, 'usage'):
+                if hasattr(response, "usage"):
                     tokens.worker.prompt_tokens += response.usage.prompt_tokens
                     tokens.worker.completion_tokens += response.usage.completion_tokens
                     tokens.worker.total_tokens += response.usage.total_tokens
-                
+
                 self.agent_backend.add_messages(response.model_dump())
                 self.agent_backend.report_execution_metrics(llm_tokens=tokens, ai_model="gpt-4.1")
                 tool_calls = self.agent_backend.extract_tool_calls(response.model_dump())
-                
+
                 if tool_calls:
                     logger.info(f"Executing {len(tool_calls)} tools...")
                     tool_results = await asyncio.to_thread(self.agent_backend.run_tools, tool_calls)
                     for res in tool_results:
                         emoji = "✅" if res.is_success else "❌"
                         logger.info(f"Tool result: {emoji} {res.function_name}")
-            
+
             duration = time.perf_counter() - start_time
             logger.info(f"Done! Duration: {duration:.1f}s | Total tokens: {tokens.worker.total_tokens}")
             result = self.agent_backend.retrieve_execution_result()
@@ -105,7 +105,7 @@ class MyAgent:
 # === Load Configuration ===
 logger.info("[xpander_handler] Loading xpander_config.json")
 config_path = Path(__file__).parent / "xpander_config.json"
-with open(config_path, 'r') as config_file:
+with open(config_path, "r") as config_file:
     xpander_config: dict = json.load(config_file)
 logger.info(f"[xpander_handler] Loaded config: {xpander_config}")
 
@@ -129,10 +129,7 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
         email = getattr(user, "email", "")
         user_info = f"👤 From user: {name}\n📧 Email: {email}"
 
-    IncomingEvent = (
-        f"\n📨 Incoming message: {execution_task.input.text}\n"
-        f"{user_info}"
-    )
+    IncomingEvent = f"\n📨 Incoming message: {execution_task.input.text}\n" f"{user_info}"
 
     logger.info(f"[on_execution_request] IncomingEvent: {IncomingEvent}")
     logger.info(f"[on_execution_request] Calling agent_backend.init_task with execution={execution_task.model_dump()}")
@@ -143,7 +140,7 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
     logger.info(f"[on_execution_request] Running agent with user_txt_input: {user_txt_input}")
     try:
         await my_agent.run(user_txt_input)
-        logger.info(f"[on_execution_request] Agent run completed")
+        logger.info("[on_execution_request] Agent run completed")
         execution_result = my_agent.agent_backend.retrieve_execution_result()
         logger.info(f"[on_execution_request] Execution result: {execution_result}")
         result_obj = AgentExecutionResult(
@@ -167,6 +164,7 @@ logger.info("[xpander_handler] Callback registered")
 
 # Example usage for direct interaction
 if __name__ == "__main__":
+
     async def main():
         agent = MyAgent()
         while True:
@@ -176,5 +174,5 @@ if __name__ == "__main__":
             agent.agent_backend.add_task(input=task)
             result = await agent.run(task)
             print(f"\nResult: {result['result']}")
-    
+
     asyncio.run(main())
