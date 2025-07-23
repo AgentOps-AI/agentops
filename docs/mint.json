@@ -161,6 +161,16 @@
       "version": "v2"
     },
     {
+      "group": "Deployment & Setup",
+      "pages": [
+        "v2/usage/deployment-overview",
+        "v2/usage/project-setup-guide",
+        "v2/usage/agent-deployment-guide",
+        "v2/usage/deployment-api-reference"
+      ],
+      "version": "v2"
+    },
+    {
       "group": "Other Info",
       "pages": ["v2/concepts/host-env"],
       "version": "v2"

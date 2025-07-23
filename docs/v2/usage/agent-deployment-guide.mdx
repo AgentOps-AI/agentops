@@ -1,0 +1,906 @@
+---
+title: "Agent Deployment Guide"
+description: "Complete guide for deploying AI agents with AgentOps observability and monitoring"
+---
+
+# Agent Deployment Guide
+
+This comprehensive guide covers everything you need to know about deploying AI agents with AgentOps monitoring, from initial setup to production deployment and ongoing management.
+
+## Overview
+
+AgentOps transforms AI agent development by providing comprehensive observability, debugging, and monitoring capabilities. Whether you're building simple chatbots or complex multi-agent systems, this guide will help you deploy your agents with enterprise-grade monitoring.
+
+### What You'll Learn
+
+- **Project Setup**: Configure your development environment
+- **Agent Instrumentation**: Add monitoring to your AI agents
+- **Deployment Strategies**: Deploy to various environments
+- **Monitoring & Analytics**: Track performance and costs
+- **API Integration**: Programmatically access your data
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+- Python 3.8+ installed
+- An [AgentOps account](https://app.agentops.ai) and API key
+- Basic familiarity with AI/ML frameworks
+- Access to LLM APIs (OpenAI, Anthropic, etc.)
+
+<Note>
+**New to AgentOps?** Sign up for a free account at [agentops.ai](https://agentops.ai) to get your API key and access to the dashboard.
+</Note>
+
+## Phase 1: Project Setup
+
+### 1.1 Environment Configuration
+
+Start by setting up your project environment with AgentOps:
+
+<CodeGroup>
+```bash pip
+pip install agentops python-dotenv
+```
+
+```bash poetry
+poetry add agentops python-dotenv
+```
+
+```bash uv
+uv add agentops python-dotenv
+```
+</CodeGroup>
+
+### 1.2 API Key Configuration
+
+Create a `.env` file in your project root:
+
+```env .env
+# AgentOps Configuration
+AGENTOPS_API_KEY=your_api_key_here
+AGENTOPS_ENVIRONMENT=development
+
+# LLM Provider Keys
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+```
+
+### 1.3 Basic Initialization
+
+Create your main application file with AgentOps initialization:
+
+```python main.py
+import agentops
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Initialize AgentOps - this enables automatic instrumentation
+agentops.init(
+    api_key=os.getenv("AGENTOPS_API_KEY"),
+    tags=["production", "chatbot"],  # Add relevant tags
+    auto_start_session=True
+)
+
+# Your agent code will go here
+```
+
+## Phase 2: Agent Instrumentation
+
+### 2.1 Basic Agent Monitoring
+
+The simplest way to add monitoring is through automatic instrumentation. AgentOps automatically tracks calls to supported frameworks:
+
+```python basic_agent.py
+import agentops
+import openai
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+# Initialize AgentOps
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
+
+# Create OpenAI client - automatically instrumented
+client = openai.OpenAI()
+
+def simple_agent(message):
+    """Basic agent with automatic monitoring."""
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": message}
+        ]
+    )
+    return response.choices[0].message.content
+
+# Use the agent
+result = simple_agent("What is the weather like today?")
+print(result)
+
+# End the session
+agentops.end_session("Success")
+```
+
+### 2.2 Advanced Agent Instrumentation
+
+For complex agents, use AgentOps decorators for detailed monitoring:
+
+```python advanced_agent.py
+import agentops
+from agentops.sdk.decorators import session, agent, operation, workflow
+import openai
+from typing import List, Dict
+import os
+
+# Initialize AgentOps
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
+
+@agent
+class CustomerServiceAgent:
+    def __init__(self, name: str):
+        self.name = name
+        self.client = openai.OpenAI()
+        
+    @operation
+    def analyze_sentiment(self, message: str) -> str:
+        """Analyze the sentiment of a customer message."""
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Analyze sentiment: positive, negative, or neutral"},
+                {"role": "user", "content": message}
+            ]
+        )
+        return response.choices[0].message.content.strip().lower()
+    
+    @operation
+    def generate_response(self, message: str, sentiment: str) -> str:
+        """Generate appropriate response based on sentiment."""
+        system_prompt = f"""
+        You are a customer service agent. The customer's message has {sentiment} sentiment.
+        Respond appropriately and professionally.
+        """
+        
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message}
+            ]
+        )
+        return response.choices[0].message.content
+    
+    @workflow
+    def handle_customer_query(self, message: str) -> Dict[str, str]:
+        """Complete workflow for handling customer queries."""
+        sentiment = self.analyze_sentiment(message)
+        response = self.generate_response(message, sentiment)
+        
+        return {
+            "sentiment": sentiment,
+            "response": response,
+            "agent": self.name
+        }
+
+@session
+def run_customer_service():
+    """Main session for customer service operations."""
+    agent = CustomerServiceAgent("CS-Agent-001")
+    
+    # Handle multiple queries
+    queries = [
+        "I'm having trouble with my order",
+        "Thank you for the excellent service!",
+        "When will my package arrive?"
+    ]
+    
+    results = []
+    for query in queries:
+        result = agent.handle_customer_query(query)
+        results.append(result)
+        
+    return results
+
+# Run the session
+if __name__ == "__main__":
+    results = run_customer_service()
+    for result in results:
+        print(f"Sentiment: {result['sentiment']}, Response: {result['response'][:50]}...")
+```
+
+### 2.3 Multi-Agent System Instrumentation
+
+For complex multi-agent systems:
+
+```python multi_agent_system.py
+import agentops
+from agentops.sdk.decorators import session, agent, operation
+import openai
+from typing import List, Dict
+import json
+
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
+
+@agent  
+class ResearchAgent:
+    def __init__(self):
+        self.client = openai.OpenAI()
+        
+    @operation
+    def research_topic(self, topic: str) -> str:
+        """Research a given topic."""
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a research agent. Provide detailed research on the given topic."},
+                {"role": "user", "content": f"Research: {topic}"}
+            ]
+        )
+        return response.choices[0].message.content
+
+@agent
+class WriterAgent:
+    def __init__(self):
+        self.client = openai.OpenAI()
+        
+    @operation
+    def write_article(self, research_data: str, topic: str) -> str:
+        """Write an article based on research data."""
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a writer. Create a well-structured article from the research data."},
+                {"role": "user", "content": f"Topic: {topic}\nResearch: {research_data}\nWrite an article:"}
+            ]
+        )
+        return response.choices[0].message.content
+
+@agent
+class EditorAgent:
+    def __init__(self):
+        self.client = openai.OpenAI()
+        
+    @operation
+    def edit_article(self, article: str) -> str:
+        """Edit and improve an article."""
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an editor. Improve the article's clarity, structure, and flow."},
+                {"role": "user", "content": f"Edit this article:\n{article}"}
+            ]
+        )
+        return response.choices[0].message.content
+
+@session
+def content_creation_pipeline(topic: str):
+    """Complete content creation pipeline with multiple agents."""
+    
+    # Initialize agents
+    researcher = ResearchAgent()
+    writer = WriterAgent()
+    editor = EditorAgent()
+    
+    # Pipeline execution
+    research_data = researcher.research_topic(topic)
+    draft_article = writer.write_article(research_data, topic)
+    final_article = editor.edit_article(draft_article)
+    
+    return {
+        "topic": topic,
+        "research": research_data[:200] + "...",
+        "draft": draft_article[:200] + "...",
+        "final": final_article[:200] + "..."
+    }
+
+# Usage
+if __name__ == "__main__":
+    result = content_creation_pipeline("The Future of AI in Healthcare")
+    print(json.dumps(result, indent=2))
+```
+
+## Phase 3: Deployment Strategies
+
+### 3.1 Local Development Deployment
+
+For local development and testing:
+
+```python local_deployment.py
+import agentops
+import os
+from dotenv import load_dotenv
+
+# Local development configuration
+load_dotenv()
+
+agentops.init(
+    api_key=os.getenv("AGENTOPS_API_KEY"),
+    tags=["development", "local"],
+    endpoint="https://api.agentops.ai",  # Default endpoint
+    max_wait_time=30000,  # 30 seconds
+    auto_start_session=True
+)
+
+# Your agent logic here
+def development_agent():
+    # Development-specific configuration
+    pass
+
+if __name__ == "__main__":
+    development_agent()
+```
+
+### 3.2 Cloud Deployment (AWS, GCP, Azure)
+
+Configure for cloud deployment:
+
+```python cloud_deployment.py
+import agentops
+import os
+import logging
+
+# Configure logging for production
+logging.basicConfig(level=logging.INFO)
+
+def initialize_production_agentops():
+    """Initialize AgentOps for production deployment."""
+    
+    # Get configuration from environment
+    api_key = os.getenv("AGENTOPS_API_KEY")
+    environment = os.getenv("ENVIRONMENT", "production")
+    service_name = os.getenv("SERVICE_NAME", "ai-agent-service")
+    version = os.getenv("SERVICE_VERSION", "1.0.0")
+    
+    if not api_key:
+        raise ValueError("AGENTOPS_API_KEY environment variable is required")
+    
+    agentops.init(
+        api_key=api_key,
+        tags=[environment, service_name, version],
+        auto_start_session=False,  # Manual session management in production
+        max_wait_time=60000,  # 60 seconds for production
+    )
+    
+    logging.info(f"AgentOps initialized for {environment} environment")
+
+# Production agent class
+class ProductionAgent:
+    def __init__(self):
+        initialize_production_agentops()
+        self.logger = logging.getLogger(__name__)
+    
+    def process_request(self, request_data):
+        """Process a request with full monitoring."""
+        
+        # Start a new session for this request
+        session_id = agentops.start_session(
+            tags=["api-request", f"user-{request_data.get('user_id', 'unknown')}"]
+        )
+        
+        try:
+            # Your agent processing logic
+            result = self._handle_request(request_data)
+            
+            # End session as successful
+            agentops.end_session("Success")
+            return result
+            
+        except Exception as e:
+            # End session as failed
+            agentops.end_session("Fail")
+            self.logger.error(f"Request processing failed: {str(e)}")
+            raise
+    
+    def _handle_request(self, request_data):
+        # Your actual agent logic
+        return {"status": "processed", "data": request_data}
+
+# Example usage
+agent = ProductionAgent()
+```
+
+### 3.3 Container Deployment (Docker)
+
+Create a Dockerfile for containerized deployment:
+
+```dockerfile Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV ENVIRONMENT=production
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+
+# Start the application
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+```txt requirements.txt
+agentops>=0.3.0
+python-dotenv
+fastapi
+uvicorn
+openai
+anthropic
+```
+
+### 3.4 Kubernetes Deployment
+
+Deploy to Kubernetes with proper configuration:
+
+```yaml k8s-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-agent-service
+  labels:
+    app: ai-agent-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ai-agent-service
+  template:
+    metadata:
+      labels:
+        app: ai-agent-service
+    spec:
+      containers:
+      - name: ai-agent
+        image: your-registry/ai-agent:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: AGENTOPS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agentops-secret
+              key: api-key
+        - name: ENVIRONMENT
+          value: "production"
+        - name: SERVICE_NAME
+          value: "ai-agent-service"
+        - name: SERVICE_VERSION
+          value: "1.0.0"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-agent-service
+spec:
+  selector:
+    app: ai-agent-service
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agentops-secret
+type: Opaque
+data:
+  api-key: <base64-encoded-agentops-api-key>
+```
+
+## Phase 4: Production Configuration
+
+### 4.1 Environment Management
+
+Configure different environments:
+
+```python config.py
+import os
+from dataclasses import dataclass
+from typing import List, Optional
+
+@dataclass
+class AgentOpsConfig:
+    api_key: str
+    environment: str
+    tags: List[str]
+    max_wait_time: int
+    auto_start_session: bool
+    endpoint: Optional[str] = None
+
+class ConfigManager:
+    @staticmethod
+    def get_config() -> AgentOpsConfig:
+        env = os.getenv("ENVIRONMENT", "development")
+        
+        if env == "production":
+            return ConfigManager._production_config()
+        elif env == "staging":
+            return ConfigManager._staging_config()
+        else:
+            return ConfigManager._development_config()
+    
+    @staticmethod
+    def _production_config() -> AgentOpsConfig:
+        return AgentOpsConfig(
+            api_key=os.getenv("AGENTOPS_API_KEY"),
+            environment="production",
+            tags=["production", os.getenv("SERVICE_NAME", "ai-service")],
+            max_wait_time=60000,
+            auto_start_session=False,
+        )
+    
+    @staticmethod
+    def _staging_config() -> AgentOpsConfig:
+        return AgentOpsConfig(
+            api_key=os.getenv("AGENTOPS_STAGING_API_KEY"),
+            environment="staging", 
+            tags=["staging", "testing"],
+            max_wait_time=30000,
+            auto_start_session=True,
+        )
+    
+    @staticmethod
+    def _development_config() -> AgentOpsConfig:
+        return AgentOpsConfig(
+            api_key=os.getenv("AGENTOPS_DEV_API_KEY"),
+            environment="development",
+            tags=["development", "local"],
+            max_wait_time=15000,
+            auto_start_session=True,
+        )
+
+# Usage
+def initialize_agentops():
+    config = ConfigManager.get_config()
+    agentops.init(
+        api_key=config.api_key,
+        tags=config.tags,
+        max_wait_time=config.max_wait_time,
+        auto_start_session=config.auto_start_session,
+        endpoint=config.endpoint
+    )
+```
+
+### 4.2 Error Handling and Resilience
+
+Implement robust error handling:
+
+```python error_handling.py
+import agentops
+from agentops.sdk.decorators import session, agent, operation
+import logging
+import time
+from typing import Optional, Any
+from functools import wraps
+
+def retry_on_failure(max_retries: int = 3, delay: float = 1.0):
+    """Decorator for retrying failed operations."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    logging.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
+                    time.sleep(delay)
+            return None
+        return wrapper
+    return decorator
+
+@agent
+class ResilientAgent:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        
+    @operation
+    @retry_on_failure(max_retries=3)
+    def reliable_operation(self, data: Any) -> Optional[str]:
+        """Operation with built-in retry logic."""
+        try:
+            # Your operation logic here
+            result = self._process_data(data)
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Operation failed: {e}")
+            # Re-raise to trigger retry
+            raise
+    
+    def _process_data(self, data: Any) -> str:
+        # Simulate processing that might fail
+        if not data:
+            raise ValueError("No data provided")
+        return f"Processed: {data}"
+
+@session
+def resilient_workflow():
+    """Workflow with comprehensive error handling."""
+    agent = ResilientAgent()
+    
+    try:
+        # Start session explicitly
+        agentops.start_session(tags=["resilient-workflow"])
+        
+        # Process data
+        result = agent.reliable_operation("sample data")
+        
+        # End session successfully
+        agentops.end_session("Success")
+        return result
+        
+    except Exception as e:
+        # Log error and end session as failed
+        logging.error(f"Workflow failed: {e}")
+        agentops.end_session("Fail")
+        raise
+```
+
+## Phase 5: Monitoring and Analytics
+
+### 5.1 Dashboard Access
+
+Access your agent performance data through the [AgentOps Dashboard](https://app.agentops.ai):
+
+- **Session Replays**: Step-by-step execution traces
+- **Cost Analytics**: Track LLM usage and costs
+- **Performance Metrics**: Response times and success rates
+- **Error Analysis**: Debug failed operations
+
+### 5.2 Programmatic Monitoring
+
+Use the Public API for programmatic access:
+
+```python monitoring.py
+import requests
+import os
+from typing import Dict, List, Optional
+
+class AgentOpsMonitor:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://api.agentops.ai"
+        self.bearer_token = None
+        self._authenticate()
+    
+    def _authenticate(self):
+        """Get bearer token for API access."""
+        response = requests.post(
+            f"{self.base_url}/public/v1/auth/access_token",
+            json={"api_key": self.api_key}
+        )
+        response.raise_for_status()
+        self.bearer_token = response.json()["bearer"]
+    
+    def get_headers(self) -> Dict[str, str]:
+        return {"Authorization": f"Bearer {self.bearer_token}"}
+    
+    def get_project_info(self) -> Dict:
+        """Get project information."""
+        response = requests.get(
+            f"{self.base_url}/public/v1/project",
+            headers=self.get_headers()
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def get_trace_details(self, trace_id: str) -> Dict:
+        """Get detailed trace information."""
+        response = requests.get(
+            f"{self.base_url}/public/v1/traces/{trace_id}",
+            headers=self.get_headers()
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def get_trace_metrics(self, trace_id: str) -> Dict:
+        """Get trace metrics and costs."""
+        response = requests.get(
+            f"{self.base_url}/public/v1/traces/{trace_id}/metrics",
+            headers=self.get_headers()
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def analyze_performance(self, trace_ids: List[str]) -> Dict:
+        """Analyze performance across multiple traces."""
+        metrics = []
+        for trace_id in trace_ids:
+            try:
+                metric = self.get_trace_metrics(trace_id)
+                metrics.append(metric)
+            except Exception as e:
+                print(f"Failed to get metrics for {trace_id}: {e}")
+        
+        if not metrics:
+            return {}
+        
+        # Calculate aggregated metrics
+        total_cost = sum(float(m.get('total_cost', 0)) for m in metrics)
+        total_tokens = sum(m.get('total_tokens', 0) for m in metrics)
+        avg_cost = total_cost / len(metrics)
+        
+        return {
+            "total_traces": len(metrics),
+            "total_cost": total_cost,
+            "average_cost": avg_cost,
+            "total_tokens": total_tokens,
+            "success_rate": sum(1 for m in metrics if m.get('success_count', 0) > 0) / len(metrics)
+        }
+
+# Usage example
+monitor = AgentOpsMonitor(os.getenv("AGENTOPS_API_KEY"))
+project_info = monitor.get_project_info()
+print(f"Monitoring project: {project_info['name']}")
+```
+
+### 5.3 Automated Alerts
+
+Set up monitoring alerts:
+
+```python alerts.py
+import smtplib
+from email.mime.text import MIMEText
+from typing import Dict, List
+import time
+
+class AlertManager:
+    def __init__(self, smtp_server: str, smtp_port: int, email: str, password: str):
+        self.smtp_server = smtp_server
+        self.smtp_port = smtp_port
+        self.email = email
+        self.password = password
+        self.monitor = AgentOpsMonitor(os.getenv("AGENTOPS_API_KEY"))
+    
+    def check_cost_threshold(self, threshold: float) -> bool:
+        """Check if costs exceed threshold."""
+        # Implementation would check recent traces
+        return False
+    
+    def check_error_rate(self, threshold: float) -> bool:
+        """Check if error rate exceeds threshold."""
+        # Implementation would check recent error rates
+        return False
+    
+    def send_alert(self, subject: str, message: str, recipients: List[str]):
+        """Send email alert."""
+        msg = MIMEText(message)
+        msg['Subject'] = subject
+        msg['From'] = self.email
+        msg['To'] = ', '.join(recipients)
+        
+        with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            server.starttls()
+            server.login(self.email, self.password)
+            server.send_message(msg)
+    
+    def run_monitoring_loop(self, recipients: List[str]):
+        """Run continuous monitoring loop."""
+        while True:
+            try:
+                if self.check_cost_threshold(100.0):  # $100 threshold
+                    self.send_alert(
+                        "AgentOps Cost Alert",
+                        "Agent costs have exceeded $100 threshold",
+                        recipients
+                    )
+                
+                if self.check_error_rate(0.1):  # 10% error rate
+                    self.send_alert(
+                        "AgentOps Error Rate Alert", 
+                        "Agent error rate exceeds 10%",
+                        recipients
+                    )
+                
+                time.sleep(300)  # Check every 5 minutes
+                
+            except Exception as e:
+                print(f"Monitoring error: {e}")
+                time.sleep(60)
+```
+
+## Best Practices
+
+### Performance Optimization
+
+1. **Session Management**: Use manual session control in production
+2. **Batch Operations**: Group related operations under single sessions
+3. **Resource Limits**: Set appropriate timeouts and limits
+4. **Caching**: Cache authentication tokens for API access
+
+### Security
+
+1. **API Key Security**: Store API keys securely using environment variables or secret management
+2. **Network Security**: Use HTTPS for all communications
+3. **Data Privacy**: Be mindful of sensitive data in traces
+4. **Access Control**: Limit dashboard access to authorized personnel
+
+### Cost Management
+
+1. **Token Monitoring**: Track token usage across models
+2. **Cost Alerts**: Set up automated cost monitoring
+3. **Model Selection**: Choose cost-effective models for different tasks
+4. **Usage Analytics**: Regular review of usage patterns
+
+## Troubleshooting
+
+### Common Issues
+
+**Authentication Failures**
+```python
+# Check API key validity
+try:
+    agentops.init(api_key="your-key")
+except Exception as e:
+    print(f"Authentication failed: {e}")
+```
+
+**Session Not Starting**
+```python
+# Ensure proper initialization
+agentops.init(api_key="your-key", auto_start_session=True)
+```
+
+**Missing Traces**
+```python
+# Verify instrumentation is working
+import logging
+logging.basicConfig(level=logging.DEBUG)
+agentops.init(api_key="your-key", debug=True)
+```
+
+### Getting Help
+
+- 📖 [Documentation](https://docs.agentops.ai)
+- 💬 [Discord Community](https://discord.gg/agentops)
+- 🐛 [GitHub Issues](https://github.com/AgentOps-AI/agentops/issues)
+- 📧 [Support Email](mailto:support@agentops.ai)
+
+## Next Steps
+
+1. **Explore Framework Integrations**: Check specific guides for [CrewAI](/v2/integrations/crewai), [LangChain](/v2/integrations/langchain), and [OpenAI Agents](/v2/integrations/openai_agents_python)
+2. **Set Up Alerts**: Configure monitoring and alerting for production
+3. **Optimize Performance**: Review dashboard analytics and optimize agent performance
+4. **Scale Deployment**: Consider load balancing and horizontal scaling strategies
+
+Your agents are now ready for production deployment with comprehensive monitoring and observability! 🚀

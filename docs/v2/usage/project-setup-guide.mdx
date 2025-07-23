@@ -1,0 +1,842 @@
+---
+title: "Project Setup Guide"
+description: "Detailed guide for setting up your development environment and configuring AgentOps for AI agent monitoring"
+---
+
+# Project Setup Guide
+
+This guide walks you through setting up your development environment for AI agents with AgentOps monitoring. Whether you're starting a new project or adding AgentOps to an existing one, this guide covers everything you need to get started.
+
+## Quick Start Checklist
+
+<Check>Create an [AgentOps account](https://app.agentops.ai) and get your API key</Check>
+<Check>Install Python 3.8+ and preferred package manager</Check>
+<Check>Install AgentOps SDK and dependencies</Check>
+<Check>Configure environment variables</Check>
+<Check>Initialize AgentOps in your project</Check>
+<Check>Test basic monitoring functionality</Check>
+
+## Prerequisites
+
+### System Requirements
+
+- **Python**: 3.8 or higher (3.11+ recommended)
+- **Operating System**: Windows, macOS, or Linux
+- **Memory**: Minimum 4GB RAM (8GB+ recommended for complex agents)
+- **Network**: Internet connection for API access
+
+### Account Setup
+
+1. **Create AgentOps Account**
+   - Visit [agentops.ai](https://agentops.ai) and sign up
+   - Verify your email address
+   - Complete the onboarding process
+
+2. **Get Your API Key**
+   - Navigate to [Dashboard Settings](https://app.agentops.ai/settings/projects)
+   - Copy your project API key
+   - Store it securely for configuration
+
+<Warning>
+**Keep your API key secure!** Never commit API keys to version control or share them publicly. Use environment variables or secure secret management systems.
+</Warning>
+
+## Installation Methods
+
+### Method 1: pip (Recommended)
+
+<CodeGroup>
+```bash Basic Installation
+pip install agentops
+```
+
+```bash With Common Dependencies
+pip install agentops python-dotenv openai anthropic
+```
+
+```bash Development Setup
+pip install agentops[dev] python-dotenv pytest black flake8
+```
+</CodeGroup>
+
+### Method 2: Poetry
+
+<CodeGroup>
+```bash Initialize Project
+poetry new my-ai-agent
+cd my-ai-agent
+```
+
+```bash Add Dependencies
+poetry add agentops python-dotenv
+poetry add openai anthropic  # Add LLM providers as needed
+```
+
+```bash Development Dependencies
+poetry add --group dev pytest black flake8 mypy
+```
+</CodeGroup>
+
+### Method 3: uv (Fast Python Package Manager)
+
+<CodeGroup>
+```bash Basic Installation
+uv add agentops python-dotenv
+```
+
+```bash With AI Dependencies
+uv add agentops python-dotenv openai anthropic crewai langchain
+```
+
+```bash Development Setup
+uv add agentops[dev] python-dotenv pytest black
+```
+</CodeGroup>
+
+## Project Structure
+
+### Recommended Directory Layout
+
+```
+my-ai-agent/
+├── .env                    # Environment variables (keep secret!)
+├── .env.example           # Template for environment variables
+├── .gitignore            # Git ignore file (include .env)
+├── requirements.txt      # Python dependencies
+├── README.md            # Project documentation
+├── config/
+│   ├── __init__.py
+│   ├── settings.py      # Configuration management
+│   └── agentops.py      # AgentOps specific config
+├── agents/
+│   ├── __init__.py
+│   ├── base.py          # Base agent class
+│   ├── chatbot.py       # Example chatbot agent
+│   └── research.py      # Example research agent
+├── tools/
+│   ├── __init__.py
+│   ├── web_search.py    # Web search tool
+│   └── calculator.py    # Calculator tool
+├── tests/
+│   ├── __init__.py
+│   ├── test_agents.py   # Agent tests
+│   └── test_tools.py    # Tool tests
+└── main.py              # Application entry point
+```
+
+### Create Project Structure
+
+<CodeGroup>
+```bash Manual Creation
+mkdir my-ai-agent
+cd my-ai-agent
+mkdir -p config agents tools tests
+touch .env .env.example .gitignore requirements.txt README.md
+touch config/__init__.py agents/__init__.py tools/__init__.py tests/__init__.py
+touch main.py config/settings.py config/agentops.py
+```
+
+```python Setup Script (setup_project.py)
+import os
+from pathlib import Path
+
+def create_project_structure(project_name: str):
+    """Create the recommended project structure."""
+    base_path = Path(project_name)
+    
+    # Create directories
+    directories = [
+        "config",
+        "agents", 
+        "tools",
+        "tests"
+    ]
+    
+    for directory in directories:
+        (base_path / directory).mkdir(parents=True, exist_ok=True)
+        (base_path / directory / "__init__.py").touch()
+    
+    # Create main files
+    files = [
+        ".env.example",
+        ".gitignore", 
+        "requirements.txt",
+        "README.md",
+        "main.py",
+        "config/settings.py",
+        "config/agentops.py"
+    ]
+    
+    for file in files:
+        (base_path / file).touch()
+    
+    print(f"Project structure created in {project_name}/")
+
+# Usage: python setup_project.py
+if __name__ == "__main__":
+    create_project_structure("my-ai-agent")
+```
+</CodeGroup>
+
+## Environment Configuration
+
+### Environment Variables Setup
+
+Create your `.env` file with the following configuration:
+
+```env .env
+# AgentOps Configuration
+AGENTOPS_API_KEY=your_agentops_api_key_here
+AGENTOPS_ENVIRONMENT=development
+AGENTOPS_PROJECT_NAME=my-ai-agent
+AGENTOPS_AUTO_START_SESSION=true
+
+# LLM Provider API Keys
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+COHERE_API_KEY=your_cohere_api_key_here
+
+# Optional Configuration
+AGENTOPS_ENDPOINT=https://api.agentops.ai
+AGENTOPS_MAX_WAIT_TIME=30000
+AGENTOPS_DEBUG=false
+
+# Application Settings
+LOG_LEVEL=INFO
+MAX_RETRIES=3
+TIMEOUT_SECONDS=30
+```
+
+### Environment Template
+
+Create `.env.example` for team sharing:
+
+```env .env.example
+# AgentOps Configuration
+AGENTOPS_API_KEY=your_agentops_api_key_here
+AGENTOPS_ENVIRONMENT=development
+AGENTOPS_PROJECT_NAME=my-ai-agent
+AGENTOPS_AUTO_START_SESSION=true
+
+# LLM Provider API Keys
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Optional: Add other providers as needed
+# COHERE_API_KEY=your_cohere_api_key_here
+# GROQ_API_KEY=your_groq_api_key_here
+
+# Application Settings
+LOG_LEVEL=INFO
+MAX_RETRIES=3
+TIMEOUT_SECONDS=30
+```
+
+### Git Configuration
+
+Add to `.gitignore`:
+
+```gitignore .gitignore
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+```
+
+## Configuration Management
+
+### Settings Module
+
+Create `config/settings.py` for centralized configuration:
+
+```python config/settings.py
+import os
+from dataclasses import dataclass
+from typing import List, Optional
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+@dataclass
+class AgentOpsSettings:
+    """AgentOps specific settings."""
+    api_key: str
+    environment: str = "development"
+    project_name: str = "ai-agent"
+    auto_start_session: bool = True
+    endpoint: Optional[str] = None
+    max_wait_time: int = 30000
+    debug: bool = False
+    tags: List[str] = None
+
+    def __post_init__(self):
+        if self.tags is None:
+            self.tags = [self.environment, self.project_name]
+
+@dataclass
+class LLMSettings:
+    """LLM provider settings."""
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    cohere_api_key: Optional[str] = None
+    default_model: str = "gpt-4o-mini"
+    max_tokens: int = 4000
+    temperature: float = 0.7
+
+@dataclass
+class AppSettings:
+    """Application settings."""
+    log_level: str = "INFO"
+    max_retries: int = 3
+    timeout_seconds: int = 30
+    debug_mode: bool = False
+
+class Settings:
+    """Main settings class."""
+    
+    def __init__(self):
+        self.agentops = AgentOpsSettings(
+            api_key=os.getenv("AGENTOPS_API_KEY"),
+            environment=os.getenv("AGENTOPS_ENVIRONMENT", "development"),
+            project_name=os.getenv("AGENTOPS_PROJECT_NAME", "ai-agent"),
+            auto_start_session=os.getenv("AGENTOPS_AUTO_START_SESSION", "true").lower() == "true",
+            endpoint=os.getenv("AGENTOPS_ENDPOINT"),
+            max_wait_time=int(os.getenv("AGENTOPS_MAX_WAIT_TIME", "30000")),
+            debug=os.getenv("AGENTOPS_DEBUG", "false").lower() == "true"
+        )
+        
+        self.llm = LLMSettings(
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+            cohere_api_key=os.getenv("COHERE_API_KEY"),
+            default_model=os.getenv("DEFAULT_MODEL", "gpt-4o-mini"),
+            max_tokens=int(os.getenv("MAX_TOKENS", "4000")),
+            temperature=float(os.getenv("TEMPERATURE", "0.7"))
+        )
+        
+        self.app = AppSettings(
+            log_level=os.getenv("LOG_LEVEL", "INFO"),
+            max_retries=int(os.getenv("MAX_RETRIES", "3")),
+            timeout_seconds=int(os.getenv("TIMEOUT_SECONDS", "30")),
+            debug_mode=os.getenv("DEBUG_MODE", "false").lower() == "true"
+        )
+    
+    def validate(self) -> bool:
+        """Validate required settings."""
+        if not self.agentops.api_key:
+            raise ValueError("AGENTOPS_API_KEY is required")
+        
+        if not any([self.llm.openai_api_key, self.llm.anthropic_api_key]):
+            raise ValueError("At least one LLM provider API key is required")
+        
+        return True
+
+# Global settings instance
+settings = Settings()
+```
+
+### AgentOps Configuration
+
+Create `config/agentops.py` for AgentOps initialization:
+
+```python config/agentops.py
+import agentops
+import logging
+from typing import Optional, List
+from .settings import settings
+
+logger = logging.getLogger(__name__)
+
+class AgentOpsManager:
+    """Manage AgentOps initialization and configuration."""
+    
+    def __init__(self):
+        self.initialized = False
+        self.session_active = False
+    
+    def initialize(self, 
+                   api_key: Optional[str] = None,
+                   tags: Optional[List[str]] = None,
+                   **kwargs) -> bool:
+        """Initialize AgentOps with configuration."""
+        
+        try:
+            # Validate settings
+            settings.validate()
+            
+            # Use provided values or fall back to settings
+            api_key = api_key or settings.agentops.api_key
+            tags = tags or settings.agentops.tags
+            
+            # Initialize AgentOps
+            agentops.init(
+                api_key=api_key,
+                tags=tags,
+                auto_start_session=settings.agentops.auto_start_session,
+                max_wait_time=settings.agentops.max_wait_time,
+                endpoint=settings.agentops.endpoint,
+                **kwargs
+            )
+            
+            self.initialized = True
+            self.session_active = settings.agentops.auto_start_session
+            
+            logger.info(f"AgentOps initialized for environment: {settings.agentops.environment}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize AgentOps: {e}")
+            return False
+    
+    def start_session(self, tags: Optional[List[str]] = None, **kwargs) -> Optional[str]:
+        """Start a new AgentOps session."""
+        if not self.initialized:
+            logger.warning("AgentOps not initialized, cannot start session")
+            return None
+        
+        try:
+            session_id = agentops.start_session(tags=tags, **kwargs)
+            self.session_active = True
+            logger.info(f"Started AgentOps session: {session_id}")
+            return session_id
+        except Exception as e:
+            logger.error(f"Failed to start session: {e}")
+            return None
+    
+    def end_session(self, end_state: str = "Success") -> bool:
+        """End the current AgentOps session."""
+        if not self.session_active:
+            logger.warning("No active session to end")
+            return False
+        
+        try:
+            agentops.end_session(end_state)
+            self.session_active = False
+            logger.info(f"Ended AgentOps session with state: {end_state}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to end session: {e}")
+            return False
+    
+    def is_initialized(self) -> bool:
+        """Check if AgentOps is initialized."""
+        return self.initialized
+    
+    def is_session_active(self) -> bool:
+        """Check if a session is currently active."""
+        return self.session_active
+
+# Global AgentOps manager instance
+agentops_manager = AgentOpsManager()
+
+# Convenience functions
+def init_agentops(**kwargs) -> bool:
+    """Initialize AgentOps with settings."""
+    return agentops_manager.initialize(**kwargs)
+
+def start_session(**kwargs) -> Optional[str]:
+    """Start a new session."""
+    return agentops_manager.start_session(**kwargs)
+
+def end_session(end_state: str = "Success") -> bool:
+    """End current session."""
+    return agentops_manager.end_session(end_state)
+```
+
+## Basic Application Setup
+
+### Main Application File
+
+Create `main.py` as your application entry point:
+
+```python main.py
+import logging
+import sys
+from config.settings import settings
+from config.agentops import init_agentops, start_session, end_session
+
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, settings.app.log_level),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+
+def setup_application():
+    """Set up the application with AgentOps monitoring."""
+    
+    # Initialize AgentOps
+    if not init_agentops():
+        logger.error("Failed to initialize AgentOps")
+        sys.exit(1)
+    
+    logger.info("Application setup complete")
+
+def main():
+    """Main application entry point."""
+    setup_application()
+    
+    # Start a session if not auto-started
+    if not settings.agentops.auto_start_session:
+        session_id = start_session(tags=["main-application"])
+        logger.info(f"Started session: {session_id}")
+    
+    try:
+        # Your application logic here
+        logger.info("Application running...")
+        
+        # Example: Simple agent interaction
+        result = run_example_agent()
+        logger.info(f"Agent result: {result}")
+        
+        # End session successfully
+        end_session("Success")
+        
+    except Exception as e:
+        logger.error(f"Application error: {e}")
+        end_session("Fail")
+        sys.exit(1)
+
+def run_example_agent():
+    """Example agent function."""
+    # This is where you'd implement your agent logic
+    # For now, just return a simple message
+    return "Agent executed successfully"
+
+if __name__ == "__main__":
+    main()
+```
+
+### Requirements File
+
+Create `requirements.txt` with all necessary dependencies:
+
+```txt requirements.txt
+# Core AgentOps
+agentops>=0.3.0
+
+# Environment management
+python-dotenv>=1.0.0
+
+# LLM Providers (choose based on your needs)
+openai>=1.0.0
+anthropic>=0.32.0
+
+# Optional: Framework integrations
+# crewai[agentops]>=0.80.0
+# langchain>=0.3.0
+# autogen[agentops]>=0.2.0
+
+# Development tools (optional)
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0
+
+# Utility packages
+requests>=2.28.0
+pydantic>=2.0.0
+```
+
+## Testing Your Setup
+
+### Basic Functionality Test
+
+Create a simple test to verify your setup:
+
+```python test_setup.py
+import os
+import sys
+from config.settings import settings
+from config.agentops import init_agentops, start_session, end_session
+
+def test_environment_variables():
+    """Test that required environment variables are set."""
+    assert settings.agentops.api_key, "AGENTOPS_API_KEY not set"
+    assert settings.llm.openai_api_key or settings.llm.anthropic_api_key, "No LLM API key set"
+    print("✅ Environment variables configured correctly")
+
+def test_agentops_initialization():
+    """Test AgentOps initialization."""
+    success = init_agentops()
+    assert success, "AgentOps initialization failed"
+    print("✅ AgentOps initialized successfully")
+
+def test_session_management():
+    """Test session start and end."""
+    session_id = start_session(tags=["test-session"])
+    assert session_id, "Failed to start session"
+    print(f"✅ Session started: {session_id}")
+    
+    success = end_session("Success")
+    assert success, "Failed to end session"
+    print("✅ Session ended successfully")
+
+def run_all_tests():
+    """Run all setup tests."""
+    print("Running setup tests...")
+    
+    try:
+        test_environment_variables()
+        test_agentops_initialization()
+        test_session_management()
+        print("\n🎉 All tests passed! Your setup is working correctly.")
+        
+    except Exception as e:
+        print(f"\n❌ Test failed: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    run_all_tests()
+```
+
+Run the test:
+
+```bash
+python test_setup.py
+```
+
+### Integration Test with LLM
+
+Create a more comprehensive test with actual LLM usage:
+
+```python test_integration.py
+import openai
+from config.settings import settings
+from config.agentops import init_agentops, start_session, end_session
+
+def test_llm_integration():
+    """Test AgentOps monitoring with actual LLM calls."""
+    
+    # Initialize AgentOps
+    if not init_agentops():
+        raise Exception("AgentOps initialization failed")
+    
+    # Start a test session
+    session_id = start_session(tags=["integration-test", "llm-test"])
+    
+    try:
+        # Create OpenAI client (automatically instrumented by AgentOps)
+        client = openai.OpenAI(api_key=settings.llm.openai_api_key)
+        
+        # Make a simple chat completion call
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Say hello and confirm that AgentOps monitoring is working."}
+            ],
+            max_tokens=100
+        )
+        
+        result = response.choices[0].message.content
+        print(f"LLM Response: {result}")
+        
+        # End session successfully
+        end_session("Success")
+        print("✅ Integration test completed successfully")
+        print(f"Check your AgentOps dashboard for session: {session_id}")
+        
+    except Exception as e:
+        end_session("Fail")
+        raise Exception(f"Integration test failed: {e}")
+
+if __name__ == "__main__":
+    test_llm_integration()
+```
+
+## Development Workflow
+
+### Development Commands
+
+Create useful scripts for development:
+
+```python scripts/dev.py
+#!/usr/bin/env python3
+"""Development utility scripts."""
+
+import subprocess
+import sys
+from pathlib import Path
+
+def run_tests():
+    """Run all tests."""
+    subprocess.run([sys.executable, "-m", "pytest", "tests/"], check=True)
+
+def format_code():
+    """Format code with black."""
+    subprocess.run([sys.executable, "-m", "black", "."], check=True)
+
+def lint_code():
+    """Lint code with flake8."""
+    subprocess.run([sys.executable, "-m", "flake8", "."], check=True)
+
+def type_check():
+    """Run type checking with mypy."""
+    subprocess.run([sys.executable, "-m", "mypy", "."], check=True)
+
+def setup_dev():
+    """Set up development environment."""
+    print("Setting up development environment...")
+    
+    # Install development dependencies
+    subprocess.run([
+        sys.executable, "-m", "pip", "install", 
+        "pytest", "black", "flake8", "mypy"
+    ], check=True)
+    
+    # Run initial setup test
+    subprocess.run([sys.executable, "test_setup.py"], check=True)
+    
+    print("✅ Development environment ready!")
+
+if __name__ == "__main__":
+    command = sys.argv[1] if len(sys.argv) > 1 else "help"
+    
+    commands = {
+        "test": run_tests,
+        "format": format_code,
+        "lint": lint_code,
+        "typecheck": type_check,
+        "setup": setup_dev,
+    }
+    
+    if command in commands:
+        commands[command]()
+    else:
+        print("Available commands: test, format, lint, typecheck, setup")
+```
+
+### IDE Configuration
+
+#### VS Code Settings
+
+Create `.vscode/settings.json`:
+
+```json .vscode/settings.json
+{
+    "python.defaultInterpreterPath": "./venv/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": ["--line-length", "88"],
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        ".env": true
+    },
+    "python.envFile": "${workspaceFolder}/.env"
+}
+```
+
+#### PyCharm Configuration
+
+For PyCharm users, configure:
+
+1. **Python Interpreter**: Point to your virtual environment
+2. **Environment Variables**: Load from `.env` file
+3. **Code Style**: Set to Black formatting
+4. **Run Configurations**: Set up with environment variables
+
+## Troubleshooting
+
+### Common Setup Issues
+
+#### API Key Not Found
+
+```bash
+# Check if environment variables are loaded
+python -c "import os; print('AGENTOPS_API_KEY:', bool(os.getenv('AGENTOPS_API_KEY')))"
+```
+
+#### Import Errors
+
+```bash
+# Verify AgentOps installation
+python -c "import agentops; print('AgentOps version:', agentops.__version__)"
+```
+
+#### Connection Issues
+
+```python
+# Test API connectivity
+import requests
+response = requests.get("https://api.agentops.ai/health")
+print("API Status:", response.status_code)
+```
+
+### Debugging Tips
+
+1. **Enable Debug Logging**:
+   ```python
+   import logging
+   logging.basicConfig(level=logging.DEBUG)
+   ```
+
+2. **Check AgentOps Status**:
+   ```python
+   from config.agentops import agentops_manager
+   print("Initialized:", agentops_manager.is_initialized())
+   print("Session Active:", agentops_manager.is_session_active())
+   ```
+
+3. **Validate Configuration**:
+   ```python
+   from config.settings import settings
+   settings.validate()
+   ```
+
+## Next Steps
+
+1. **Explore Examples**: Check out the [examples](/v2/examples/examples) to see AgentOps in action
+2. **Add Framework Integration**: Set up [CrewAI](/v2/integrations/crewai), [LangChain](/v2/integrations/langchain), or other frameworks
+3. **Deploy Your Agent**: Follow the [Agent Deployment Guide](/v2/usage/agent-deployment-guide) for production deployment
+4. **Monitor Performance**: Learn about the [Dashboard](/v2/usage/dashboard-info) and [Public API](/v2/usage/public-api)
+
+Your development environment is now ready for building and monitoring AI agents with AgentOps! 🚀

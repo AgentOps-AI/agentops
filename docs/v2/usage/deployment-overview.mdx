@@ -1,0 +1,339 @@
+---
+title: "Agent Deployment Overview"
+description: "Complete overview of deploying AI agents with AgentOps monitoring - from setup to production"
+---
+
+# Agent Deployment Overview
+
+Welcome to the comprehensive guide for deploying AI agents with AgentOps observability and monitoring. This overview provides a roadmap to get your agents from development to production with enterprise-grade monitoring.
+
+## 🚀 Quick Navigation
+
+<CardGroup cols={3}>
+  <Card title="Project Setup" icon="gear" href="/v2/usage/project-setup-guide">
+    Environment configuration, installation, and initial setup
+  </Card>
+  <Card title="Deployment Guide" icon="rocket" href="/v2/usage/agent-deployment-guide">
+    End-to-end deployment from development to production
+  </Card>
+  <Card title="API Reference" icon="code" href="/v2/usage/deployment-api-reference">
+    Complete SDK and REST API documentation
+  </Card>
+</CardGroup>
+
+## What is Agent Deployment with AgentOps?
+
+AgentOps transforms AI agent development by providing comprehensive observability, debugging, and monitoring capabilities. When we talk about "agent deployment," we mean:
+
+- **Instrumenting your AI agents** with monitoring and observability
+- **Deploying to production environments** with proper configuration
+- **Monitoring performance and costs** in real-time
+- **Debugging and optimizing** agent behavior
+- **Scaling and managing** multi-agent systems
+
+## Deployment Journey
+
+### Phase 1: Setup & Development 🛠️
+
+<Steps>
+  <Step title="Environment Setup">
+    Install AgentOps SDK and configure your development environment
+    - [Installation Methods](/v2/usage/project-setup-guide#installation-methods)
+    - [Project Structure](/v2/usage/project-setup-guide#project-structure)
+    - [Environment Configuration](/v2/usage/project-setup-guide#environment-configuration)
+  </Step>
+  
+  <Step title="Basic Configuration">
+    Configure API keys and initialize AgentOps monitoring
+    - [Configuration Management](/v2/usage/project-setup-guide#configuration-management)
+    - [Basic Application Setup](/v2/usage/project-setup-guide#basic-application-setup)
+    - [Testing Your Setup](/v2/usage/project-setup-guide#testing-your-setup)
+  </Step>
+  
+  <Step title="Agent Instrumentation">
+    Add monitoring to your AI agents using decorators or manual instrumentation
+    - [Basic Agent Monitoring](/v2/usage/agent-deployment-guide#basic-agent-monitoring)
+    - [Advanced Instrumentation](/v2/usage/agent-deployment-guide#advanced-agent-instrumentation)
+    - [Multi-Agent Systems](/v2/usage/agent-deployment-guide#multi-agent-system-instrumentation)
+  </Step>
+</Steps>
+
+### Phase 2: Deployment Strategies 🚀
+
+<Steps>
+  <Step title="Local Development">
+    Deploy and test locally with monitoring
+    - [Local Deployment](/v2/usage/agent-deployment-guide#local-development-deployment)
+    - [Development Configuration](/v2/usage/agent-deployment-guide#environment-management)
+  </Step>
+  
+  <Step title="Cloud Deployment">
+    Deploy to AWS, GCP, Azure with proper configuration
+    - [Cloud Deployment](/v2/usage/agent-deployment-guide#cloud-deployment-aws-gcp-azure)
+    - [Container Deployment](/v2/usage/agent-deployment-guide#container-deployment-docker)
+    - [Kubernetes Deployment](/v2/usage/agent-deployment-guide#kubernetes-deployment)
+  </Step>
+  
+  <Step title="Production Configuration">
+    Configure for production with error handling and resilience
+    - [Production Configuration](/v2/usage/agent-deployment-guide#production-configuration)
+    - [Error Handling](/v2/usage/agent-deployment-guide#error-handling-and-resilience)
+  </Step>
+</Steps>
+
+### Phase 3: Monitoring & Management 📊
+
+<Steps>
+  <Step title="Dashboard Analytics">
+    Monitor agent performance through the AgentOps dashboard
+    - [Dashboard Access](/v2/usage/agent-deployment-guide#dashboard-access)
+    - [Performance Metrics](/v2/usage/dashboard-info)
+  </Step>
+  
+  <Step title="Programmatic Monitoring">
+    Access monitoring data via APIs for custom analytics
+    - [Public API Access](/v2/usage/agent-deployment-guide#programmatic-monitoring)
+    - [API Reference](/v2/usage/deployment-api-reference#public-rest-api)
+  </Step>
+  
+  <Step title="Alerts & Optimization">
+    Set up alerts and optimize agent performance
+    - [Automated Alerts](/v2/usage/agent-deployment-guide#automated-alerts)
+    - [Best Practices](/v2/usage/agent-deployment-guide#best-practices)
+  </Step>
+</Steps>
+
+## Key Features & Benefits
+
+### 🔍 **Comprehensive Observability**
+
+<Tabs>
+  <Tab title="Session Replays">
+    **Step-by-step execution traces** showing exactly what your agents did
+    - View complete conversation flows
+    - Debug failed operations
+    - Understand agent decision-making
+  </Tab>
+  
+  <Tab title="Performance Metrics">
+    **Real-time performance monitoring** with detailed analytics
+    - Response times and latency
+    - Success/failure rates
+    - Token usage and costs
+    - Custom metrics and events
+  </Tab>
+  
+  <Tab title="Cost Analytics">
+    **LLM cost tracking and optimization** across all providers
+    - Per-model cost breakdown
+    - Usage trends and forecasting
+    - Cost alerts and budgeting
+    - ROI analysis
+  </Tab>
+</Tabs>
+
+### 🛠️ **Developer Experience**
+
+- **2-Line Setup**: Get started with just `agentops.init()` and automatic instrumentation
+- **Framework Integration**: Native support for CrewAI, LangChain, OpenAI Agents, and more
+- **Flexible APIs**: Use decorators, manual instrumentation, or automatic monitoring
+- **Production Ready**: Built-in error handling, retries, and graceful degradation
+
+### 🏗️ **Deployment Flexibility**
+
+<CardGroup cols={2}>
+  <Card title="Local Development" icon="laptop">
+    Quick setup for development and testing
+    - Automatic session management
+    - Debug-friendly configuration
+    - Hot reloading support
+  </Card>
+  <Card title="Cloud Platforms" icon="cloud">
+    Deploy to any cloud platform
+    - AWS, GCP, Azure support
+    - Environment-specific configuration
+    - Scalable architecture
+  </Card>
+  <Card title="Container Deployment" icon="docker">
+    Docker and Kubernetes ready
+    - Health check endpoints
+    - Graceful shutdown handling
+    - Resource management
+  </Card>
+  <Card title="Serverless Functions" icon="bolt">
+    Works with serverless architectures
+    - Lambda, Cloud Functions
+    - Short-lived execution support
+    - Minimal overhead
+  </Card>
+</CardGroup>
+
+## Common Use Cases
+
+### 🤖 **Customer Service Agents**
+
+Deploy chatbots and customer service agents with comprehensive monitoring:
+
+```python
+@agent
+class CustomerServiceAgent:
+    @operation
+    def analyze_sentiment(self, message: str) -> str:
+        # Sentiment analysis with monitoring
+        pass
+    
+    @operation  
+    def generate_response(self, message: str, sentiment: str) -> str:
+        # Response generation with cost tracking
+        pass
+```
+
+### 🔬 **Research & Analysis Agents**
+
+Monitor complex research workflows and data processing:
+
+```python
+@workflow
+def research_pipeline(topic: str):
+    researcher = ResearchAgent()
+    writer = WriterAgent() 
+    editor = EditorAgent()
+    
+    research = researcher.research_topic(topic)
+    article = writer.write_article(research, topic)
+    return editor.edit_article(article)
+```
+
+### 🏢 **Enterprise Multi-Agent Systems**
+
+Deploy and monitor complex multi-agent workflows:
+
+```python
+@session
+def enterprise_workflow():
+    # Orchestrate multiple specialized agents
+    planning_agent = PlanningAgent()
+    execution_agents = [ExecutionAgent(i) for i in range(5)]
+    review_agent = ReviewAgent()
+    
+    plan = planning_agent.create_plan()
+    results = [agent.execute(plan) for agent in execution_agents]
+    return review_agent.review_results(results)
+```
+
+## API & Integration Options
+
+### 🐍 **Python SDK**
+
+<CardGroup cols={2}>
+  <Card title="Decorators API" icon="at">
+    Easy-to-use decorators for automatic monitoring
+    - `@session`, `@agent`, `@operation`, `@workflow`
+    - Zero-configuration instrumentation
+    - Hierarchical span tracking
+  </Card>
+  <Card title="Manual API" icon="code">
+    Fine-grained control over monitoring
+    - `agentops.start_session()`
+    - `agentops.start_span()`
+    - `agentops.record_event()`
+  </Card>
+</CardGroup>
+
+### 🌐 **REST API**
+
+<CardGroup cols={2}>
+  <Card title="Read-Only Access" icon="eye">
+    Programmatic access to monitoring data
+    - Get trace and span details
+    - Retrieve metrics and costs
+    - Export data for analysis
+  </Card>
+  <Card title="MCP Server" icon="server">
+    Model Context Protocol integration
+    - AI assistant integration
+    - Direct data querying
+    - Conversational monitoring
+  </Card>
+</CardGroup>
+
+## Framework Integrations
+
+AgentOps provides native integrations with popular AI frameworks:
+
+<CardGroup cols={3}>
+  <Card title="OpenAI Agents" icon="openai" href="/v2/integrations/openai_agents_python">
+    Native SDK integration for OpenAI Agents
+  </Card>
+  <Card title="CrewAI" icon="users" href="/v2/integrations/crewai">
+    Multi-agent framework support
+  </Card>
+  <Card title="LangChain" icon="link" href="/v2/integrations/langchain">
+    Comprehensive LangChain monitoring
+  </Card>
+  <Card title="AG2 (AutoGen)" icon="robot" href="/v2/integrations/ag2">
+    Multi-agent conversation tracking
+  </Card>
+  <Card title="LlamaIndex" icon="llama" href="/v2/integrations/llamaindex">
+    RAG and indexing pipeline monitoring
+  </Card>
+  <Card title="Anthropic" icon="anthropic" href="/v2/integrations/anthropic">
+    Claude API integration and tracking
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+### Quick Start (2 Minutes)
+
+1. **Install AgentOps**:
+   ```bash
+   pip install agentops python-dotenv
+   ```
+
+2. **Initialize monitoring**:
+   ```python
+   import agentops
+   agentops.init("your-api-key")
+   ```
+
+3. **Deploy your agent** with automatic monitoring!
+
+### Full Setup (15 Minutes)
+
+Follow our comprehensive guides:
+
+1. 📖 **[Project Setup Guide](/v2/usage/project-setup-guide)** - Complete environment configuration
+2. 🚀 **[Deployment Guide](/v2/usage/agent-deployment-guide)** - Production deployment strategies  
+3. 📚 **[API Reference](/v2/usage/deployment-api-reference)** - Detailed API documentation
+
+## Support & Resources
+
+<CardGroup cols={2}>
+  <Card title="Documentation" icon="book" href="https://docs.agentops.ai">
+    Comprehensive guides and API reference
+  </Card>
+  <Card title="Discord Community" icon="discord" href="https://discord.gg/agentops">
+    Get help from the community and team
+  </Card>
+  <Card title="GitHub Examples" icon="github" href="https://github.com/AgentOps-AI/agentops">
+    Code examples and open source project
+  </Card>
+  <Card title="Dashboard" icon="chart-line" href="https://app.agentops.ai">
+    Monitor your deployed agents
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+Ready to deploy your first agent with AgentOps monitoring?
+
+<CardGroup cols={1}>
+  <Card title="Start with Project Setup" icon="play" href="/v2/usage/project-setup-guide">
+    Begin with our step-by-step setup guide to configure your development environment and get your first agent running with monitoring.
+  </Card>
+</CardGroup>
+
+---
+
+*Questions about deployment? Join our [Discord community](https://discord.gg/agentops) or check out our [GitHub repository](https://github.com/AgentOps-AI/agentops) for examples and support.*

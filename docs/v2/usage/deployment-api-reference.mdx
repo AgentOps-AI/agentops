@@ -1,0 +1,956 @@
+---
+title: "Deployment API Reference"
+description: "Complete API reference for deploying and managing AI agents with AgentOps monitoring and observability"
+---
+
+# Deployment API Reference
+
+This comprehensive API reference covers all the APIs you need for deploying, monitoring, and managing AI agents with AgentOps. Whether you're using the Python SDK, REST APIs, or integrating with deployment platforms, this guide has you covered.
+
+## SDK API Reference
+
+### Core Initialization
+
+#### `agentops.init()`
+
+Initialize AgentOps monitoring for your application.
+
+<CodeGroup>
+```python Basic Usage
+import agentops
+
+agentops.init(api_key="your-api-key")
+```
+
+```python Advanced Configuration
+import agentops
+
+agentops.init(
+    api_key="your-api-key",
+    tags=["production", "chatbot", "v1.0"],
+    auto_start_session=True,
+    max_wait_time=60000,
+    endpoint="https://api.agentops.ai",
+    environment="production"
+)
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `api_key` | `str` | Yes | Your AgentOps project API key |
+| `tags` | `List[str]` | No | Tags to associate with all sessions |
+| `auto_start_session` | `bool` | No | Automatically start a session (default: `True`) |
+| `max_wait_time` | `int` | No | Maximum wait time for API calls in milliseconds (default: `30000`) |
+| `endpoint` | `str` | No | Custom API endpoint (default: `https://api.agentops.ai`) |
+| `environment` | `str` | No | Environment identifier for your deployment |
+
+### Session Management
+
+#### `agentops.start_session()`
+
+Start a new monitoring session.
+
+<CodeGroup>
+```python Basic Session
+session_id = agentops.start_session()
+```
+
+```python Tagged Session
+session_id = agentops.start_session(
+    tags=["user-123", "chat-session", "mobile"],
+    metadata={
+        "user_id": "123",
+        "session_type": "chat",
+        "platform": "mobile"
+    }
+)
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tags` | `List[str]` | No | Tags specific to this session |
+| `metadata` | `Dict[str, Any]` | No | Additional metadata for the session |
+
+**Returns:** `str` - Session ID
+
+#### `agentops.end_session()`
+
+End the current monitoring session.
+
+<CodeGroup>
+```python Success
+agentops.end_session("Success")
+```
+
+```python Failure
+agentops.end_session("Fail")
+```
+
+```python With Metadata
+agentops.end_session(
+    end_state="Success",
+    metadata={
+        "total_interactions": 15,
+        "user_satisfaction": 4.5
+    }
+)
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `end_state` | `str` | Yes | Session end state: `"Success"`, `"Fail"`, or `"Indeterminate"` |
+| `metadata` | `Dict[str, Any]` | No | Additional metadata for session closure |
+
+### Decorators API
+
+#### `@session`
+
+Create a session span around a function.
+
+<CodeGroup>
+```python Basic Session Decorator
+from agentops.sdk.decorators import session
+
+@session
+def main_workflow():
+    # Your workflow logic
+    return "Completed"
+```
+
+```python Session with Tags
+from agentops.sdk.decorators import session
+
+@session(tags=["workflow", "production"])
+def process_request(request_data):
+    # Process the request
+    return result
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tags` | `List[str]` | No | Tags for the session |
+| `name` | `str` | No | Custom name for the session |
+
+#### `@agent`
+
+Mark a class as an agent for monitoring.
+
+<CodeGroup>
+```python Basic Agent
+from agentops.sdk.decorators import agent
+
+@agent
+class ChatBot:
+    def __init__(self, name):
+        self.name = name
+    
+    def respond(self, message):
+        return f"Response to: {message}"
+```
+
+```python Agent with Configuration
+from agentops.sdk.decorators import agent
+
+@agent(name="CustomerServiceBot", tags=["customer-service"])
+class ServiceAgent:
+    def handle_query(self, query):
+        return self.process_query(query)
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `str` | No | Custom name for the agent |
+| `tags` | `List[str]` | No | Tags specific to this agent |
+
+#### `@operation`
+
+Track individual operations within agents.
+
+<CodeGroup>
+```python Basic Operation
+from agentops.sdk.decorators import operation
+
+@operation
+def analyze_sentiment(text):
+    # Sentiment analysis logic
+    return "positive"
+```
+
+```python Operation with Custom Name
+from agentops.sdk.decorators import operation
+
+@operation(name="llm-call", tags=["gpt-4"])
+def call_openai(prompt):
+    # OpenAI API call
+    return response
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `str` | No | Custom name for the operation |
+| `tags` | `List[str]` | No | Tags specific to this operation |
+
+#### `@workflow`
+
+Track multi-step workflows.
+
+<CodeGroup>
+```python Basic Workflow
+from agentops.sdk.decorators import workflow
+
+@workflow
+def content_pipeline(topic):
+    research_data = research_topic(topic)
+    article = write_article(research_data)
+    return edit_article(article)
+```
+
+```python Workflow with Error Handling
+from agentops.sdk.decorators import workflow
+
+@workflow(name="order-processing")
+def process_order(order_data):
+    try:
+        validated = validate_order(order_data)
+        payment = process_payment(validated)
+        return fulfill_order(payment)
+    except Exception as e:
+        handle_error(e)
+        raise
+```
+</CodeGroup>
+
+### Manual Span Management
+
+#### `agentops.start_span()`
+
+Manually start a span for custom tracking.
+
+<CodeGroup>
+```python Basic Span
+span = agentops.start_span(
+    name="custom-operation",
+    span_kind="task"
+)
+```
+
+```python Span with Attributes
+span = agentops.start_span(
+    name="database-query",
+    span_kind="operation",
+    attributes={
+        "db.table": "users",
+        "db.operation": "select"
+    }
+)
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `str` | Yes | Name of the span |
+| `span_kind` | `str` | No | Type of span: `"agent"`, `"llm"`, `"tool"`, `"task"`, `"operation"` |
+| `attributes` | `Dict[str, Any]` | No | Custom attributes for the span |
+
+#### `agentops.end_span()`
+
+End a manually created span.
+
+<CodeGroup>
+```python End Span Successfully
+agentops.end_span(span, status="success")
+```
+
+```python End Span with Error
+agentops.end_span(
+    span, 
+    status="error",
+    error_message="Database connection failed"
+)
+```
+</CodeGroup>
+
+### Event Recording
+
+#### `agentops.record_event()`
+
+Record custom events for monitoring.
+
+<CodeGroup>
+```python Basic Event
+agentops.record_event(
+    event_type="user_interaction",
+    data={"action": "button_click", "button_id": "submit"}
+)
+```
+
+```python Complex Event
+agentops.record_event(
+    event_type="llm_response",
+    data={
+        "model": "gpt-4",
+        "prompt_tokens": 150,
+        "completion_tokens": 75,
+        "cost": 0.0045
+    },
+    tags=["openai", "production"]
+)
+```
+</CodeGroup>
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `event_type` | `str` | Yes | Type of event being recorded |
+| `data` | `Dict[str, Any]` | Yes | Event data payload |
+| `tags` | `List[str]` | No | Tags for the event |
+
+## Public REST API
+
+### Authentication
+
+#### Get Access Token
+
+Convert your API key to a bearer token for API access.
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/public/v1/auth/access_token \
+  -H "Content-Type: application/json" \
+  -d '{"api_key": "YOUR_API_KEY"}'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "https://api.agentops.ai/public/v1/auth/access_token",
+    json={"api_key": "YOUR_API_KEY"}
+)
+token = response.json()["bearer"]
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.agentops.ai/public/v1/auth/access_token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ api_key: 'YOUR_API_KEY' })
+});
+const { bearer } = await response.json();
+```
+</CodeGroup>
+
+**Request Body:**
+```json
+{
+  "api_key": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "bearer": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+### Project Information
+
+#### Get Project Details
+
+Retrieve information about your project.
+
+<CodeGroup>
+```bash curl
+curl -X GET https://api.agentops.ai/public/v1/project \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```python Python
+headers = {"Authorization": f"Bearer {token}"}
+response = requests.get(
+    "https://api.agentops.ai/public/v1/project",
+    headers=headers
+)
+project = response.json()
+```
+</CodeGroup>
+
+**Response:**
+```json
+{
+  "id": "proj_abc123",
+  "name": "My AI Project",
+  "environment": "production",
+  "created_at": "2024-01-01T00:00:00Z",
+  "settings": {
+    "retention_days": 30,
+    "cost_tracking": true
+  }
+}
+```
+
+### Trace Management
+
+#### Get Trace Details
+
+Retrieve comprehensive information about a specific trace.
+
+<CodeGroup>
+```bash curl
+curl -X GET https://api.agentops.ai/public/v1/traces/{trace_id} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```python Python
+def get_trace_details(trace_id: str, token: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(
+        f"https://api.agentops.ai/public/v1/traces/{trace_id}",
+        headers=headers
+    )
+    return response.json()
+```
+</CodeGroup>
+
+**Response:**
+```json
+{
+  "trace_id": "trace_123",
+  "project_id": "proj_abc123",
+  "start_time": "2024-03-14T12:00:00.000Z",
+  "end_time": "2024-03-14T12:00:05.000Z",
+  "tags": ["production", "chatbot", "gpt-4"],
+  "status": "success",
+  "spans": [
+    {
+      "span_id": "span_456",
+      "parent_span_id": null,
+      "span_name": "User Query Processing",
+      "span_kind": "agent",
+      "start_time": "2024-03-14T12:00:00.000Z",
+      "end_time": "2024-03-14T12:00:05.000Z",
+      "duration_ms": 5000,
+      "status": "success"
+    }
+  ]
+}
+```
+
+#### Get Trace Metrics
+
+Retrieve aggregated metrics for a trace.
+
+<CodeGroup>
+```bash curl
+curl -X GET https://api.agentops.ai/public/v1/traces/{trace_id}/metrics \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```python Python
+def get_trace_metrics(trace_id: str, token: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(
+        f"https://api.agentops.ai/public/v1/traces/{trace_id}/metrics",
+        headers=headers
+    )
+    return response.json()
+```
+</CodeGroup>
+
+**Response:**
+```json
+{
+  "span_count": 5,
+  "success_count": 4,
+  "fail_count": 1,
+  "total_tokens": 250,
+  "prompt_tokens": 150,
+  "completion_tokens": 75,
+  "total_cost": "0.0045",
+  "duration_ms": 5000,
+  "cost_breakdown": {
+    "gpt-4": "0.0030",
+    "gpt-3.5-turbo": "0.0015"
+  }
+}
+```
+
+### Span Management
+
+#### Get Span Details
+
+Retrieve detailed information about a specific span.
+
+<CodeGroup>
+```bash curl
+curl -X GET https://api.agentops.ai/public/v1/spans/{span_id} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```python Python
+def get_span_details(span_id: str, token: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(
+        f"https://api.agentops.ai/public/v1/spans/{span_id}",
+        headers=headers
+    )
+    return response.json()
+```
+</CodeGroup>
+
+**Response:**
+```json
+{
+  "span_id": "span_456",
+  "trace_id": "trace_123",
+  "parent_span_id": null,
+  "span_name": "LLM Call",
+  "span_kind": "llm",
+  "start_time": "2024-03-14T12:00:01.000Z",
+  "end_time": "2024-03-14T12:00:03.000Z",
+  "duration_ms": 2000,
+  "status": "success",
+  "attributes": {
+    "llm.model": "gpt-4-turbo",
+    "llm.prompt_tokens": 50,
+    "llm.completion_tokens": 25,
+    "llm.temperature": 0.7,
+    "llm.cost": "0.0020"
+  },
+  "events": [
+    {
+      "timestamp": "2024-03-14T12:00:01.500Z",
+      "name": "llm.request.sent",
+      "attributes": {
+        "request_size": 1024
+      }
+    }
+  ]
+}
+```
+
+## Deployment-Specific APIs
+
+### Health Checks
+
+Implement health check endpoints for your deployed agents.
+
+<CodeGroup>
+```python Flask Example
+from flask import Flask, jsonify
+from config.agentops import agentops_manager
+
+app = Flask(__name__)
+
+@app.route('/health')
+def health_check():
+    """Basic health check endpoint."""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "agentops_initialized": agentops_manager.is_initialized()
+    })
+
+@app.route('/ready')
+def readiness_check():
+    """Readiness check for Kubernetes."""
+    if not agentops_manager.is_initialized():
+        return jsonify({
+            "status": "not ready",
+            "reason": "AgentOps not initialized"
+        }), 503
+    
+    return jsonify({
+        "status": "ready",
+        "timestamp": datetime.utcnow().isoformat()
+    })
+```
+
+```python FastAPI Example
+from fastapi import FastAPI, HTTPException
+from config.agentops import agentops_manager
+
+app = FastAPI()
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "agentops_status": agentops_manager.is_initialized()
+    }
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus-style metrics endpoint."""
+    return {
+        "agentops_initialized": int(agentops_manager.is_initialized()),
+        "active_sessions": int(agentops_manager.is_session_active())
+    }
+```
+</CodeGroup>
+
+### Environment Configuration
+
+Manage configuration across different deployment environments.
+
+<CodeGroup>
+```python Environment Detection
+import os
+
+def get_environment_config():
+    """Get configuration based on deployment environment."""
+    env = os.getenv("ENVIRONMENT", "development")
+    
+    configs = {
+        "development": {
+            "agentops_tags": ["dev", "local"],
+            "auto_start_session": True,
+            "max_wait_time": 15000,
+            "debug": True
+        },
+        "staging": {
+            "agentops_tags": ["staging", "test"],
+            "auto_start_session": True,
+            "max_wait_time": 30000,
+            "debug": False
+        },
+        "production": {
+            "agentops_tags": ["prod", "live"],
+            "auto_start_session": False,
+            "max_wait_time": 60000,
+            "debug": False
+        }
+    }
+    
+    return configs.get(env, configs["development"])
+```
+
+```python Kubernetes Config
+import os
+import json
+
+def get_k8s_config():
+    """Get configuration from Kubernetes environment."""
+    return {
+        "agentops_api_key": os.getenv("AGENTOPS_API_KEY"),
+        "pod_name": os.getenv("HOSTNAME"),
+        "namespace": os.getenv("NAMESPACE"),
+        "service_name": os.getenv("SERVICE_NAME"),
+        "version": os.getenv("SERVICE_VERSION"),
+        "tags": [
+            os.getenv("ENVIRONMENT", "production"),
+            os.getenv("SERVICE_NAME", "ai-agent"),
+            f"v{os.getenv('SERVICE_VERSION', '1.0.0')}"
+        ]
+    }
+```
+</CodeGroup>
+
+### Monitoring Integration
+
+Integrate with monitoring and observability platforms.
+
+<CodeGroup>
+```python Prometheus Metrics
+from prometheus_client import Counter, Histogram, generate_latest
+import agentops
+
+# Metrics
+REQUEST_COUNT = Counter('agent_requests_total', 'Total agent requests')
+REQUEST_DURATION = Histogram('agent_request_duration_seconds', 'Request duration')
+ERROR_COUNT = Counter('agent_errors_total', 'Total agent errors')
+
+class MetricsAgent:
+    def __init__(self):
+        agentops.init(os.getenv("AGENTOPS_API_KEY"))
+    
+    @REQUEST_DURATION.time()
+    def process_request(self, request):
+        REQUEST_COUNT.inc()
+        
+        try:
+            session_id = agentops.start_session(tags=["metrics-enabled"])
+            result = self._handle_request(request)
+            agentops.end_session("Success")
+            return result
+            
+        except Exception as e:
+            ERROR_COUNT.inc()
+            agentops.end_session("Fail")
+            raise
+
+@app.route('/metrics')
+def metrics():
+    return generate_latest()
+```
+
+```python DataDog Integration
+import datadog
+from datadog import statsd
+import agentops
+
+# Initialize DataDog
+datadog.initialize(
+    api_key=os.getenv("DATADOG_API_KEY"),
+    app_key=os.getenv("DATADOG_APP_KEY")
+)
+
+class DataDogAgent:
+    def __init__(self):
+        agentops.init(os.getenv("AGENTOPS_API_KEY"))
+    
+    def process_request(self, request):
+        with statsd.timer('agent.request.duration'):
+            try:
+                session_id = agentops.start_session()
+                statsd.increment('agent.request.count')
+                
+                result = self._handle_request(request)
+                
+                agentops.end_session("Success")
+                statsd.increment('agent.request.success')
+                return result
+                
+            except Exception as e:
+                agentops.end_session("Fail")
+                statsd.increment('agent.request.error')
+                raise
+```
+</CodeGroup>
+
+## Error Handling & Resilience
+
+### Retry Logic
+
+Implement robust retry mechanisms for API calls.
+
+<CodeGroup>
+```python Retry Decorator
+import time
+import functools
+from typing import Callable, Any
+
+def retry_on_failure(max_retries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+    """Decorator to retry failed operations with exponential backoff."""
+    
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            current_delay = delay
+            
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    
+                    print(f"Attempt {attempt + 1} failed: {e}. Retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+                    
+            return None
+        return wrapper
+    return decorator
+
+# Usage
+@retry_on_failure(max_retries=3, delay=1.0)
+def robust_llm_call(prompt):
+    # LLM call that might fail
+    return client.chat.completions.create(...)
+```
+
+```python Circuit Breaker
+import time
+from enum import Enum
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open" 
+    HALF_OPEN = "half_open"
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, recovery_timeout=60):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = CircuitState.CLOSED
+    
+    def call(self, func, *args, **kwargs):
+        if self.state == CircuitState.OPEN:
+            if time.time() - self.last_failure_time > self.recovery_timeout:
+                self.state = CircuitState.HALF_OPEN
+            else:
+                raise Exception("Circuit breaker is OPEN")
+        
+        try:
+            result = func(*args, **kwargs)
+            self._on_success()
+            return result
+        except Exception as e:
+            self._on_failure()
+            raise
+    
+    def _on_success(self):
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+    
+    def _on_failure(self):
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN
+
+# Usage
+breaker = CircuitBreaker(failure_threshold=3)
+
+def safe_llm_call(prompt):
+    return breaker.call(lambda: client.chat.completions.create(...))
+```
+</CodeGroup>
+
+### Graceful Degradation
+
+Handle AgentOps failures gracefully without breaking your application.
+
+<CodeGroup>
+```python Fallback Manager
+import logging
+from typing import Optional, Any
+
+class AgentOpsFallback:
+    """Fallback handler for AgentOps failures."""
+    
+    def __init__(self):
+        self.enabled = True
+        self.logger = logging.getLogger(__name__)
+    
+    def safe_init(self, **kwargs) -> bool:
+        """Safely initialize AgentOps with fallback."""
+        try:
+            agentops.init(**kwargs)
+            return True
+        except Exception as e:
+            self.logger.warning(f"AgentOps init failed: {e}. Continuing without monitoring.")
+            self.enabled = False
+            return False
+    
+    def safe_start_session(self, **kwargs) -> Optional[str]:
+        """Safely start session with fallback."""
+        if not self.enabled:
+            return None
+            
+        try:
+            return agentops.start_session(**kwargs)
+        except Exception as e:
+            self.logger.warning(f"Session start failed: {e}")
+            return None
+    
+    def safe_end_session(self, end_state: str = "Success") -> bool:
+        """Safely end session with fallback."""
+        if not self.enabled:
+            return True
+            
+        try:
+            agentops.end_session(end_state)
+            return True
+        except Exception as e:
+            self.logger.warning(f"Session end failed: {e}")
+            return False
+
+# Global fallback instance
+agentops_fallback = AgentOpsFallback()
+```
+
+```python Resilient Agent
+class ResilientAgent:
+    """Agent with built-in resilience and monitoring."""
+    
+    def __init__(self, name: str):
+        self.name = name
+        self.fallback = AgentOpsFallback()
+        self.fallback.safe_init(
+            api_key=os.getenv("AGENTOPS_API_KEY"),
+            tags=[name, "resilient"]
+        )
+    
+    def process_request(self, request_data: dict) -> dict:
+        """Process request with monitoring and resilience."""
+        session_id = self.fallback.safe_start_session(
+            tags=[f"agent-{self.name}", "request-processing"]
+        )
+        
+        try:
+            # Process the request
+            result = self._handle_request(request_data)
+            
+            self.fallback.safe_end_session("Success")
+            return result
+            
+        except Exception as e:
+            self.fallback.safe_end_session("Fail")
+            
+            # Log error but don't re-raise if it's monitoring-related
+            if "agentops" in str(e).lower():
+                logging.warning(f"Monitoring error (continuing): {e}")
+                return {"error": "monitoring_failure", "retryable": True}
+            
+            # Re-raise business logic errors
+            raise
+    
+    def _handle_request(self, request_data: dict) -> dict:
+        # Your actual business logic here
+        return {"status": "processed", "data": request_data}
+```
+</CodeGroup>
+
+## Best Practices
+
+### Production Deployment
+
+1. **API Key Management**: Use secure secret management
+2. **Session Control**: Manual session management in production
+3. **Error Boundaries**: Implement proper error handling
+4. **Resource Limits**: Set appropriate timeouts and limits
+5. **Monitoring**: Integrate with your existing monitoring stack
+
+### Performance Optimization
+
+1. **Batch Operations**: Group related operations under single sessions
+2. **Async Operations**: Use async/await for non-blocking operations
+3. **Connection Pooling**: Reuse HTTP connections when possible
+4. **Caching**: Cache authentication tokens appropriately
+
+### Security Considerations
+
+1. **Secure API Keys**: Never expose API keys in logs or responses
+2. **Network Security**: Use HTTPS for all communications
+3. **Data Privacy**: Be mindful of sensitive data in traces
+4. **Access Control**: Implement proper authorization
+
+This comprehensive API reference provides everything you need to deploy and manage AI agents with AgentOps monitoring. For specific framework integrations, check our [integration guides](/v2/integrations).
