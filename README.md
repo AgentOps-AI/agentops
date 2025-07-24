@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/agentops-ai-agentops-badge.png)](https://mseep.ai/app/agentops-ai-agentops)
+
 <div align="center">
   <a href="https://agentops.ai?ref=gh">
     <img src="docs/images/external/logo/github-banner.png" alt="Logo">
