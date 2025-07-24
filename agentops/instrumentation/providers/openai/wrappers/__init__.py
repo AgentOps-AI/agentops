@@ -14,6 +14,7 @@ from agentops.instrumentation.providers.openai.wrappers.assistant import (
     handle_run_stream_attributes,
     handle_messages_attributes,
 )
+from agentops.instrumentation.providers.openai.wrappers.responses import handle_responses_attributes
 
 __all__ = [
     "handle_chat_attributes",
@@ -25,4 +26,5 @@ __all__ = [
     "handle_run_retrieve_attributes",
     "handle_run_stream_attributes",
     "handle_messages_attributes",
+    "handle_responses_attributes",
 ]

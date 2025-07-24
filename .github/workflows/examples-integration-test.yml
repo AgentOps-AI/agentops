@@ -36,6 +36,7 @@ jobs:
           - { path: 'examples/openai/openai_example_async.py', name: 'OpenAI Async' }
           - { path: 'examples/openai/multi_tool_orchestration.py', name: 'OpenAI Multi-Tool' }
           - { path: 'examples/openai/web_search.py', name: 'OpenAI Web Search' }
+          - { path: 'examples/openai/o3_responses_example.py', name: 'OpenAI o3 Responses' }
           
           # Anthropic examples
           - { path: 'examples/anthropic/anthropic-example-sync.py', name: 'Anthropic Sync' }
