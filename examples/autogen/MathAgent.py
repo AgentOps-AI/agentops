@@ -6,17 +6,19 @@
 # %pip install -U "autogen-ext[openai]"
 # %pip install -U agentops
 # %pip install -U python-dotenv
+# %pip install -U nest_asyncio
+
 # Then import them
 from typing import Annotated, Literal
 import asyncio
+import nest_asyncio
 import os
 from dotenv import load_dotenv
-
 import agentops
-
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.messages import TextMessage
+from autogen_core import CancellationToken
 
 # Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
 #
@@ -34,7 +36,7 @@ tracer = agentops.start_trace(
     trace_name="Microsoft Autogen Tool Example", tags=["autogen-tool", "microsoft-autogen", "agentops-example"]
 )
 
-# AG2 will now start automatically tracking
+# Autogen will now start automatically tracking
 #
 # * LLM prompts and completions
 # * Token usage and costs
@@ -43,14 +45,14 @@ tracer = agentops.start_trace(
 # * Tool usage
 # * Errors
 # # Tool Example
-# AgentOps tracks when AG2 agents use tools. You can find more information on this example in [tool-use.ipynb](https://docs.ag2.ai/docs/tutorial/tool-use#tool-use)
 # # Define model and API key
 model_name = "gpt-4-turbo"
 api_key = os.getenv("OPENAI_API_KEY")
-
+# Ensure API key is available
+if not api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is required")
 # Create the model client
 model_client = OpenAIChatCompletionClient(model=model_name, api_key=api_key, seed=42, temperature=0)
-
 Operator = Literal["+", "-", "*", "/"]
 
 
@@ -68,62 +70,66 @@ def calculator(a: int, b: int, operator: Annotated[Operator, "operator"]) -> int
 
 
 async def main():
+    # Create an assistant agent that can help with math problems and use the calculator tool.
     assistant = AssistantAgent(
         name="Assistant",
         system_message="You are a helpful AI assistant. You can help with simple calculations. Return 'TERMINATE' when the task is done.",
         model_client=model_client,
         tools=[calculator],
         reflect_on_tool_use=True,
+        max_tool_iterations=5,
     )
 
+    # This is the math question we want the assistant to solve.
     initial_task_message = "What is (1423 - 123) / 3 + (32 + 23) * 5?"
-    print(f"User Task: {initial_task_message}")
 
     try:
-        from autogen_core import CancellationToken
+        # Start tracking the assistant's work for the first way of running the task(on_messages method).
+        tracer = agentops.start_trace(
+            trace_name="autogen-math-agent-on-messages", tags=["autogen-math", "agentops-example"]
+        )
+        # Ask the assistant to solve the problem .
+        await assistant.on_messages([TextMessage(content=initial_task_message, source="user")], CancellationToken())
+        agentops.end_trace(tracer, end_state="Success")
 
-        response = await assistant.on_messages(
-            [TextMessage(content=initial_task_message, source="user")], CancellationToken()
+        # Start tracking for the second way of running the task(using the run method).
+        tracer = agentops.start_trace(trace_name="autogen-math-agent-run", tags=["autogen-math", "agentops-example"])
+        # Ask the assistant to solve the problem .
+        await assistant.run(
+            task=[TextMessage(content=initial_task_message, source="user")], cancellation_token=CancellationToken()
         )
 
-        final_response_message = response.chat_message
-        if final_response_message:
-            print(f"Assistant: {final_response_message.to_text()}")
-        else:
-            print("Assistant did not provide a final message.")
+        agentops.end_trace(tracer, end_state="Success")
+        # Start tracking for the third way: streaming the assistant's responses as they come in(run_stream method).
+        tracer = agentops.start_trace(
+            trace_name="autogen-math-agent-run-stream", tags=["autogen-math", "agentops-example"]
+        )
+        async for message in assistant.run_stream(
+            task=[TextMessage(content=initial_task_message, source="user")], cancellation_token=CancellationToken()
+        ):
+            pass
+        agentops.end_trace(tracer, end_state="Success")
 
+        # Start tracking for the fourth way: streaming with on_messages_stream(on_messages_stream method).
+        tracer = agentops.start_trace(
+            trace_name="autogen-math-agent-on-messages-stream", tags=["autogen-math", "agentops-example"]
+        )
+        async for message in assistant.on_messages_stream(
+            messages=[TextMessage(content=initial_task_message, source="user")], cancellation_token=CancellationToken()
+        ):
+            pass
         agentops.end_trace(tracer, end_state="Success")
 
     except Exception as e:
         print(f"An error occurred: {e}")
         agentops.end_trace(tracer, end_state="Error")
     finally:
+        # Always close the model client when done.
         await model_client.close()
 
-    # Let's check programmatically that spans were recorded in AgentOps
-    print("\n" + "=" * 50)
-    print("Now let's verify that our LLM calls were tracked properly...")
-    try:
-        agentops.validate_trace_spans(trace_context=tracer)
-        print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
-    except agentops.ValidationError as e:
-        print(f"\n❌ Error validating spans: {e}")
-        raise
 
-
-if __name__ == "__main__":
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop and loop.is_running():
-        import nest_asyncio
-
-        nest_asyncio.apply()
-        asyncio.run(main())
-    else:
-        asyncio.run(main())
+nest_asyncio.apply()
+asyncio.run(main())
 
 # You can see your run in action at [app.agentops.ai](app.agentops.ai). In this example, the AgentOps dashboard will show:
 #
