@@ -1,0 +1,38 @@
+---
+title: 'Xpander'
+description: 'Xpander coding agent example with AgentOps'
+---
+{/*  SOURCE_FILE: examples/xpander/coding_agent.py  */}
+
+_View Python Example on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/xpander/coding_agent.py'} target={'_blank'}>Github</a>_
+
+This example demonstrates a complete Xpander coding agent implementation with AgentOps instrumentation using callback handlers. The example shows how to build a single-file agent that combines the MyAgent class and XpanderEventListener for comprehensive monitoring.
+
+## Key Features
+
+- **Single-file implementation** combining agent logic and event handling
+- **Callback-based instrumentation** using XpanderEventListener
+- **Async tool execution** with proper error handling and logging
+- **AgentOps integration** with custom trace names and tags
+
+## Running the Example
+
+1. Set up your environment variables in a `.env` file or export them:
+   ```bash
+   AGENTOPS_API_KEY=your_agentops_api_key
+   XPANDER_API_KEY=your_xpander_api_key  
+   XPANDER_AGENT_ID=your_agent_id
+   OPENAI_API_KEY=your_openai_api_key
+   ```
+
+2. Run the agent:
+   ```bash
+   python examples/xpander/coding_agent.py
+   ```
+
+The agent will start an interactive session where you can ask coding questions and see the results tracked in your AgentOps dashboard.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
