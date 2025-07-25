@@ -97,82 +97,15 @@ user_proxy.initiate_chat(
     message="How can I implement a basic web scraper in Python?"
 )
 ```
-
-```python Multi-Agent Conversation
-import os
-import agentops
-import autogen
-
-# Initialize AgentOps
-agentops.init()
-
-# Configure your AG2 agents
-config_list = [
-    {
-        "model": "gpt-4",
-        "api_key": os.getenv("OPENAI_API_KEY"),
-    }
-]
-
-llm_config = {
-    "config_list": config_list,
-    "timeout": 60,
-}
-
-# Create a team of agents
-researcher = autogen.AssistantAgent(
-    name="researcher",
-    llm_config=llm_config,
-    system_message="You are a researcher who specializes in finding accurate information."
-)
-
-coder = autogen.AssistantAgent(
-    name="coder",
-    llm_config=llm_config,
-    system_message="You are an expert programmer who writes clean, efficient code."
-)
-
-critic = autogen.AssistantAgent(
-    name="critic",
-    llm_config=llm_config,
-    system_message="You review solutions and provide constructive feedback."
-)
-
-user_proxy = autogen.UserProxyAgent(
-    name="user_proxy",
-    human_input_mode="TERMINATE",
-    max_consecutive_auto_reply=10,
-    is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
-    code_execution_config={"last_n_messages": 3, "work_dir": "coding"},
-)
-
-# Create a group chat
-groupchat = autogen.GroupChat(
-    agents=[user_proxy, researcher, coder, critic],
-    messages=[],
-    max_round=12
-)
-
-manager = autogen.GroupChatManager(
-    groupchat=groupchat,
-    llm_config=llm_config
-)
-
-# Initiate the group chat
-user_proxy.initiate_chat(
-    manager,
-    message="Create a Python program to analyze sentiment from Twitter data."
-)
-```
 </CodeGroup>
 
 ## Examples
 
 <CardGroup cols={2}>
-  <Card title="AG2 Memory Chat" icon="notebook" href="/v2/examples/ag2">
-    Multi-agent conversation with memory capabilities
+  <Card title="AG2 Async Agent Chat" icon="notebook" href="/v2/examples/ag2">
+   AG2 Async Agent Chat with Automated Responses
   </Card>
-  <Card title="Async Human Input" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/async_human_input.ipynb" newTab={true}>
+  <Card title="Async Human Input" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/ag2_async_agent.ipynb" newTab={true}>
     Demonstrates asynchronous human input with AG2 agents.
   </Card>
   <Card title="Wikipedia Search Tool" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/tools_wikipedia_search.ipynb" newTab={true}>
