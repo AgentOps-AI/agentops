@@ -30,6 +30,29 @@ def clean_html_content(text):
     return "\n".join(cleaned_lines)
 
 
+def convert_relative_urls(text, base_url="https://github.com/AgentOps-AI/agentops/blob/main"):
+    """Convert relative URLs to absolute URLs for llms.txt compliance."""
+
+    def replace_relative_link(match):
+        link_text = match.group(1)
+        url = match.group(2)
+
+        if url.startswith(("http://", "https://", "mailto:", "#")):
+            return match.group(0)
+
+        if url.startswith("./"):
+            url = url[2:]
+        elif url.startswith("../"):
+            url = url[3:]
+
+        absolute_url = f"{base_url}/{url}"
+        return f"[{link_text}]({absolute_url})"
+
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", replace_relative_link, text)
+
+    return text
+
+
 def compile_llms_txt():
     """Compile a comprehensive llms.txt file with actual repository content."""
 
@@ -41,6 +64,7 @@ def compile_llms_txt():
         with open("../README.md", "r", encoding="utf-8") as f:
             readme_content = f.read()
         cleaned_readme = clean_html_content(readme_content)
+        cleaned_readme = convert_relative_urls(cleaned_readme)
         content += "## Repository Overview\n\n"
         content += cleaned_readme + "\n\n"
     except Exception as e:
@@ -50,6 +74,7 @@ def compile_llms_txt():
         with open("../CONTRIBUTING.md", "r", encoding="utf-8") as f:
             contributing_content = f.read()
         cleaned_contributing = clean_html_content(contributing_content)
+        cleaned_contributing = convert_relative_urls(cleaned_contributing)
         content += "## Contributing Guide\n\n"
         content += cleaned_contributing + "\n\n"
     except Exception as e:
