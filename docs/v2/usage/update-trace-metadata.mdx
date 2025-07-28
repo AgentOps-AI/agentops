@@ -1,0 +1,108 @@
+---
+title: "Updating Trace Metadata"
+description: "How to use the update_trace_metadata() helper to enrich running traces with contextual information."
+---
+
+> **TL;DR** – Call `agentops.update_trace_metadata({...})` at any point during a trace to attach additional, searchable attributes such as progress, tags, business identifiers, or anything else that helps you understand what is happening inside your application.
+
+## Why update metadata?
+
+Sometimes you do not yet know all the information that belongs on a trace when you create it with `start_trace()`.  As your application progresses you may learn the user’s ID, the total work to be done, the current progress … or perhaps you want to flag the trace as *escalated* once an error threshold is crossed.  Updating the metadata in-flight keeps the trace useful and searchable in the AgentOps dashboard.
+
+## Function signature
+
+```python
+update_trace_metadata(
+    metadata: Dict[str, Any],
+    prefix: str = "trace.metadata",
+) -> bool
+```
+
+* **metadata** – Dictionary of key → value pairs to set on the *currently active* trace.  Values must be strings, numbers, booleans, or lists of those primitives.  Lists are serialised to JSON strings automatically so they remain OpenTelemetry-compatible.
+* **prefix** (*optional*) – Non-semantic attributes are stored under this prefix (default: `trace.metadata`).  You can supply your own prefix (for example, `business` or `pipeline`) to create a logical namespace.
+
+The call returns **True** if at least one attribute was written, otherwise **False** (for example if no trace is active).
+
+## Semantic convention shortcuts
+
+Several user-friendly keys are automatically mapped to their OpenTelemetry semantic-convention counterparts so you do not need to remember the long attribute names:
+
+| Shorthand            | Semantic attribute |
+|----------------------|--------------------|
+| `tags`               | `core.tags`        |
+| `agent_name`         | `agent.name`       |
+| `workflow_name`      | `workflow.name`    |
+| `operation_name`     | `span.operation`   |
+
+All other keys are stored verbatim under the chosen prefix.
+
+## Basic example
+
+```python
+import agentops
+from agentops import update_trace_metadata
+
+agentops.init("your-api-key", auto_start_session=False)
+
+trace = agentops.start_trace("image-processing", tags=["initial"])
+
+# … do some work …
+update_trace_metadata({
+    "operation_name": "Resizing images",  # updates span.operation
+    "progress": "30%",
+    "tags": ["resize", "batch-42"],      # updates core.tags
+})
+
+# … more work …
+update_trace_metadata({
+    "progress": "100%",
+    "result_url": "s3://…/output.zip",
+})
+
+agentops.end_trace(trace, "Success")
+```
+
+## Using a custom prefix
+
+```python
+update_trace_metadata({
+    "customer_id": "CUS-9876",
+    "order_total": 123.45,
+}, prefix="business")
+
+# Attributes become:
+#   business.customer_id = "CUS-9876"
+#   business.order_total  = 123.45
+```
+
+## Accepted value types
+
+✔️ Strings &nbsp;&nbsp; ✔️ Numbers &nbsp;&nbsp; ✔️ Booleans &nbsp;&nbsp; ✔️ Lists containing the former types.
+
+If you pass a list, the SDK will serialise it to a JSON string so it remains valid OpenTelemetry.
+
+```python
+update_trace_metadata({
+    "processed_ids": [1, 2, 3, 4],  # becomes "[1,2,3,4]"
+})
+```
+
+## Error handling
+
+If no trace is active (for example outside of a `start_trace` / `@trace` context) the function logs a warning and returns `False`.
+
+```python
+>>> update_trace_metadata({"foo": "bar"})
+WARNING  agentops.SDK  No active trace. Cannot update trace metadata.
+False
+```
+
+## Further reading
+
+* [Manual Trace Control](/v2/usage/manual-trace-control#updating-trace-metadata-during-execution) – step-by-step walkthrough including an ETL pipeline example.
+* [SDK reference](/v2/usage/sdk-reference#update_trace_metadata) – full parameter documentation.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
