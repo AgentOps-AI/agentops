@@ -174,7 +174,7 @@ def compile_llms_txt():
     try:
         import llms_txt
 
-        print("✅ llms-txt package available for validation")
+        print("SUCCESS: llms-txt package available for validation")
 
         import re
 
@@ -191,30 +191,30 @@ def compile_llms_txt():
         summary_match = re.search(r"> (.+)", content)
         summary = summary_match.group(1) if summary_match else "No summary"
 
-        print("✅ Manual validation results:")
+        print("SUCCESS: Manual validation results:")
         print(f"   - Title: {title}")
         print(f"   - Summary: {summary[:100]}{'...' if len(summary) > 100 else ''}")
         print(f"   - H2 sections: {h2_count}")
         print(f"   - Links found: {len(links)}")
         print(f"   - Content size: {len(content)} characters")
 
-        print("✅ Structure validation:")
-        print(f"   - H1 header: {'✅' if has_h1 else '❌'}")
-        print(f"   - Blockquote summary: {'✅' if has_blockquote else '❌'}")
-        print(f"   - Multiple sections: {'✅' if h2_count > 0 else '❌'}")
+        print("SUCCESS: Structure validation:")
+        print(f"   - H1 header: {'PASS' if has_h1 else 'FAIL'}")
+        print(f"   - Blockquote summary: {'PASS' if has_blockquote else 'FAIL'}")
+        print(f"   - Multiple sections: {'PASS' if h2_count > 0 else 'FAIL'}")
 
         try:
             simple_test = "# Test\n\n> Test summary\n\n## Section\n\nContent here."
             llms_txt.parse_llms_file(simple_test)
-            print("✅ llms-txt library functional (tested with simple content)")
+            print("SUCCESS: llms-txt library functional (tested with simple content)")
         except Exception as simple_error:
-            print(f"⚠️  llms-txt library has parsing issues: {simple_error}")
+            print(f"WARNING: llms-txt library has parsing issues: {simple_error}")
 
-        print("💡 For comprehensive content validation, use: https://llmstxtvalidator.dev")
+        print("INFO: For comprehensive content validation, use: https://llmstxtvalidator.dev")
 
     except ImportError:
-        print("⚠️  llms-txt package not available, skipping library validation")
-        print("💡 Install with: pip install llms-txt")
+        print("WARNING: llms-txt package not available, skipping library validation")
+        print("INFO: Install with: pip install llms-txt")
 
 
 if __name__ == "__main__":
