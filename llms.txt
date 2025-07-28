@@ -406,7 +406,7 @@ await main()
 
 Track agents built with the Mistral Python SDK (>=0.32.0).
 
-- [AgentOps integration example](https://github.com/AgentOps-AI/agentops/blob/main/examples/mistral//mistral_example.ipynb)
+- [AgentOps integration example](https://github.com/AgentOps-AI/agentops/blob/main/examples/mistral/mistral_example.ipynb)
 - [Official Mistral documentation](https://docs.mistral.ai)
 
   Installation
@@ -702,13 +702,13 @@ There are tons of ways to contribute, and we genuinely appreciate all of them:
 Even if you're not ready to contribute code, we'd love to hear your thoughts. Drop into our Discord, open an issue, or start a discussion. We're building this for developers like you, so your input matters.
 
 ## Table of Contents
-- [Getting Started](#getting-started)
-- [Development Environment](#development-environment)
-- [Testing](#testing)
-- [Adding LLM Providers](#adding-llm-providers)
-- [Code Style](#code-style)
-- [Pull Request Process](#pull-request-process)
-- [Documentation](#documentation)
+- [Getting Started](https://github.com/AgentOps-AI/agentops/blob/main/README.md#getting-started)
+- [Development Environment](https://github.com/AgentOps-AI/agentops/blob/main/README.md#development-environment)
+- [Testing](https://github.com/AgentOps-AI/agentops/blob/main/README.md#testing)
+- [Adding LLM Providers](https://github.com/AgentOps-AI/agentops/blob/main/README.md#adding-llm-providers)
+- [Code Style](https://github.com/AgentOps-AI/agentops/blob/main/README.md#code-style)
+- [Pull Request Process](https://github.com/AgentOps-AI/agentops/blob/main/README.md#pull-request-process)
+- [Documentation](https://github.com/AgentOps-AI/agentops/blob/main/README.md#documentation)
 
 ## Getting Started
 

@@ -37,13 +37,23 @@ def convert_relative_urls(text, base_url="https://github.com/AgentOps-AI/agentop
         link_text = match.group(1)
         url = match.group(2)
 
-        if url.startswith(("http://", "https://", "mailto:", "#")):
+        if url.startswith(("http://", "https://", "mailto:")):
             return match.group(0)
+
+        if url.startswith("#"):
+            absolute_url = f"{base_url}/README.md{url}"
+            return f"[{link_text}]({absolute_url})"
 
         if url.startswith("./"):
             url = url[2:]
         elif url.startswith("../"):
             url = url[3:]
+
+        url = re.sub(r"/+", "/", url)
+        url = url.strip("/")
+
+        if not url:
+            return match.group(0)
 
         absolute_url = f"{base_url}/{url}"
         return f"[{link_text}]({absolute_url})"
