@@ -1,0 +1,492 @@
+---
+title: "Update Trace Metadata"
+description: "Comprehensive guide to using update_trace_metadata for dynamic trace enrichment"
+---
+
+## Overview
+
+The `update_trace_metadata()` function allows you to dynamically add or update metadata on running traces. This is essential for tracking progress, storing intermediate results, and adding contextual information during trace execution.
+
+## Function Signature
+
+```python
+def update_trace_metadata(
+    metadata: Dict[str, Any], 
+    prefix: str = "trace.metadata"
+) -> bool
+```
+
+### Parameters
+
+- **`metadata`** (Dict[str, Any]): Dictionary of key-value pairs to set as trace metadata
+  - Values must be strings, numbers, booleans, or lists of these types
+  - Lists are automatically converted to JSON string representation
+  - Keys can be custom keys or semantic convention aliases
+
+- **`prefix`** (str, optional): Prefix for metadata attributes
+  - Default: `"trace.metadata"`
+  - Ignored for semantic convention attributes
+  - Used for custom attributes to namespace them properly
+
+### Returns
+
+- **`bool`**: `True` if metadata was successfully updated, `False` otherwise
+
+## Basic Usage
+
+```python
+import agentops
+
+# Initialize AgentOps
+agentops.init()
+
+# Start a trace
+trace = agentops.start_trace("my-workflow")
+
+# Update metadata during execution
+success = agentops.update_trace_metadata({
+    "stage": "processing",
+    "items_processed": 42,
+    "current_model": "gpt-4"
+})
+
+if success:
+    print("Metadata updated successfully")
+
+# End the trace
+agentops.end_trace(trace, "Success")
+```
+
+## Semantic Convention Support
+
+The function automatically maps user-friendly keys to OpenTelemetry semantic conventions:
+
+### Common Semantic Mappings
+
+| User-Friendly Key | Semantic Convention | Description |
+|------------------|-------------------|-------------|
+| `tags` | `core.tags` | Tags for categorization |
+| `agent_name` | `agent.name` | Name of the agent |
+| `agent_version` | `agent.version` | Version of the agent |
+| `workflow_name` | `workflow.name` | Name of the workflow |
+| `tool_name` | `tool.name` | Name of the tool |
+| `operation_name` | `core.operation.name` | Name of the operation |
+| `error_type` | `error.type` | Type of error |
+
+### Example with Semantic Conventions
+
+```python
+# These keys will be automatically mapped
+agentops.update_trace_metadata({
+    "operation_name": "Customer Query Processing",
+    "tags": ["production", "customer-service", "gpt-4"],
+    "agent_name": "CustomerServiceBot",
+    "agent_version": "2.1.0",
+    "workflow_name": "Support Ticket Resolution"
+})
+```
+
+## Advanced Usage
+
+### Custom Prefixes
+
+Use custom prefixes to organize your metadata:
+
+```python
+# Business metrics with custom prefix
+agentops.update_trace_metadata({
+    "customer_id": "CUST_12345",
+    "order_value": 299.99,
+    "subscription_tier": "premium",
+    "region": "us-west-2"
+}, prefix="business.metrics")
+
+# Results in attributes like:
+# business.metrics.customer_id = "CUST_12345"
+# business.metrics.order_value = 299.99
+```
+
+### Progress Tracking
+
+Track progress through multi-step workflows:
+
+```python
+def process_large_dataset(dataset):
+    trace = agentops.start_trace("data-processing")
+    
+    total_items = len(dataset)
+    
+    # Initial metadata
+    agentops.update_trace_metadata({
+        "operation_name": "Large Dataset Processing",
+        "total_items": total_items,
+        "status": "initializing",
+        "start_time": datetime.now().isoformat()
+    })
+    
+    for i, item in enumerate(dataset):
+        # Update progress periodically
+        if i % 100 == 0:
+            agentops.update_trace_metadata({
+                "items_processed": i,
+                "progress_percentage": round((i / total_items) * 100, 2),
+                "status": "processing",
+                "current_batch": i // 100
+            })
+        
+        # Process item
+        process_item(item)
+    
+    # Final update
+    agentops.update_trace_metadata({
+        "operation_name": "Dataset Processing Complete",
+        "items_processed": total_items,
+        "progress_percentage": 100.0,
+        "status": "completed",
+        "end_time": datetime.now().isoformat()
+    })
+    
+    agentops.end_trace(trace, "Success")
+```
+
+### Error Tracking
+
+Capture error information in metadata:
+
+```python
+def risky_operation():
+    trace = agentops.start_trace("risky-operation")
+    
+    try:
+        # Initial metadata
+        agentops.update_trace_metadata({
+            "operation_name": "Risk Assessment",
+            "risk_level": "high",
+            "retry_count": 0
+        })
+        
+        result = perform_risky_task()
+        
+        # Success metadata
+        agentops.update_trace_metadata({
+            "status": "success",
+            "result_quality": evaluate_result(result),
+            "execution_time_ms": 1234
+        })
+        
+        agentops.end_trace(trace, "Success")
+        
+    except Exception as e:
+        # Error metadata
+        agentops.update_trace_metadata({
+            "status": "failed",
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "stack_trace": traceback.format_exc(),
+            "tags": ["error", "exception", type(e).__name__.lower()]
+        })
+        
+        agentops.end_trace(trace, "Error")
+        raise
+```
+
+## Data Type Support
+
+### Supported Types
+
+The function supports the following data types:
+
+```python
+agentops.update_trace_metadata({
+    # Strings
+    "name": "My Agent",
+    
+    # Numbers (int and float)
+    "count": 42,
+    "percentage": 95.5,
+    
+    # Booleans
+    "is_active": True,
+    "has_errors": False,
+    
+    # Lists (converted to JSON strings)
+    "tags": ["tag1", "tag2", "tag3"],
+    "steps": ["init", "process", "complete"],
+    "scores": [0.9, 0.85, 0.92]
+})
+```
+
+### Unsupported Types
+
+The following types are not supported and will be skipped:
+
+```python
+# These will be skipped with warnings
+agentops.update_trace_metadata({
+    "dict_value": {"nested": "dict"},  # Dicts not supported
+    "set_value": {1, 2, 3},            # Sets not supported
+    "none_value": None,                # None values skipped
+    "object_value": MyClass()          # Objects not supported
+})
+```
+
+## Best Practices
+
+### 1. Use Semantic Conventions
+
+Prefer semantic convention keys when applicable:
+
+```python
+# Good - uses semantic conventions
+agentops.update_trace_metadata({
+    "agent_name": "DataProcessor",
+    "tags": ["production", "batch-job"]
+})
+
+# Less ideal - custom keys require prefix
+agentops.update_trace_metadata({
+    "my_agent": "DataProcessor",
+    "my_tags": ["production", "batch-job"]
+})
+```
+
+### 2. Update Incrementally
+
+Update metadata as your trace progresses:
+
+```python
+# Initial state
+agentops.update_trace_metadata({"status": "initializing"})
+
+# During processing
+agentops.update_trace_metadata({"status": "processing", "progress": 50})
+
+# Completion
+agentops.update_trace_metadata({"status": "completed", "progress": 100})
+```
+
+### 3. Group Related Metadata
+
+Use custom prefixes to group related metadata:
+
+```python
+# Performance metrics
+agentops.update_trace_metadata({
+    "latency_ms": 234,
+    "throughput_rps": 1000,
+    "cpu_usage": 45.2
+}, prefix="performance")
+
+# Business metrics
+agentops.update_trace_metadata({
+    "revenue": 1234.56,
+    "conversion_rate": 0.023
+}, prefix="business")
+```
+
+### 4. Include Contextual Tags
+
+Always include relevant tags for filtering and grouping:
+
+```python
+agentops.update_trace_metadata({
+    "operation_name": "User Query Processing",
+    "tags": [
+        "environment:production",
+        "service:chatbot",
+        "model:gpt-4",
+        "priority:high"
+    ]
+})
+```
+
+## Integration Examples
+
+### With Decorators
+
+```python
+from agentops.sdk.decorators import agent, operation
+
+@agent
+class DataAnalyzer:
+    @operation
+    def analyze(self, data):
+        # Update metadata within decorated methods
+        agentops.update_trace_metadata({
+            "operation_name": "Data Analysis",
+            "data_size": len(data),
+            "analysis_type": "statistical"
+        })
+        
+        return perform_analysis(data)
+```
+
+### With Context Managers
+
+```python
+with agentops.start_trace("batch-job") as trace:
+    agentops.update_trace_metadata({
+        "job_type": "batch_processing",
+        "scheduled": True
+    })
+    
+    # Your processing code here
+    process_batch()
+    
+    agentops.update_trace_metadata({
+        "completion_status": "success"
+    })
+```
+
+## Troubleshooting
+
+### Metadata Not Updating
+
+If metadata is not updating, check:
+
+1. **SDK Initialization**: Ensure AgentOps is initialized
+   ```python
+   agentops.init()  # Must be called first
+   ```
+
+2. **Active Trace**: Verify there's an active trace
+   ```python
+   trace = agentops.start_trace("my-trace")
+   # Now update_trace_metadata will work
+   ```
+
+3. **Valid Data Types**: Ensure all values are supported types
+   ```python
+   # Check your data types
+   metadata = {
+       "valid_string": "hello",
+       "valid_number": 42,
+       "invalid_dict": {"nested": "dict"}  # This will be skipped
+   }
+   ```
+
+### Return Value is False
+
+If `update_trace_metadata()` returns `False`:
+
+- No active trace is running
+- The SDK is not initialized
+- All provided metadata values were invalid types
+
+Check the logs for specific error messages:
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Now you'll see detailed error messages
+success = agentops.update_trace_metadata({"key": "value"})
+```
+
+## Complete Example
+
+Here's a comprehensive example showing various uses of `update_trace_metadata`:
+
+```python
+import agentops
+from datetime import datetime
+import time
+
+def ai_customer_service_workflow(customer_query):
+    """Complete AI customer service workflow with metadata tracking"""
+    
+    # Initialize AgentOps
+    agentops.init(auto_start_session=False)
+    
+    # Start trace with initial tags
+    trace = agentops.start_trace(
+        "customer-service-workflow",
+        tags=["customer-support", "ai-agent"]
+    )
+    
+    try:
+        # Initial metadata
+        agentops.update_trace_metadata({
+            "operation_name": "Customer Query Processing",
+            "customer_query": customer_query[:100],  # First 100 chars
+            "workflow_stage": "initialization",
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Step 1: Query Classification
+        agentops.update_trace_metadata({
+            "workflow_stage": "classification",
+            "tags": ["classification", "nlp"]
+        })
+        
+        query_type = classify_query(customer_query)
+        
+        agentops.update_trace_metadata({
+            "query_type": query_type,
+            "confidence_score": 0.95
+        })
+        
+        # Step 2: Generate Response
+        agentops.update_trace_metadata({
+            "workflow_stage": "response_generation",
+            "model": "gpt-4",
+            "tags": ["generation", "llm", "gpt-4"]
+        })
+        
+        response = generate_response(customer_query, query_type)
+        
+        agentops.update_trace_metadata({
+            "response_length": len(response),
+            "generation_time_ms": 1234
+        })
+        
+        # Step 3: Quality Check
+        agentops.update_trace_metadata({
+            "workflow_stage": "quality_check"
+        })
+        
+        quality_score = check_response_quality(response)
+        
+        # Final metadata
+        agentops.update_trace_metadata({
+            "operation_name": "Customer Query Processed Successfully",
+            "workflow_stage": "completed",
+            "quality_score": quality_score,
+            "total_duration_ms": 2500,
+            "tags": ["completed", "success", f"quality:{quality_score}"]
+        })
+        
+        agentops.end_trace(trace, "Success")
+        return response
+        
+    except Exception as e:
+        # Error handling with metadata
+        agentops.update_trace_metadata({
+            "workflow_stage": "error",
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "tags": ["error", "failed"]
+        })
+        
+        agentops.end_trace(trace, "Error")
+        raise
+
+# Helper functions (simplified)
+def classify_query(query):
+    return "technical_support"
+
+def generate_response(query, query_type):
+    return "I'll help you with that technical issue..."
+
+def check_response_quality(response):
+    return 0.92
+
+# Usage
+response = ai_customer_service_workflow("How do I reset my password?")
+```
+
+## See Also
+
+- [Manual Trace Control](/v2/usage/manual-trace-control) - Complete guide to trace management
+- [SDK Reference](/v2/usage/sdk-reference) - Full API documentation
+- [Core Concepts](/v2/concepts/core-concepts) - Understanding traces and spans

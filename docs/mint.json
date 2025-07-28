@@ -156,6 +156,7 @@
         "v2/usage/trace-decorator",
         "v2/usage/track-endpoint-decorator",
         "v2/usage/manual-trace-control",
+        "v2/usage/update-trace-metadata",
         "v2/usage/public-api"
       ],
       "version": "v2"
