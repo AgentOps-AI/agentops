@@ -8,7 +8,7 @@ AgentOps provides the following decorators:
 
 | Decorator | Purpose | Creates |
 |-----------|---------|---------|
-| `@session` | Track an entire user interaction | SESSION span |
+| `@trace` | Track an entire user interaction | TRACE span |
 | `@agent` | Track agent classes and their lifecycle | AGENT span |
 | `@operation` | Track discrete operations performed by agents | OPERATION span |
 | `@workflow` | Track a sequence of operations | WORKFLOW span |
@@ -21,7 +21,7 @@ AgentOps provides the following decorators:
 The decorators create spans that form a hierarchy:
 
 ```
-SESSION
+TRACE
   ├── AGENT
   │     ├── OPERATION or TASK
   │     │     ├── LLM
@@ -34,18 +34,18 @@ SESSION
 
 ## Using Decorators
 
-### @session
+### @trace
 
-The `@session` decorator tracks an entire user interaction from start to finish:
+The `@trace` decorator tracks an entire user interaction from start to finish:
 
 ```python
-from agentops.sdk.decorators import session
+from agentops.sdk.decorators import trace
 import agentops
 
 # Initialize AgentOps
 agentops.init(api_key="YOUR_API_KEY")
 
-@session
+@trace
 def answer_question(question):
     # Create and use agents
     weather_agent = WeatherAgent()
@@ -55,7 +55,7 @@ def answer_question(question):
     return result
 ```
 
-Each `@session` function call creates a new session span that contains all the agents, operations, and workflows used during that interaction.
+Each `@trace` function call creates a new trace span that contains all the agents, operations, and workflows used during that interaction.
 
 ### @agent
 
@@ -287,13 +287,13 @@ Common attributes include:
 Here's a complete example using all the decorators together:
 
 ```python
-from agentops.sdk.decorators import session, agent, operation, workflow, task
+from agentops.sdk.decorators import trace, agent, operation, workflow, task
 import agentops
 
 # Initialize AgentOps
 agentops.init(api_key="YOUR_API_KEY")
 
-@session
+@trace
 def assist_user(query):
     # Create the main assistant
     assistant = Assistant()
@@ -350,7 +350,7 @@ assist_user("What is the capital of France?")
 ```
 
 In this example:
-1. The `@session` decorator wraps the entire interaction
+1. The `@trace` decorator wraps the entire interaction
 2. The `@agent` decorator defines multiple agent classes
 3. The `@workflow` decorator creates a workflow that coordinates agents
 4. The `@operation` and `@task` decorators track individual operations
@@ -360,7 +360,7 @@ Note that LLM and TOOL spans are automatically created when you use compatible L
 
 ## Best Practices
 
-- **Use @session for top-level functions** that represent complete user interactions
+- **Use @trace for top-level functions** that represent complete user interactions
 - **Apply @agent to classes** that represent distinct components of your system
 - **Use @operation for significant functions** that represent complete units of work
 - **Use @task for smaller functions** that are part of larger operations

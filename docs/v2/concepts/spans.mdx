@@ -85,9 +85,9 @@ There are several ways to create spans in AgentOps:
 The recommended way to create spans is using decorators:
 
 ```python
-from agentops.sdk.decorators import agent, operation, session, workflow, task
+from agentops.sdk.decorators import agent, operation, trace, workflow, task
 
-@session
+@trace
 def my_workflow():
     agent_instance = MyAgent()
     return agent_instance.perform_task()

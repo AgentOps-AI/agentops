@@ -279,6 +279,33 @@ except Exception as e:
 ```
 
 
+## Preventing Duplicate Traces
+
+AgentOps automatically handles ADK integration to prevent duplicate telemetry. The AgentOps ADK instrumentor:
+
+1. **Disables ADK's built-in telemetry** to prevent duplicate spans
+2. **Creates AgentOps spans** that mirror ADK's telemetry structure  
+3. **Properly extracts LLM messages and tool calls** for the AgentOps dashboard
+
+If you're seeing duplicate traces, ensure you're:
+- Using `auto_start_session=False` when manually managing traces with ADK
+- Not manually creating additional telemetry alongside ADK's automatic instrumentation
+- Using the latest version of both AgentOps and Google ADK
+
+### Troubleshooting Duplicate Traces
+
+```python
+# ✅ Correct: Let AgentOps handle ADK instrumentation
+agentops.init(AGENTOPS_API_KEY, auto_start_session=False)
+trace = agentops.start_trace("adk-workflow")
+# Your ADK code here - AgentOps will automatically capture spans
+
+# ❌ Incorrect: Don't manually create spans for ADK operations
+# This can cause duplicates
+```
+
+The ADK instrumentor in AgentOps specifically prevents duplicate spans by patching ADK's telemetry system. If you encounter issues, check that you're not mixing manual span creation with ADK's automatic instrumentation.
+
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
