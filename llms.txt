@@ -1854,72 +1854,54 @@ __all__ = [
 title: "Introduction"
 description: "AgentOps is the developer favorite platform for testing, debugging, and deploying AI agents and LLM apps."
 ---
-<iframe
-  width="100%"
-  height="300"
-  src="https://www.youtube.com/embed/EU_A3_ux09s?si=I05b3Jf5eufCy3R-"
-  title="AgentOps Introduction"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowFullScreen
-></iframe>
 
-<Note title="Chat with the docs in your IDE">
-Prefer asking your IDE? Install the Mintlify <a href="/v2/usage/mcp-docs"><strong>MCP Docs Server</strong></a> for AgentOps to chat with the docs while you code:
+Prefer asking your IDE? Install the Mintlify MCP Docs Server for AgentOps to chat with the docs while you code:
 `npx mint-mcp add agentops`
-</Note>
-
 
 ## Integrate with developer favorite LLM providers and agent frameworks
 
 ### Agent Frameworks
 
-<CardGroup cols={2}>
-  <Card title="AG2" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/ag2/ag2-logo.svg?raw=true" alt="AG2"/>} iconType="image" href="/v2/integrations/ag2" />
-  <Card title="Agno" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/agno/agno.png?raw=true" alt="Agno" />} iconType="image" href="/v2/integrations/agno" />
-  <Card title="AutoGen" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/autogen/autogen-logo.svg?raw=true" alt="AutoGen" />} iconType="image" href="/v2/integrations/autogen" />
-  <Card title="CrewAI" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/crewai/crewai-logo.png?raw=true" alt="CrewAI" />} iconType="image" href="/v2/integrations/crewai" />
-  <Card title="Google ADK" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/google-adk/google-adk-logo.png?raw=true" alt="Google ADK" />} iconType="image" href="/v2/integrations/google_adk" />
-  <Card title="LangChain" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/langchain/langchain-logo.svg?raw=true" alt="LangChain" />} iconType="image" href="/v2/integrations/langchain" />
-  <Card title="OpenAI Agents (Python)" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/openai/openai-logomark.png?raw=true" alt="OpenAI Agents Python" />} iconType="image" href="/v2/integrations/openai_agents_python" />
-  <Card title="OpenAI Agents (TypeScript)" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/openai/openai-logomark.png?raw=true" alt="OpenAI Agents JS" />} iconType="image" href="/v2/integrations/openai_agents_js" />
-  <Card title="Smolagents" icon={<img src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/huggingface/hf-logo.png?raw=true" alt="smolagents" />} iconType="image" href="/v2/integrations/smolagents" />
-</CardGroup>
+  } iconType="image" href="/v2/integrations/ag2" />
+  } iconType="image" href="/v2/integrations/agno" />
+  } iconType="image" href="/v2/integrations/autogen" />
+  } iconType="image" href="/v2/integrations/crewai" />
+  } iconType="image" href="/v2/integrations/google_adk" />
+  } iconType="image" href="/v2/integrations/langchain" />
+  } iconType="image" href="/v2/integrations/openai_agents_python" />
+  } iconType="image" href="/v2/integrations/openai_agents_js" />
+  } iconType="image" href="/v2/integrations/smolagents" />
 
 ### LLM Providers
 
-<CardGroup cols={2}>
-  <Card title="Anthropic" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/anthropic/anthropic_icon_slate.png?raw=true" alt="Anthropic" />} iconType="image" href="/v2/integrations/anthropic" />
-  <Card title="Google Generative AI" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/deepmind/gemini-logo.png?raw=true" alt="Gemini" />} iconType="image" href="/v2/integrations/google_generative_ai" />
-  <Card title="OpenAI" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/openai/openai-logomark.png?raw=true" alt="OpenAI" />} iconType="image" href="/v2/integrations/openai" />
-  <Card title="LiteLLM" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/litellm/litellm.png?raw=true" alt="LiteLLM" />} iconType="image" href="/v2/integrations/litellm" />
-  <Card title="Watsonx" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/ibm/ibm-logo.svg?raw=true" alt="IBM" />} iconType="image" href="/v2/integrations/ibm_watsonx_ai" />
-  <Card title="x.AI" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/xai/xai-logo.png?raw=true" alt="x.AI" />} iconType="image" href="/v2/integrations/xai" />
-  <Card title="Mem0" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/mem0/mem0.png?raw=true" alt="Mem0" />} iconType="image" href="/v2/integrations/mem0" />
-</CardGroup>
+  } iconType="image" href="/v2/integrations/anthropic" />
+  } iconType="image" href="/v2/integrations/google_generative_ai" />
+  } iconType="image" href="/v2/integrations/openai" />
+  } iconType="image" href="/v2/integrations/litellm" />
+  } iconType="image" href="/v2/integrations/ibm_watsonx_ai" />
+  } iconType="image" href="/v2/integrations/xai" />
+  } iconType="image" href="/v2/integrations/mem0" />
 
 Observability and monitoring for your AI agents and LLM apps. And we do it all in just two lines of code...
-<CodeGroup>
+
 	```python python
 	import agentops
-	agentops.init(<INSERT YOUR API KEY HERE>)
+	agentops.init()
 	```
-</CodeGroup>
+
 ... that logs everything back to your AgentOps Dashboard.
 
-<Note>
-AgentOps is also available for TypeScript/JavaScript applications. Check out our [TypeScript SDK guide](/v2/usage/typescript-sdk) for Node.js projects.
-</Note>
+AgentOps is also available for TypeScript/JavaScript applications. Check out our [TypeScript SDK guide](https://github.com/AgentOps-AI/agentops/blob/main/v2/usage/typescript-sdk) for Node.js projects.
 
 That's it! AgentOps will automatically instrument your code and start tracking traces.
 
 Need more control? You can create custom traces using the `@trace` decorator (recommended) or manage traces manually for advanced use cases:
 
-<CodeGroup>
 	```python python
 	import agentops
 	from agentops.sdk.decorators import trace
 	
-	agentops.init(<INSERT YOUR API KEY HERE>, auto_start_session=False)
+	agentops.init(, auto_start_session=False)
 	
 	@trace(name="my-workflow", tags=["production"])
 	def my_workflow():
@@ -1927,20 +1909,17 @@ Need more control? You can create custom traces using the `@trace` decorator (re
 		return "Workflow completed"
 	
 	```
-</CodeGroup>
 
 You can also set a custom trace name during initialization:
 
-<CodeGroup>
 	```python python
 	import agentops
-	agentops.init(<INSERT YOUR API KEY HERE>, trace_name="custom-trace-name")
+	agentops.init(, trace_name="custom-trace-name")
 	```
-</CodeGroup>
 
 ## The AgentOps Dashboard
 
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) to bookmark on GitHub, save for later 🖇️)</Check>
+[Give us a star](https://github.com/AgentOps-AI/agentops) to bookmark on GitHub, save for later )
 
 With just two lines of code, you can free yourself from the chains of the terminal and, instead, visualize your agents' behavior
 in your AgentOps Dashboard. After setting up AgentOps, each execution of your program is recorded as a session and the above
@@ -1953,32 +1932,14 @@ Here you will find a list of all of your previously recorded sessions and useful
 You also get helpful debugging info such as any SDK versions you were on if you're building on a supported agent framework like Crew or AutoGen.
 LLM calls are presented as a familiar chat history view, and charts give you a breakdown of the types of events that were called and how long they took.
 
-<Frame type="glass" caption="Session Summary">
-  <img height="200" src="/images/session-summary.gif" />
-</Frame>
-
 Find any past sessions from your Session Drawer.
-<Frame type="glass" caption="Session Drawer">
-  <img height="250" src="/images/session-drawer.gif" />
-</Frame>
 
 Most powerful of all is the Session Waterfall. On the left, a time visualization of all your LLM calls, Action events, Tool calls, and Errors.
 On the right, specific details about the event you've selected on the waterfall. For instance the exact prompt and completion for a given LLM call. 
 Most of which has been automatically recorded for you.
 
-<Frame type="glass" caption="Session Waterfall">
-  <img height="200" src="/images/session-waterfall.gif" />
-</Frame>
-
-
 ### Session Overview
 View a meta-analysis of all of your sessions in a single view.
-<Frame type="glass" caption="Session Overview">
-  <img height="200" src="/images/overview.png" />
-</Frame>
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
 
 
 ### v2/quickstart.mdx
@@ -1990,16 +1951,14 @@ description: "Get started with AgentOps in minutes with just 2 lines of code for
 
 AgentOps is designed for easy integration into your AI agent projects, providing powerful observability with minimal setup. This guide will get you started quickly.
 
-<Check>[Give us a star on GitHub!](https://github.com/AgentOps-AI/agentops) Your support helps us grow. ⭐</Check>
+[Give us a star on GitHub!](https://github.com/AgentOps-AI/agentops) Your support helps us grow. 
 
-<Note title="Chat with the docs in your IDE">
-Prefer asking your IDE? Install the Mintlify <a href="/v2/usage/mcp-docs"><strong>MCP Docs Server</strong></a> for AgentOps to chat with the docs while you code:
+Prefer asking your IDE? Install the Mintlify MCP Docs Server for AgentOps to chat with the docs while you code:
 `npx mint-mcp add agentops`
-</Note>
 
 ## Installation
 First, install the AgentOps SDK. We recommend including `python-dotenv` for easy API key management.
-<CodeGroup>
+
   ```bash pip 
   pip install agentops python-dotenv
   ```
@@ -2009,7 +1968,6 @@ First, install the AgentOps SDK. We recommend including `python-dotenv` for easy
   ```bash uv
   uv add agentops python-dotenv
   ```
-</CodeGroup>
 
 ## Initial Setup (2 Lines of Code)
 
@@ -2018,7 +1976,6 @@ At its simplest, AgentOps can start monitoring your supported LLM and agent fram
 1.  **Import AgentOps**: Add `import agentops` to your script.
 2.  **Initialize AgentOps**: Call `agentops.init()` with your API key.
 
-<CodeGroup>
 ```python Python
 import agentops
 import os
@@ -2036,21 +1993,20 @@ agentops.init(AGENTOPS_API_KEY)
 # If you're using a supported library (like OpenAI, LangChain, CrewAI, etc.),
 # AgentOps will now automatically track LLM calls and agent actions.
 ```
-</CodeGroup>
 
 ### Setting Your AgentOps API Key
 You need an AgentOps API key to send data to your dashboard.
 - Get your API key from the [AgentOps Dashboard](https://app.agentops.ai/settings/projects).
 
 It's best practice to set your API key as an environment variable.
-<CodeGroup>
+
   ```bash Export to CLI
   export AGENTOPS_API_KEY="your_agentops_api_key_here"
   ```
   ```txt Set in .env file
   AGENTOPS_API_KEY="your_agentops_api_key_here"
   ```
-</CodeGroup>
+
 If you use a `.env` file, make sure `load_dotenv()` is called before `agentops.init()`.
 
 ## Running Your Agent & Viewing Traces
@@ -2059,7 +2015,6 @@ After adding the two lines and ensuring your API key is set up:
 1.  Run your agent application as you normally would.
 2.  AgentOps will automatically instrument supported libraries and send trace data.
 3.  Visit your [AgentOps Dashboard](https://app.agentops.ai/traces) to observe your agent's operations!
-
 
 ## Beyond Automatic Instrumentation: Decorators
 
@@ -2127,7 +2082,7 @@ def calculator(expression: str) -> str:
 
 ### Grouping with Traces (`@trace` or manual)
 Create custom traces to group a sequence of operations or define logical units of work. You can use the `@trace` decorator or manage traces manually for more complex scenarios.
-<Note>If `auto_start_session=False` in `agentops.init()`, you must use `@trace` or `agentops.start_trace()` for any data to be recorded.</Note>
+If `auto_start_session=False` in `agentops.init()`, you must use `@trace` or `agentops.start_trace()` for any data to be recorded.
 
 ```python
 from agentops.sdk.decorators import trace
@@ -2234,35 +2189,14 @@ print(final_output)
 
 You've seen how to get started with AgentOps! Explore further to leverage its full potential:
 
-<CardGroup cols={2}>
-  <Card
-    title="Integrations"
-    icon="plug"
-    href="/v2/integrations"
-  >
     See how AgentOps automatically instruments popular LLM and agent frameworks.
-  </Card>
-  <Card
-    title="Examples"
-    icon="square-code"
-    href="/v2/examples"
-  >
+  
     Explore detailed examples for various use cases and integrations.
-  </Card>
-  <Card title="SDK Reference" icon="book-open" href="/v2/sdk-reference">
+  
     Dive deeper into the AgentOps SDK capabilities and API.
-  </Card>
-  <Card title="Trace Decorator" icon="code" href="/v2/usage/trace-decorator">
+  
     Learn how to group operations and create custom traces using the @trace decorator.
-  </Card>
-</CardGroup>
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="css" src="/styles/styles.css"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
-
+  
 
 ### v2/concepts/core-concepts.mdx
 
@@ -2281,7 +2215,7 @@ After calling `agentops.init()`, the SDK automatically identifies installed LLM 
 
 ## Declarative Tracing with Decorators
 
-The [decorators](/v2/concepts/decorators) system allows you to add tracing to your existing functions and classes with minimal code changes. Decorators create hierarchical spans that provide a structured view of your agent's operations for monitoring and analysis.
+The [decorators](https://github.com/AgentOps-AI/agentops/blob/main/v2/concepts/decorators) system allows you to add tracing to your existing functions and classes with minimal code changes. Decorators create hierarchical spans that provide a structured view of your agent's operations for monitoring and analysis.
 
 ## OpenTelemetry Foundation
 
@@ -2289,7 +2223,7 @@ AgentOps is built on [OpenTelemetry](https://opentelemetry.io/), a widely-adopte
 
 # Sessions
 
-A [Session](/v2/concepts/sessions) represents a single user interaction with your agent. When you initialize AgentOps using the `init` function, a session is automatically created for you:
+A [Session](https://github.com/AgentOps-AI/agentops/blob/main/v2/concepts/sessions) represents a single user interaction with your agent. When you initialize AgentOps using the `init` function, a session is automatically created for you:
 
 ```python
 import agentops
@@ -2323,13 +2257,13 @@ This hierarchy creates a complete trace of your agent's execution:
 
 ```
 SESSION
-  ├── AGENT
-  │     ├── OPERATION/TASK
-  │     │     ├── LLM
-  │     │     └── TOOL
-  │     └── WORKFLOW
-  │           └── OPERATION/TASK
-  └── LLM (unattributed to a specific agent)
+   AGENT
+        OPERATION/TASK
+             LLM
+             TOOL
+        WORKFLOW
+              OPERATION/TASK
+   LLM (unattributed to a specific agent)
 ```
 
 # Agents
@@ -2377,7 +2311,7 @@ response = client.chat.completions.create(
 
 # Tags
 
-[Tags](/v2/concepts/tags) help you organize and filter your sessions. You can add tags when initializing AgentOps or when starting a session:
+[Tags](https://github.com/AgentOps-AI/agentops/blob/main/v2/concepts/tags) help you organize and filter your sessions. You can add tags when initializing AgentOps or when starting a session:
 
 ```python
 # Add tags when initializing
@@ -2389,7 +2323,7 @@ agentops.start_session(tags=["customer-service", "tier-1"])
 
 # Host Environment
 
-AgentOps automatically collects basic [information](/v2/concepts/host-env) about the environment where your agent is running:
+AgentOps automatically collects basic [information](https://github.com/AgentOps-AI/agentops/blob/main/v2/concepts/host-env) about the environment where your agent is running:
 
 - **Operating System**: The OS type and version
 - **Python Version**: The version of Python being used
@@ -2443,9 +2377,6 @@ workflow()
 # Session is automatically tracked until application terminates
 ```
 
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
 
 ### v1/quickstart.mdx
 
@@ -2456,46 +2387,29 @@ description: "Start using AgentOps with just 2 lines of code"
 import CodeTooltip from '/snippets/add-code-tooltip.mdx'
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-<Steps>
-  <Step title="Install the AgentOps SDK">
-    <CodeGroup>
       ```bash pip 
       pip install agentops
       ```
       ```bash poetry
       poetry add agentops
       ```
-    </CodeGroup>
-  </Step>
-  <Step title="Add 2 lines of code">
-    <CodeTooltip />
+    
     Get an AgentOps API key [here](https://app.agentops.ai/settings/projects)
-      <CodeGroup>
+      
         ```python python
         import agentops
-        agentops.init(<INSERT YOUR API KEY HERE>)
+        agentops.init()
         ```
-      </CodeGroup>
-    <EnvTooltip />
-  </Step>
-  <Step title="Run your agent">
-    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+      
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 
 
-    <Tip>After your run, AgentOps prints a clickable URL to console linking directly to your session in the Dashboard</Tip> 
-     <div/>{/* Intentionally blank div for newline */}
+    After your run, AgentOps prints a clickable URL to console linking directly to your session in the Dashboard 
+     {/* Intentionally blank div for newline */}
 
-     <Frame type="glass" caption="Clickable link to session">
-        <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
-    </Frame>
-  </Step>
-</Steps>
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) if you liked AgentOps! (you may be our <span id="stars-text">3,000th</span> 😊)</Check>
+[Give us a star](https://github.com/AgentOps-AI/agentops) if you liked AgentOps! (you may be our 3,000th )
 
 ## More basic functionality
 
-<CardGroup cols={1}>
-
-<Card icon="code" title="Decorate Operations">
   You can instrument functions inside your code with the `@operation` decorator, which will create spans that track function execution, parameters, and return values. These operations will be displayed in your session visualization alongside LLM calls.
   ```python python
   # Instrument a function as an operation
@@ -2508,8 +2422,6 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
       return result
 ```
 
-</Card>
-<Card icon="robot" title="Track Agents">
   If you use specific named agents within your system, you can create agent spans that contain all downstream operations using the `@agent` decorator.
   ```python python
   # Create an agent class
@@ -2526,8 +2438,6 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
           return f"Completed {task}"
 ```
 
-</Card>
-<Card icon="stop" title="Creating Sessions">
   Create a session to group all your agent operations by using the `@session` decorator. Sessions serve as the root span for all operations.
   ```python python
   # Create a session
@@ -2543,9 +2453,6 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
   # Run the session
   my_workflow()
   ```
-</Card>
-</CardGroup>
-
 
 ## Example Code
 
@@ -2556,7 +2463,7 @@ import agentops
 from agentops.sdk.decorators import session, agent, operation
 
 # Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init()
 
 # Create an agent class
 @agent
@@ -2581,39 +2488,16 @@ def my_workflow():
 my_workflow()
 ```
 
-<Card
-  title="Simple Code Example"
-  icon="square-code"
-  href="https://github.com/AgentOps-AI/agentops-py/blob/main/examples/openai-gpt.ipynb"
->
   Jupyter Notebook with sample code that you can run!
-</Card>
 
-<Check>
   That's all you need to get started! Check out the documentation below to see how you can record other operations. AgentOps is a lot more powerful this way!
-</Check>
 
 ## Explore our more advanced functionality!
 
-<CardGroup cols={2}>
-  <Card
-    title="Examples and Video Guides"
-    icon="square-code"
-    href="/v1/examples"
-  >
     Record all of your operations the way AgentOps intends.
-  </Card>
-  <Card title="Tracking Agents" icon="robot" href="/v1/usage/tracking-agents">
+  
     Associate operations with specific named agents.
-  </Card>
-</CardGroup>
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="css" src="/styles/styles.css"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
-
+  
 
 ## Instrumentation Architecture
 
@@ -3370,12 +3254,12 @@ recorder.record_duration(1.5)
 Example structure:
 ```
 agentops/instrumentation/
-├── my_provider/
-│   ├── __init__.py
-│   ├── instrumentor.py
-│   └── attributes/
-│       ├── __init__.py
-│       └── handlers.py
+ my_provider/
+    __init__.py
+    instrumentor.py
+    attributes/
+        __init__.py
+        handlers.py
 ```
 
 ## Best Practices
@@ -4093,79 +3977,79 @@ except agentops.ValidationError as e:
 
 This directory contains comprehensive examples demonstrating how to integrate AgentOps with various AI/ML frameworks, libraries, and providers. Each example is provided as a Jupyter notebook and a Python script with detailed explanations and code samples.
 
-## 📁 Directory Structure
+##  Directory Structure
 
-- **[`ag2/`](./ag2/)** - Examples for AG2 (AutoGen 2.0) multi-agent conversations
+- **[`ag2/`](https://github.com/AgentOps-AI/agentops/blob/main/ag2)** - Examples for AG2 (AutoGen 2.0) multi-agent conversations
   - `agentchat_with_memory` - Agent chat with persistent memory
   - `async_human_input` - Asynchronous human input handling
   - `tools_wikipedia_search` - Wikipedia search tool integration
 
-- **[`anthropic/`](./anthropic/)** - Anthropic Claude API integration examples
+- **[`anthropic/`](https://github.com/AgentOps-AI/agentops/blob/main/anthropic)** - Anthropic Claude API integration examples
   - `agentops-anthropic-understanding-tools` - Deep dive into tool usage
   - `anthropic-example-async` - Asynchronous API calls
   - `anthropic-example-sync` - Synchronous API calls
   - `antrophic-example-tool` - Tool calling examples
   - `README.md` - Detailed Anthropic integration guide
 
-- **[`autogen/`](./autogen/)** - Microsoft AutoGen framework examples
+- **[`autogen/`](https://github.com/AgentOps-AI/agentops/blob/main/autogen)** - Microsoft AutoGen framework examples
   - `AgentChat` - Basic agent chat functionality
   - `MathAgent` - Mathematical problem-solving agent
 
-- **[`crewai/`](./crewai/)** - CrewAI multi-agent framework examples
+- **[`crewai/`](https://github.com/AgentOps-AI/agentops/blob/main/crewai)** - CrewAI multi-agent framework examples
   - `job_posting` - Job posting automation workflow
   - `markdown_validator` - Markdown validation agent
 
-- **[`gemini/`](./gemini/)** - Google Gemini API integration
+- **[`gemini/`](https://github.com/AgentOps-AI/agentops/blob/main/gemini)** - Google Gemini API integration
   - `gemini_example` - Basic Gemini API usage with AgentOps
 
-- **[`google_adk/`](./google_adk/)** - Google AI Development Kit examples
+- **[`google_adk/`](https://github.com/AgentOps-AI/agentops/blob/main/google_adk)** - Google AI Development Kit examples
   - `human_approval` - Human-in-the-loop approval workflows
 
-- **[`langchain/`](./langchain/)** - LangChain framework integration
+- **[`langchain/`](https://github.com/AgentOps-AI/agentops/blob/main/langchain)** - LangChain framework integration
   - `langchain_examples` - Comprehensive LangChain usage examples
 
-- **[`litellm/`](./litellm/)** - LiteLLM proxy integration
+- **[`litellm/`](https://github.com/AgentOps-AI/agentops/blob/main/litellm)** - LiteLLM proxy integration
   - `litellm_example` - Multi-provider LLM access through LiteLLM
 
-- **[`openai/`](./openai/)** - OpenAI API integration examples
+- **[`openai/`](https://github.com/AgentOps-AI/agentops/blob/main/openai)** - OpenAI API integration examples
   - `multi_tool_orchestration` - Complex tool orchestration
   - `openai_example_async` - Asynchronous OpenAI API calls
   - `openai_example_sync` - Synchronous OpenAI API calls
   - `web_search` - Web search functionality
 
-- **[`openai_agents/`](./openai_agents/)** - OpenAI Agents SDK examples
+- **[`openai_agents/`](https://github.com/AgentOps-AI/agentops/blob/main/openai_agents)** - OpenAI Agents SDK examples
   - `agent_patterns` - Common agent design patterns
   - `agents_tools` - Agent tool integration
   - `customer_service_agent` - Customer service automation
 
-- **[`smolagents/`](./smolagents/)** - SmolAgents framework examples
+- **[`smolagents/`](https://github.com/AgentOps-AI/agentops/blob/main/smolagents)** - SmolAgents framework examples
   - `multi_smolagents_system` - Multi-agent system coordination
   - `text_to_sql` - Natural language to SQL conversion
 
-- **[`watsonx/`](./watsonx/)** - IBM Watsonx AI integration
+- **[`watsonx/`](https://github.com/AgentOps-AI/agentops/blob/main/watsonx)** - IBM Watsonx AI integration
   - `watsonx-streaming` - Streaming text generation
   - `watsonx-text-chat` - Text generation and chat completion
   - `watsonx-tokeniation-model` - Tokenization and model details
   - `README.md` - Detailed Watsonx integration guide
 
-- **[`xai/`](./xai/)** - xAI (Grok) API integration
+- **[`xai/`](https://github.com/AgentOps-AI/agentops/blob/main/xai)** - xAI (Grok) API integration
   - `grok_examples` - Basic Grok API usage
   - `grok_vision_examples` - Vision capabilities with Grok
 
 ### Utility Scripts
 
-- **[`generate_documentation.py`](./generate_documentation.py)** - Script to convert Jupyter notebooks to MDX documentation files
+- **[`generate_documentation.py`](https://github.com/AgentOps-AI/agentops/blob/main/generate_documentation.py)** - Script to convert Jupyter notebooks to MDX documentation files
   - Converts notebooks from `examples/` to `docs/v2/examples/`
   - Handles frontmatter, GitHub links, and installation sections
   - Transforms `%pip install` commands to CodeGroup format
 
-## 📓 Prerequisites
+##  Prerequisites
 
 1. **AgentOps Account**: Sign up at [agentops.ai](https://agentops.ai)
 2. **Python Environment**: Python 3.10+ recommended
 3. **API Keys**: Obtain API keys for the services you want to use
 
-## 📖 Documentation Generation
+##  Documentation Generation
 
 The `generate_documentation.py` script automatically converts these Jupyter notebook examples into documentation for the AgentOps website. It:
 
@@ -4180,7 +4064,7 @@ The `generate_documentation.py` script automatically converts these Jupyter note
 python examples/generate_documentation.py examples/langchain/langchain_examples.ipynb
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 When adding new examples:
 
@@ -4194,14 +4078,14 @@ When adding new examples:
 8. Add the generated documentation to the `docs/v2/examples/` directory for website visibility
 9. Submit a pull request with a clear description of your changes
 
-## 📚 Additional Resources
+##  Additional Resources
 
 - [AgentOps Documentation](https://docs.agentops.ai)
 - [AgentOps Dashboard](https://app.agentops.ai)
 - [GitHub Repository](https://github.com/AgentOps-AI/agentops)
 - [Community Discord](https://discord.gg/agentops)
 
-## 📄 License
+##  License
 
 These examples are provided under the same license as the AgentOps project. See the main repository for license details.
 

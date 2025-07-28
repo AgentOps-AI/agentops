@@ -113,7 +113,9 @@ def compile_llms_txt():
             try:
                 with open(doc_file, "r", encoding="utf-8") as f:
                     file_content = f.read()
-                content += f"### {doc_file}\n\n{file_content}\n\n"
+                cleaned_content = clean_html_content(file_content)
+                cleaned_content = convert_relative_urls(cleaned_content)
+                content += f"### {doc_file}\n\n{cleaned_content}\n\n"
             except Exception as e:
                 print(f"Warning: Could not read {doc_file}: {e}")
 
@@ -134,7 +136,9 @@ def compile_llms_txt():
                 if file_path.endswith(".py"):
                     content += f"### {relative_path}\n\n```python\n{file_content}\n```\n\n"
                 else:
-                    content += f"### {relative_path}\n\n{file_content}\n\n"
+                    cleaned_content = clean_html_content(file_content)
+                    cleaned_content = convert_relative_urls(cleaned_content)
+                    content += f"### {relative_path}\n\n{cleaned_content}\n\n"
             except Exception as e:
                 print(f"Warning: Could not read {file_path}: {e}")
 
@@ -156,7 +160,9 @@ def compile_llms_txt():
                 if file_path.endswith(".py"):
                     content += f"### {relative_path}\n\n```python\n{file_content}\n```\n\n"
                 else:
-                    content += f"### {relative_path}\n\n{file_content}\n\n"
+                    cleaned_content = clean_html_content(file_content)
+                    cleaned_content = convert_relative_urls(cleaned_content)
+                    content += f"### {relative_path}\n\n{cleaned_content}\n\n"
             except Exception as e:
                 print(f"Warning: Could not read {file_path}: {e}")
 
