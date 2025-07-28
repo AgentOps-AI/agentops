@@ -1,7 +1,11 @@
 ---
-title: Sessions
-description: Detailed breakdown of initializing AgentOps and managing sessions.
+title: Sessions (Deprecated)
+description: Detailed breakdown of initializing AgentOps and managing sessions - DEPRECATED: Use Traces instead
 ---
+
+<Warning>
+Sessions are deprecated in favor of Traces. Please refer to the [v2 Traces documentation](/v2/concepts/traces) for current best practices. The session concept has been replaced with the more flexible trace system.
+</Warning>
 
 A **Session** encapsulates a singular execution instance of your workflow, bringing together all agents, LLMs, 
 actions, etc., under one umbrella. Consequently, it is imperative for each event to be associated with a session. 
