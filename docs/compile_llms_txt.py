@@ -1,7 +1,34 @@
 import os
 import glob
+import re
 from pathlib import Path
 
+
+def clean_html_content(text):
+    """Remove HTML tags and clean content for llms.txt compatibility."""
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    lines = text.split('\n')
+    cleaned_lines = []
+    in_table = False
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        if '|' in stripped and (stripped.startswith('|') or stripped.count('|') >= 2):
+            in_table = True
+            continue
+        elif in_table and (stripped.startswith('-') or not stripped):
+            continue
+        else:
+            in_table = False
+        
+        cleaned_line = re.sub(r'[^\x00-\x7F]+', '', line)
+        
+        if cleaned_line.strip() or (cleaned_lines and cleaned_lines[-1].strip()):
+            cleaned_lines.append(cleaned_line)
+    
+    return '\n'.join(cleaned_lines)
 
 def compile_llms_txt():
     """Compile a comprehensive llms.txt file with actual repository content."""
@@ -13,16 +40,18 @@ def compile_llms_txt():
     try:
         with open("../README.md", "r", encoding="utf-8") as f:
             readme_content = f.read()
+        cleaned_readme = clean_html_content(readme_content)
         content += "## Repository Overview\n\n"
-        content += readme_content + "\n\n"
+        content += cleaned_readme + "\n\n"
     except Exception as e:
         print(f"Warning: Could not read README.md: {e}")
     
     try:
         with open("../CONTRIBUTING.md", "r", encoding="utf-8") as f:
             contributing_content = f.read()
+        cleaned_contributing = clean_html_content(contributing_content)
         content += "## Contributing Guide\n\n"
-        content += contributing_content + "\n\n"
+        content += cleaned_contributing + "\n\n"
     except Exception as e:
         print(f"Warning: Could not read CONTRIBUTING.md: {e}")
     
