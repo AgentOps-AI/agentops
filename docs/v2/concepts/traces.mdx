@@ -270,6 +270,125 @@ The AgentOps dashboard provides several views for analyzing your traces:
 - **Leverage context managers** for automatic trace lifecycle management
 - **Set appropriate end states** to track success/failure rates
 
+## Multi-Turn Conversations
+
+For applications that handle multiple user interactions within a single logical session (like chatbots or conversational agents), you can group multiple requests and responses into a single trace using manual trace control.
+
+### Basic Multi-Turn Pattern
+
+```python
+import agentops
+from agentops.sdk.decorators import operation
+
+# Initialize without auto-starting a trace
+agentops.init("your-api-key", auto_start_session=False)
+
+# Start a trace for the entire conversation
+conversation_trace = agentops.start_trace(
+    "customer_conversation", 
+    tags=["chatbot", "customer-service"]
+)
+
+@operation
+def process_user_message(message, conversation_context):
+    # Process individual message within the conversation trace
+    response = generate_response(message, conversation_context)
+    return response
+
+# Simulate multiple turns in conversation
+conversation_context = {}
+messages = [
+    "Hello, I need help with my order",
+    "My order number is 12345", 
+    "When will it be delivered?"
+]
+
+try:
+    for message in messages:
+        response = process_user_message(message, conversation_context)
+        conversation_context['last_response'] = response
+        print(f"User: {message}")
+        print(f"Bot: {response}")
+    
+    agentops.end_trace(conversation_trace, "Success")
+except Exception as e:
+    agentops.end_trace(conversation_trace, "Error")
+```
+
+### Advanced Multi-Turn with Metadata Updates
+
+You can track conversation progress and context using trace metadata:
+
+```python
+import agentops
+
+agentops.init("your-api-key", auto_start_session=False)
+
+def handle_conversation(user_id, conversation_id):
+    # Start trace for entire conversation
+    trace = agentops.start_trace(
+        f"conversation_{conversation_id}",
+        tags=["multi-turn", "customer-service", f"user_{user_id}"]
+    )
+    
+    turn_count = 0
+    
+    try:
+        while True:  # Conversation loop
+            user_input = input("User: ")
+            if user_input.lower() in ['quit', 'exit', 'bye']:
+                break
+            
+            turn_count += 1
+            
+            # Update trace metadata with conversation progress
+            agentops.update_trace_metadata({
+                "conversation_turn": turn_count,
+                "conversation_stage": "active",
+                "user_id": user_id,
+                "last_user_input": user_input[:50]  # Truncated for privacy
+            })
+            
+            # Process the message (your agent logic here)
+            response = process_message(user_input)
+            print(f"Bot: {response}")
+            
+            # Update metadata with response info
+            agentops.update_trace_metadata({
+                "last_response_length": len(response),
+                "total_turns": turn_count
+            })
+        
+        # Final metadata update
+        agentops.update_trace_metadata({
+            "conversation_stage": "completed",
+            "completion_reason": "user_ended",
+            "total_turns": turn_count
+        })
+        
+        agentops.end_trace(trace, "Success")
+        
+    except Exception as e:
+        agentops.update_trace_metadata({
+            "conversation_stage": "error",
+            "error_turn": turn_count,
+            "error_message": str(e)
+        })
+        agentops.end_trace(trace, "Error")
+
+# Example usage
+handle_conversation("user_123", "conv_456")
+```
+
+### Best Practices for Multi-Turn Conversations
+
+- **Use a single trace per conversation**: Group all related turns under one trace for better analysis
+- **Update metadata progressively**: Track conversation state, turn count, and context changes
+- **Use meaningful trace names**: Include conversation or session identifiers
+- **Tag appropriately**: Use tags to categorize conversation types, user segments, etc.
+- **Handle errors gracefully**: Ensure traces are properly ended even if conversations are interrupted
+- **Consider conversation boundaries**: Start new traces for logically separate conversations
+
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>

@@ -76,6 +76,49 @@ After adding the two lines and ensuring your API key is set up:
 3.  Visit your [AgentOps Dashboard](https://app.agentops.ai/traces) to observe your agent's operations!
 
 
+## From Simple to Advanced: Customizing Your AgentOps Integration
+
+The two-line setup gets you started quickly, but AgentOps offers powerful customization options as your needs grow:
+
+**Level 1: Basic Setup (2 lines)**
+```python
+import agentops
+agentops.init("your-api-key")  # Automatic instrumentation
+```
+
+**Level 2: Custom Configuration**
+```python
+import agentops
+agentops.init(
+    "your-api-key",
+    default_tags=["production", "v2.1"],
+    auto_start_session=False,  # Manual trace control
+    max_wait_time=10000
+)
+```
+
+**Level 3: Manual Trace Management**
+```python
+import agentops
+agentops.init("your-api-key", auto_start_session=False)
+
+trace = agentops.start_trace("custom-workflow", tags=["user-123"])
+# Your code here
+agentops.end_trace(trace, "Success")
+```
+
+**Level 4: Decorator-Based Instrumentation**
+```python
+from agentops.sdk.decorators import trace, agent, operation
+
+@trace
+def my_workflow():
+    agent = MyAgent()
+    return agent.process()
+```
+
+Each level builds on the previous one, allowing you to add sophistication as needed.
+
 ## Beyond Automatic Instrumentation: Decorators
 
 While AgentOps automatically instruments many popular libraries, you can gain finer-grained control and track custom parts of your code using our powerful decorators. This allows you to define specific operations, group logic under named agents, track tool usage with costs, and create custom traces.

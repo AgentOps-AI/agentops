@@ -13,7 +13,11 @@ description: "Seemingly magic tools that can be added to functions and classes f
 
 AgentOps provides a set of decorators that allow you to easily instrument your code for tracing and monitoring AI agent workflows. These decorators create spans (units of work) that are organized hierarchically to track different types of operations.
 
-## `@session`
+## `@session` (Deprecated)
+
+<Warning>
+The `@session` decorator is deprecated in favor of `@trace`. Please use `@trace` for new implementations. See the [v2 documentation](/v2/concepts/decorators) for current best practices.
+</Warning>
 
 The `@session` decorator creates a session span, which serves as the root for all other spans. No spans can exist without a session at the top.
 
