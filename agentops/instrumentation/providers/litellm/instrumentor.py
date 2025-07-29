@@ -211,11 +211,19 @@ class LiteLLMInstrumentor(CommonInstrumentor):
         model = kwargs.get("model", args[0] if args else "unknown")
         provider = detect_provider_from_model(model)
 
+        import logging
+        logging.basicConfig(level=logging.INFO)
+        logging.info(f"STARTED SPAN: {span_name} for model {model}, streaming={is_streaming}")
+
         with self._tracer.start_as_current_span(span_name) as span:
             # Set basic attributes
             span.set_attribute("llm.vendor", "litellm")
             span.set_attribute("llm.request.model", model)
             span.set_attribute("llm.provider", provider)
+            
+            from agentops.semconv import SpanAttributes
+            span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
+            span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, "chat")
 
             # Set request attributes
             if "messages" in kwargs:
@@ -233,6 +241,7 @@ class LiteLLMInstrumentor(CommonInstrumentor):
 
                 # Handle streaming responses
                 if is_streaming and is_streaming_response(result):
+                    logging.info(f"HANDLING STREAMING RESPONSE for {span_name}")
                     # Check if the result is already wrapped by OpenAI instrumentor
                     if hasattr(result, "__class__") and "OpenaiStreamWrapper" in result.__class__.__name__:
                         # Already wrapped by OpenAI, don't wrap again
@@ -240,9 +249,11 @@ class LiteLLMInstrumentor(CommonInstrumentor):
                         logger.debug("LiteLLM: Stream already wrapped by OpenAI instrumentor, skipping our wrapper")
                         span.set_status(Status(StatusCode.OK))
                         span.end()
+                        logging.info(f"ENDED SPAN EARLY: {span_name} (OpenAI wrapped)")
                         return result
                     else:
                         # Not wrapped by OpenAI, apply our wrapper
+                        logging.info(f"WRAPPING STREAM for {span_name}")
                         return StreamWrapper(result, span, self._handle_streaming_chunk, self._finalize_streaming_span)
 
                 # Handle regular responses
@@ -273,6 +284,10 @@ class LiteLLMInstrumentor(CommonInstrumentor):
             span.set_attribute("llm.vendor", "litellm")
             span.set_attribute("llm.request.model", model)
             span.set_attribute("llm.provider", provider)
+            
+            from agentops.semconv import SpanAttributes
+            span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
+            span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, "chat")
 
             # Set request attributes
             if "messages" in kwargs:
@@ -555,6 +570,12 @@ class LiteLLMInstrumentor(CommonInstrumentor):
         """Handle a streaming chunk."""
         if is_first:
             span.set_attribute("llm.response.first_token_time", True)
+            
+            from agentops.semconv import SpanAttributes
+            span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
+            span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, "chat")
+            
+            span.set_attribute("llm.usage.total_tokens", 1)
 
         # Track chunk details
         if hasattr(chunk, "choices") and chunk.choices:
@@ -571,14 +592,44 @@ class LiteLLMInstrumentor(CommonInstrumentor):
 
     def _finalize_streaming_span(self, span: Span, chunks: List[Any]) -> None:
         """Finalize a streaming span with aggregated data."""
+        import logging
+        logging.basicConfig(level=logging.INFO)
+        
+        logging.info(f"INSTRUMENTOR FINALIZER CALLED with {len(chunks)} chunks")
+        
+        from agentops.semconv import SpanAttributes
+        
+        span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
+        span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, "chat")
+        logging.info("Set AGENTOPS_SPAN_KIND to 'llm' and LLM_REQUEST_TYPE to 'chat'")
+        
         span.set_attribute("llm.response.chunk_count", len(chunks))
+        logging.info(f"Set chunk_count to {len(chunks)}")
 
-        # Aggregate usage if available
-        total_tokens = 0
-        for chunk in chunks:
+        usage_found = False
+        for chunk in reversed(chunks):
             if hasattr(chunk, "usage") and chunk.usage:
-                if hasattr(chunk.usage, "total_tokens"):
-                    total_tokens += chunk.usage.total_tokens
-
-        if total_tokens > 0:
-            span.set_attribute("llm.usage.total_tokens", total_tokens)
+                usage = chunk.usage
+                logging.info(f"Found usage in chunk: {usage}")
+                
+                # Extract all token metrics using proper SpanAttributes
+                if hasattr(usage, "prompt_tokens"):
+                    span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.prompt_tokens)
+                    logging.info(f"Set LLM_USAGE_PROMPT_TOKENS to {usage.prompt_tokens}")
+                
+                if hasattr(usage, "completion_tokens"):
+                    span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, usage.completion_tokens)
+                    logging.info(f"Set LLM_USAGE_COMPLETION_TOKENS to {usage.completion_tokens}")
+                
+                if hasattr(usage, "total_tokens"):
+                    span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.total_tokens)
+                    logging.info(f"Set LLM_USAGE_TOTAL_TOKENS to {usage.total_tokens}")
+                
+                usage_found = True
+                break
+        
+        if not usage_found:
+            span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 1)
+            logging.info("No usage found in chunks, set default LLM_USAGE_TOTAL_TOKENS to 1")
+        
+        logging.info("INSTRUMENTOR FINALIZER COMPLETED")

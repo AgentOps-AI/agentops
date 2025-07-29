@@ -7,7 +7,8 @@ time-to-first-token and other streaming metrics.
 import time
 from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
 
-from opentelemetry.trace import Span
+from opentelemetry import context as context_api
+from opentelemetry.trace import Span, Status, StatusCode, set_span_in_context
 
 
 class StreamWrapper:
@@ -41,6 +42,9 @@ class StreamWrapper:
         self.first_chunk_time: Optional[float] = None
         self.start_time = time.time()
         self._is_first = True
+        
+        current_context = context_api.get_current()
+        self._token = context_api.attach(set_span_in_context(span, current_context))
 
     def __iter__(self):
         """Return self as iterator."""
@@ -90,11 +94,22 @@ class StreamWrapper:
             if self.finalizer:
                 self.finalizer(self.span, self.chunks)
 
+            self.span.set_status(Status(StatusCode.OK))
+            self.span.end()
+            
+            context_api.detach(self._token)
+
         except Exception as e:
             # Don't let telemetry errors break the stream
             import logging
-
             logging.error(f"Error finalizing stream metrics: {e}")
+            
+            try:
+                self.span.set_status(Status(StatusCode.ERROR, str(e)))
+                self.span.end()
+                context_api.detach(self._token)
+            except:
+                pass
 
     def close(self):
         """Close the stream if it has a close method."""
@@ -135,6 +150,9 @@ class AsyncStreamWrapper:
         self.first_chunk_time: Optional[float] = None
         self.start_time = time.time()
         self._is_first = True
+        
+        current_context = context_api.get_current()
+        self._token = context_api.attach(set_span_in_context(span, current_context))
 
     def __aiter__(self):
         """Return self as async iterator."""
@@ -184,11 +202,22 @@ class AsyncStreamWrapper:
             if self.finalizer:
                 self.finalizer(self.span, self.chunks)
 
+            self.span.set_status(Status(StatusCode.OK))
+            self.span.end()
+            
+            context_api.detach(self._token)
+
         except Exception as e:
             # Don't let telemetry errors break the stream
             import logging
-
             logging.error(f"Error finalizing async stream metrics: {e}")
+            
+            try:
+                self.span.set_status(Status(StatusCode.ERROR, str(e)))
+                self.span.end()
+                context_api.detach(self._token)
+            except:
+                pass
 
     async def aclose(self):
         """Close the async stream if it has an aclose method."""
@@ -257,6 +286,8 @@ class ChunkAggregator:
         # Usage (sometimes in final chunk)
         if hasattr(chunk, "usage") and chunk.usage:
             self.usage = chunk.usage
+            import logging
+            logging.info(f"Found usage in chunk: {chunk.usage.__dict__ if hasattr(chunk.usage, '__dict__') else chunk.usage}")
 
     def get_aggregated_content(self) -> str:
         """Get the complete aggregated text content."""
@@ -329,9 +360,38 @@ def create_finalizer(aggregator: ChunkAggregator) -> Callable[[Span, List[Any]],
 
     def finalizer(span: Span, chunks: List[Any]) -> None:
         """Finalize the streaming span with aggregated metrics."""
+        import logging
+        logging.basicConfig(level=logging.INFO)
+        
+        logging.info(f"STREAMING FINALIZER CALLED with {len(chunks)} chunks")
+        
         metrics = aggregator.get_metrics()
+        logging.info(f"Aggregated metrics: {metrics}")
 
+        from agentops.semconv import SpanAttributes
+        
+        span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
+        span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, "chat")
+        logging.info("Set AGENTOPS_SPAN_KIND to 'llm' and LLM_REQUEST_TYPE to 'chat'")
+        
+        span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, max(1, metrics.get("total_tokens", 1)))
+        logging.info(f"Set LLM_USAGE_TOTAL_TOKENS to {max(1, metrics.get('total_tokens', 1))}")
+        
         for key, value in metrics.items():
-            span.set_attribute(f"llm.response.{key}", value)
+            if key in ["prompt_tokens", "completion_tokens", "total_tokens"]:
+                if key == "prompt_tokens":
+                    span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, value)
+                    logging.info(f"Set LLM_USAGE_PROMPT_TOKENS to {value}")
+                elif key == "completion_tokens":
+                    span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, value)
+                    logging.info(f"Set LLM_USAGE_COMPLETION_TOKENS to {value}")
+                elif key == "total_tokens":
+                    span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, value)
+                    logging.info(f"Set LLM_USAGE_TOTAL_TOKENS to {value}")
+            else:
+                span.set_attribute(f"llm.response.{key}", value)
+                logging.info(f"Set llm.response.{key} to {value}")
+        
+        logging.info("STREAMING FINALIZER COMPLETED")
 
     return finalizer
