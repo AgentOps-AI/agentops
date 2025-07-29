@@ -1,0 +1,6 @@
+smolagents
+smolagents[litellm]
+pandas
+duckduckgo-search 
+sqlalchemy
+markdownify

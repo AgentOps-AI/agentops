@@ -1,0 +1,5 @@
+crewai
+crewai-tools
+pymarkdown==0.1.4
+pymarkdownlnt==0.9.30
+pymdown-extensions==10.15

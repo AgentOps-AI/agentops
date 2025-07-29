@@ -1,0 +1,83 @@
+---
+title: "MCP Server"
+description: "MCP server for accessing AgentOps trace and span data"
+---
+
+<iframe
+  width="100%"
+  height="300"
+  src="https://www.youtube.com/embed/lTa3Sk8C4f0?si=3r7GO8N1Csh0P9C5RR"
+  title="AgentOps MCP Server"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+# MCP Server
+
+AgentOps provides a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that exposes the Public API as a set of tools for AI assistants. This allows AI models to directly query your AgentOps data during conversations and debug AI agents with greater context.
+
+### Configuration & Installation
+
+Add the AgentOps MCP to your MCP client's configuration file.
+
+**npx configuration:**
+```json
+{
+  "mcpServers": {
+    "agentops": {
+      "command": "npx",
+      "args": [
+        "agentops-mcp"
+      ],
+      "env": {
+        "AGENTOPS_API_KEY": ""
+      }
+    }
+  }
+}
+```
+
+**Cursor Deeplink:**
+
+Add the AgentOps MCP to Cursor with Deeplink.
+
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=agentops&config=eyJjb21tYW5kIjoibnB4IGFnZW50b3BzLW1jcCIsImVudiI6eyJBR0VOVE9QU19BUElfS0VZIjoiIn19)
+
+**Smithery:**
+
+To install agentops-mcp for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@AgentOps-AI/agentops-mcp):
+
+```bash
+npx -y @smithery/cli install @AgentOps-AI/agentops-mcp --client claude
+```
+
+### Available Tools
+
+The MCP server exposes the following tools that mirror the Public API endpoints:
+
+#### `auth`
+Authorize using an AgentOps project API key.
+- **Parameters**: `api_key` (string) - Your AgentOps project API key
+- **Usage**: The server will automatically prompt for authentication when needed
+
+#### `get_trace`
+Get trace information by ID.
+- **Parameters**: `trace_id` (string) - The trace identifier
+- **Returns**: Trace details and metrics
+
+#### `get_span`
+Get span information by ID.
+- **Parameters**: `span_id` (string) - The span identifier
+- **Returns**: Span attributes and metrics
+
+#### `get_complete_trace`
+Get complete trace information by ID.
+- **Parameters**: `span_id` (string) - The trace identifier
+- **Returns**: Complete trace and associated span details.
+
+### Environment Variables
+
+The MCP server supports the following environment variables:
+
+- `AGENTOPS_API_KEY`: Your AgentOps project API key
+- `HOST`: API endpoint (defaults to `https://api.agentops.ai`)

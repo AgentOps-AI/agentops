@@ -1,0 +1,188 @@
+name: Examples Integration Test
+
+# This workflow runs all example scripts to ensure they work correctly
+# and that LLM spans are properly tracked in AgentOps using the 
+# integrated validation functionality.
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'examples/**/*.py'
+      - 'agentops/**'
+      - '.github/workflows/examples-integration-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'examples/**/*.py'
+      - 'agentops/**'
+      - '.github/workflows/examples-integration-test.yml'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  test-examples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          # OpenAI examples
+          - { path: 'examples/openai/openai_example_sync.py', name: 'OpenAI Sync' }
+          - { path: 'examples/openai/openai_example_async.py', name: 'OpenAI Async' }
+          - { path: 'examples/openai/multi_tool_orchestration.py', name: 'OpenAI Multi-Tool' }
+          - { path: 'examples/openai/web_search.py', name: 'OpenAI Web Search' }
+          - { path: 'examples/openai/o3_responses_example.py', name: 'OpenAI o3 Responses' }
+          
+          # Anthropic examples
+          - { path: 'examples/anthropic/anthropic-example-sync.py', name: 'Anthropic Sync' }
+          - { path: 'examples/anthropic/anthropic-example-async.py', name: 'Anthropic Async' }
+          - { path: 'examples/anthropic/agentops-anthropic-understanding-tools.py', name: 'Anthropic Tools' }
+          
+          # LangChain examples
+          - { path: 'examples/langchain/langchain_examples.py', name: 'LangChain' }
+          
+          # LiteLLM examples
+          - { path: 'examples/litellm/litellm_example.py', name: 'LiteLLM' }
+          
+          # Google Generative AI examples
+          - { path: 'examples/google_genai/gemini_example.py', name: 'Google Gemini' }
+          
+          # xAI examples
+          - { path: 'examples/xai/grok_examples.py', name: 'xAI Grok' }
+          - { path: 'examples/xai/grok_vision_examples.py', name: 'xAI Grok Vision' }
+          
+          # CrewAI examples
+          - { path: 'examples/crewai/job_posting.py', name: 'CrewAI Job Posting' }
+          - { path: 'examples/crewai/markdown_validator.py', name: 'CrewAI Markdown' }
+          
+          # AutoGen examples
+          - { path: 'examples/autogen/AgentChat.py', name: 'AutoGen Agent Chat' }
+          - { path: 'examples/autogen/MathAgent.py', name: 'AutoGen Math Agent' }
+          
+          # AG2 examples
+          - { path: 'examples/ag2/async_human_input.py', name: 'AG2 Async Human Input' }
+          - { path: 'examples/ag2/tools_wikipedia_search.py', name: 'AG2 Wikipedia Search' }
+          
+          # Agno examples
+          - { path: 'examples/agno/agno_async_operations.py', name: 'Agno Async Operations' }
+          - { path: 'examples/agno/agno_basic_agents.py', name: 'Agno Basic Agents' }
+          - { path: 'examples/agno/agno_research_team.py', name: 'Agno Research Team' }
+          - { path: 'examples/agno/agno_tool_integrations.py', name: 'Agno Tool Integrations' }
+          - { path: 'examples/agno/agno_workflow_setup.py', name: 'Agno Workflow Setup' }
+          
+          # Google ADK examples
+          - { path: 'examples/google_adk/human_approval.py', name: 'Google ADK Human Approval' }
+          
+          # LlamaIndex examples
+          # - { path: 'examples/llamaindex/llamaindex_example.py', name: 'LlamaIndex' }
+          
+          # Mem0 examples
+          - { path: 'examples/mem0/mem0_memoryclient_example.py', name: 'Mem0 Memory Client' }
+          
+          # Watsonx examples
+          - { path: 'examples/watsonx/watsonx-streaming.py', name: 'Watsonx Streaming' }
+          - { path: 'examples/watsonx/watsonx-text-chat.py', name: 'Watsonx Text Chat' }
+          - { path: 'examples/watsonx/watsonx-tokeniation-model.py', name: 'Watsonx Tokenization' }
+          
+          # LangGraph examples
+          - { path: 'examples/langgraph/langgraph_example.py', name: 'LangGraph' }
+          
+          # Smolagents examples
+          - { path: 'examples/smolagents/multi_smolagents_system.py', name: 'Smolagents Multi System' }
+          - { path: 'examples/smolagents/text_to_sql.py', name: 'Smolagents Text to SQL' }
+          
+          # OpenAI Agents examples
+          - { path: 'examples/openai_agents/agent_guardrails.py', name: 'OpenAI Agents Guardrails' }
+          - { path: 'examples/openai_agents/agent_patterns.py', name: 'OpenAI Agents Patterns' }
+          - { path: 'examples/openai_agents/agents_tools.py', name: 'OpenAI Agents Tools' }
+          - { path: 'examples/openai_agents/customer_service_agent.py', name: 'OpenAI Agents Customer Service' }
+          
+          # Add more examples as needed
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install AgentOps
+      run: |
+        pip install -e .
+    
+    - name: Install example dependencies
+      run: |
+        # Install common dependencies
+        pip install python-dotenv requests
+        
+        # Install from requirements.txt in the example's directory
+        example_dir=$(dirname "${{ matrix.example.path }}")
+        if [ -f "$example_dir/requirements.txt" ]; then
+          echo "Installing dependencies from $example_dir/requirements.txt"
+          pip install -r "$example_dir/requirements.txt"
+        else
+          echo "No requirements.txt found in $example_dir"
+        fi
+    
+    - name: Run example - ${{ matrix.example.name }}
+      env:
+        AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+        WATSONX_API_KEY: ${{ secrets.WATSONX_API_KEY }}
+        WATSONX_PROJECT_ID: ${{ secrets.WATSONX_PROJECT_ID }}
+        WATSONX_URL: ${{ secrets.WATSONX_URL }}
+        MEM0_API_KEY: ${{ secrets.MEM0_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
+        MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        AI21_API_KEY: ${{ secrets.AI21_API_KEY }}
+        TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+        LLAMA_API_KEY: ${{ secrets.LLAMA_API_KEY }}
+        PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        echo "Running ${{ matrix.example.name }}..."
+        python "${{ matrix.example.path }}" || exit 1
+    
+    - name: Check for errors
+      if: failure()
+      run: |
+        echo "Example ${{ matrix.example.name }} failed!"
+        echo "Path: ${{ matrix.example.path }}"
+        
+        # Show last 50 lines of any log files
+        if [ -f agentops.log ]; then
+          echo "=== AgentOps Log ==="
+          tail -n 50 agentops.log
+        fi
+  
+  summary:
+    needs: test-examples
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Summary
+      run: |
+        echo "## Examples Integration Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.test-examples.result }}" == "success" ]; then
+          echo "✅ All examples passed!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Some examples failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
+        fi 

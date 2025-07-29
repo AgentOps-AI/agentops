@@ -7,6 +7,11 @@ AgentOps is designed for easy integration into your AI agent projects, providing
 
 <Check>[Give us a star on GitHub!](https://github.com/AgentOps-AI/agentops) Your support helps us grow. ⭐</Check>
 
+<Note title="Chat with the docs in your IDE">
+Prefer asking your IDE? Install the Mintlify <a href="/v2/usage/mcp-docs"><strong>MCP Docs Server</strong></a> for AgentOps to chat with the docs while you code:
+`npx mint-mcp add agentops`
+</Note>
+
 ## Installation
 First, install the AgentOps SDK. We recommend including `python-dotenv` for easy API key management.
 <CodeGroup>
@@ -169,6 +174,23 @@ def my_workflow_decorated(task_to_perform):
 #     if custom_trace: # Ensure trace was started before trying to end it
 #         agentops.end_trace(custom_trace, end_state="Fail", error_message=str(e))
 #     raise
+```
+
+### Updating Trace Metadata
+
+You can also update metadata on running traces to add context or track progress:
+
+```python
+from agentops import update_trace_metadata
+
+# Update metadata during trace execution
+update_trace_metadata({
+    "operation_name": "AI Agent Processing",
+    "processing_stage": "data_validation",
+    "records_processed": 1500,
+    "user_id": "user_123",
+    "tags": ["validation", "production"]
+})
 ```
 
 ## Complete Example with Decorators

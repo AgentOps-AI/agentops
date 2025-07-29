@@ -4,17 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.4.16"
+version = "0.4.18"
 authors = [
-  { name="Alex Reibman", email="areibman@gmail.com" },
-  { name="Shawn Qiu", email="siyangqiu@gmail.com" },
-  { name="Braelyn Boynton", email="bboynton97@gmail.com" },
-  { name="Howard Gil", email="howardbgil@gmail.com" },
-  { name="Constantin Teodorescu", email="teocns@gmail.com" },
-  { name="Pratyush Shukla", email="ps4534@nyu.edu" },
-  { name="Travis Dent", email="tcdent@gmail.com" },
-  { name="Dwij Patel", email="dwijpatel1704@gmail.com" },
-  { name="Fenil Faldu", email="fenilfaldu143@gmail.com"}
+    { name = "Alex Reibman", email = "areibman@gmail.com" },
+    { name = "Shawn Qiu", email = "siyangqiu@gmail.com" },
+    { name = "Braelyn Boynton", email = "bboynton97@gmail.com" },
+    { name = "Howard Gil", email = "howardbgil@gmail.com" },
+    { name = "Constantin Teodorescu", email = "teocns@gmail.com" },
+    { name = "Pratyush Shukla", email = "ps4534@nyu.edu" },
+    { name = "Travis Dent", email = "tcdent@gmail.com" },
+    { name = "Dwij Patel", email = "dwijpatel1704@gmail.com" },
+    { name = "Fenil Faldu", email = "fenilfaldu143@gmail.com" },
 ]
 description = "Observability and DevTool Platform for AI Agents"
 # readme = "README.md"
@@ -34,8 +34,8 @@ dependencies = [
     "psutil>=5.9.8,<7.0.1",
     "termcolor>=2.3.0,<2.5.0",
     "PyYAML>=5.3,<7.0",
-    "packaging>=21.0,<25.0", # Lower bound of 21.0 ensures compatibility with Python 3.9+
-    "httpx>=0.24.0,<0.29.0", # Required for legacy module compatibility
+    "packaging>=21.0,<25.0",                                                 # Lower bound of 21.0 ensures compatibility with Python 3.9+
+    "httpx>=0.24.0,<0.29.0",                                                 # Required for legacy module compatibility
     "opentelemetry-sdk==1.29.0; python_version<'3.10'",
     "opentelemetry-sdk>1.29.0; python_version>='3.10'",
     "opentelemetry-api==1.29.0; python_version<'3.10'",
@@ -70,20 +70,20 @@ test = [
 
 dev = [
     # Testing essentials
-    "pytest>=8.0.0", # Testing framework with good async support
-    "pytest-depends", # For testing complex agent workflows
-    "pytest-asyncio", # Async test support for testing concurrent agent operations
-    "pytest-mock", # Mocking capabilities for isolating agent components
-    "pyfakefs", # File system testing
+    "pytest>=8.0.0",    # Testing framework with good async support
+    "pytest-depends",   # For testing complex agent workflows
+    "pytest-asyncio",   # Async test support for testing concurrent agent operations
+    "pytest-mock",      # Mocking capabilities for isolating agent components
+    "pyfakefs",         # File system testing
     "pytest-recording", # Alternative to pytest-vcr with better Python 3.x support
     "vcrpy>=0.7.0",
     # Code quality and type checking
-    "ruff", # Fast Python linter for maintaining code quality
-    "mypy", # Static type checking for better reliability
+    "ruff",           # Fast Python linter for maintaining code quality
+    "mypy",           # Static type checking for better reliability
     "types-requests", # Type stubs for requests library
     # HTTP mocking and environment
     "requests_mock>=1.11.0", # Mock HTTP requests for testing agent external communications
-    "python-dotenv", # Environment management for secure testing
+    "python-dotenv",         # Environment management for secure testing
     # Agent integration testing
     "pytest-sugar>=1.0.0",
     "pdbpp>=0.10.3",
@@ -95,12 +95,12 @@ Homepage = "https://github.com/AgentOps-AI/agentops"
 Issues = "https://github.com/AgentOps-AI/agentops/issues"
 
 [tool.uv]
-compile-bytecode = true  # Enable bytecode compilation for better performance
+compile-bytecode = true # Enable bytecode compilation for better performance
 resolution = "highest"
-default-groups = ["test", "dev"]  # Default groups to install for development
+default-groups = ["test", "dev"] # Default groups to install for development
 constraint-dependencies = [
-    "pydantic>=2.8.0; python_version>='3.13'",  # Ensure Python 3.13 compatibility
-    "typing-extensions; python_version>='3.13'",  # Required for Pydantic with Python 3.13
+    "pydantic>=2.8.0; python_version>='3.13'",   # Ensure Python 3.13 compatibility
+    "typing-extensions; python_version>='3.13'", # Required for Pydantic with Python 3.13
 ]
 
 [tool.autopep8]
@@ -108,25 +108,25 @@ max_line_length = 120
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "module" # WARNING: Changing this may break tests. A `module`-scoped session might be faster, but also unstable.
-testpaths = ["tests/unit"]  # Default to unit tests
-addopts = "--tb=short -p no:warnings --import-mode=importlib --ignore=tests/integration"  # Ignore integration by default
+asyncio_default_fixture_loop_scope = "module"                                            # WARNING: Changing this may break tests. A `module`-scoped session might be faster, but also unstable.
+testpaths = ["tests/unit"]                                                               # Default to unit tests
+addopts = "--tb=short -p no:warnings --import-mode=importlib --ignore=tests/integration" # Ignore integration by default
 pythonpath = ["."]
-faulthandler_timeout = 30  # Increased from 60 to handle tracing overhead
+faulthandler_timeout = 30                                                                # Increased from 60 to handle tracing overhead
 timeout = 60
-disable_socket = true  # Add this to prevent hanging on socket cleanup
-log_cli = true  # Enable logging to console
-log_cli_level = "DEBUG"  # Set log level to INFO
+disable_socket = true                                                                    # Add this to prevent hanging on socket cleanup
+log_cli = true                                                                           # Enable logging to console
+log_cli_level = "DEBUG"                                                                  # Set log level to INFO
 
 [tool.ruff]
 line-length = 120
 
 [tool.ruff.lint]
 ignore = [
-    "E712",  # Comparison to True/False
-    "E711",  # Comparison to None
-    "E722",  # Bare except
-    "E731",  # Use lambda instead of def
+    "E712", # Comparison to True/False
+    "E711", # Comparison to None
+    "E722", # Bare except
+    "E731", # Use lambda instead of def
 ]
 
 exclude = [
@@ -168,20 +168,19 @@ packages = ["agentops"]
 
 [tool.hatch.build]
 exclude = [
-  "docs/*",
-  "examples/*",
-  "tests/*",
-  ".github/*",
-  "*.gif",
-  "*.png",
-  "dist/*",
-  "build/*",
-  ".pytest_cache",
-  ".ruff_cache",
-  "__pycache__",
-  "*.pyc"
+    "docs/*",
+    "examples/*",
+    "tests/*",
+    ".github/*",
+    "*.gif",
+    "*.png",
+    "dist/*",
+    "build/*",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "*.pyc",
 ]
 
 [tool.hatch.metadata]
 allow-direct-references = true
-

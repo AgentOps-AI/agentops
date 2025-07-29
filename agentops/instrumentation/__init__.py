@@ -80,16 +80,6 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
     },
 }
 
-# Configuration for utility instrumentors
-UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
-    "concurrent.futures": {
-        "module_name": "agentops.instrumentation.utilities.concurrent_futures",
-        "class_name": "ConcurrentFuturesInstrumentor",
-        "min_version": "3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
-        "package_name": "python",  # Special case for stdlib modules
-    },
-}
-
 # Configuration for supported agentic libraries
 AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "crewai": {
@@ -115,17 +105,22 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "agno": {
         "module_name": "agentops.instrumentation.agentic.agno",
         "class_name": "AgnoInstrumentor",
-        "min_version": "0.1.0",
+        "min_version": "1.5.8",
     },
     "smolagents": {
         "module_name": "agentops.instrumentation.agentic.smolagents",
         "class_name": "SmolagentsInstrumentor",
         "min_version": "1.0.0",
     },
+    "langgraph": {
+        "module_name": "agentops.instrumentation.agentic.langgraph",
+        "class_name": "LanggraphInstrumentor",
+        "min_version": "0.2.0",
+    },
 }
 
 # Combine all target packages for monitoring
-TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys()) | set(UTILITY_INSTRUMENTORS.keys())
+TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys())
 
 # Create a single instance of the manager
 # _manager = InstrumentationManager() # Removed
@@ -144,16 +139,6 @@ def _is_installed_package(module_obj: ModuleType, package_name_key: str) -> bool
     rather than a local module, especially when names might collide.
     `package_name_key` is the key from TARGET_PACKAGES (e.g., 'agents', 'google.adk').
     """
-    # Special case for stdlib modules (marked with package_name="python" in UTILITY_INSTRUMENTORS)
-    if (
-        package_name_key in UTILITY_INSTRUMENTORS
-        and UTILITY_INSTRUMENTORS[package_name_key].get("package_name") == "python"
-    ):
-        logger.debug(
-            f"_is_installed_package: Module '{package_name_key}' is a Python standard library module. Considering it an installed package."
-        )
-        return True
-
     if not hasattr(module_obj, "__file__") or not module_obj.__file__:
         logger.debug(
             f"_is_installed_package: Module '{package_name_key}' has no __file__, assuming it might be an SDK namespace package. Returning True."
@@ -226,7 +211,7 @@ def _uninstrument_providers():
         if instrumented_key and instrumented_key in PROVIDERS:
             try:
                 instrumentor.uninstrument()
-                logger.info(
+                logger.debug(
                     f"AgentOps: Uninstrumented provider: {instrumentor.__class__.__name__} (for package '{instrumented_key}') due to agentic library activation."
                 )
                 uninstrumented_any = True
@@ -246,7 +231,7 @@ def _uninstrument_providers():
 def _should_instrument_package(package_name: str) -> bool:
     """
     Determine if a package should be instrumented based on current state.
-    Handles special cases for agentic libraries, providers, and utility instrumentors.
+    Handles special cases for agentic libraries and providers.
     """
     global _has_agentic_library
 
@@ -255,12 +240,6 @@ def _should_instrument_package(package_name: str) -> bool:
         logger.debug(f"_should_instrument_package: '{package_name}' already instrumented by AgentOps. Skipping.")
         return False
 
-    # Utility instrumentors should always be instrumented regardless of agentic library state
-    if package_name in UTILITY_INSTRUMENTORS:
-        logger.debug(f"_should_instrument_package: '{package_name}' is a utility instrumentor. Always allowing.")
-        return True
-
-    # Only apply agentic/provider logic if it's NOT a utility instrumentor
     is_target_agentic = package_name in AGENTIC_LIBRARIES
     is_target_provider = package_name in PROVIDERS
 
@@ -273,19 +252,19 @@ def _should_instrument_package(package_name: str) -> bool:
     if _has_agentic_library:
         # An agentic library is already active.
         if is_target_agentic:
-            logger.info(
+            logger.debug(
                 f"AgentOps: An agentic library is active. Skipping instrumentation for subsequent agentic library '{package_name}'."
             )
             return False
         if is_target_provider:
-            logger.info(
+            logger.debug(
                 f"AgentOps: An agentic library is active. Skipping instrumentation for provider '{package_name}'."
             )
             return False
     else:
         # No agentic library is active yet.
         if is_target_agentic:
-            logger.info(
+            logger.debug(
                 f"AgentOps: '{package_name}' is the first-targeted agentic library. Will uninstrument providers if any are/become active."
             )
             _uninstrument_providers()
@@ -309,18 +288,14 @@ def _perform_instrumentation(package_name: str):
         return
 
     # Get the appropriate configuration for the package
-    # Ensure package_name is a key in either PROVIDERS, AGENTIC_LIBRARIES, or UTILITY_INSTRUMENTORS
-    if (
-        package_name not in PROVIDERS
-        and package_name not in AGENTIC_LIBRARIES
-        and package_name not in UTILITY_INSTRUMENTORS
-    ):
+    # Ensure package_name is a key in either PROVIDERS or AGENTIC_LIBRARIES
+    if package_name not in PROVIDERS and package_name not in AGENTIC_LIBRARIES:
         logger.debug(
-            f"_perform_instrumentation: Package '{package_name}' not found in PROVIDERS, AGENTIC_LIBRARIES, or UTILITY_INSTRUMENTORS. Skipping."
+            f"_perform_instrumentation: Package '{package_name}' not found in PROVIDERS or AGENTIC_LIBRARIES. Skipping."
         )
         return
 
-    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name) or UTILITY_INSTRUMENTORS[package_name]
+    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name)
     loader = InstrumentorLoader(**config)
 
     # instrument_one already checks loader.should_activate
@@ -360,6 +335,30 @@ def _perform_instrumentation(package_name: str):
         ):  # Check _has_agentic_library to ensure this is the *first* one.
             # _uninstrument_providers() was already called in _should_instrument_package for the first agentic library.
             _has_agentic_library = True
+
+        # Special case: If mem0 is instrumented, also instrument concurrent.futures
+        if package_name == "mem0" and is_newly_added:
+            try:
+                # Check if concurrent.futures module is available
+
+                # Create config for concurrent.futures instrumentor
+                concurrent_config = InstrumentorConfig(
+                    module_name="agentops.instrumentation.utilities.concurrent_futures",
+                    class_name="ConcurrentFuturesInstrumentor",
+                    min_version="3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
+                    package_name="python",  # Special case for stdlib modules
+                )
+
+                # Create and instrument concurrent.futures
+                concurrent_loader = InstrumentorLoader(**concurrent_config)
+                concurrent_instrumentor = instrument_one(concurrent_loader)
+
+                if concurrent_instrumentor is not None:
+                    concurrent_instrumentor._agentops_instrumented_package_key = "concurrent.futures"
+                    _active_instrumentors.append(concurrent_instrumentor)
+                    logger.debug("AgentOps: Instrumented concurrent.futures as a dependency of mem0.")
+            except Exception as e:
+                logger.debug(f"Could not instrument concurrent.futures for mem0: {e}")
     else:
         logger.debug(
             f"_perform_instrumentation: instrument_one for '{package_name}' returned None. Not added to active instrumentors."
@@ -419,7 +418,7 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
             if target_module_obj:
                 is_sdk = _is_installed_package(target_module_obj, package_to_check)
                 if not is_sdk:
-                    logger.info(
+                    logger.debug(
                         f"AgentOps: Target '{package_to_check}' appears to be a local module/directory. Skipping AgentOps SDK instrumentation for it."
                     )
                     continue
@@ -494,7 +493,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     """
     if not loader.should_activate:
         # This log is important for users to know why something wasn't instrumented.
-        logger.info(
+        logger.debug(
             f"AgentOps: Package '{loader.package_name or loader.module_name}' not found or version is less than minimum required ('{loader.min_version}'). Skipping instrumentation."
         )
         return None
@@ -503,7 +502,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     try:
         # Use the provider directly from the global tracer instance
         instrumentor.instrument(tracer_provider=tracer.provider)
-        logger.info(
+        logger.debug(
             f"AgentOps: Successfully instrumented '{loader.class_name}' for package '{loader.package_name or loader.module_name}'."
         )
     except Exception as e:

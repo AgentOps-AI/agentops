@@ -12,16 +12,30 @@ from agentops.legacy import (
     LLMEvent,
 )  # type: ignore
 
+# Import all required modules at the top
+from opentelemetry.trace import get_current_span
+from agentops.semconv import (
+    AgentAttributes,
+    ToolAttributes,
+    WorkflowAttributes,
+    CoreAttributes,
+    SpanKind,
+    SpanAttributes,
+)
+import json
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail, track_endpoint
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
 from agentops.logging.config import logger
 from agentops.helpers.deprecation import deprecated, warn_deprecated_param
 import threading
+
+# Import validation functions
+from agentops.validation import validate_trace_spans, print_validation_summary, ValidationError
 
 # Thread-safe client management
 _client_lock = threading.Lock()
@@ -76,6 +90,7 @@ def init(
     env_data_opt_out: Optional[bool] = None,
     log_level: Optional[Union[str, int]] = None,
     fail_safe: Optional[bool] = None,
+    log_session_replay_url: Optional[bool] = None,
     exporter_endpoint: Optional[str] = None,
     **kwargs,
 ):
@@ -103,6 +118,7 @@ def init(
         env_data_opt_out (bool): Whether to opt out of collecting environment data.
         log_level (str, int): The log level to use for the client. Defaults to 'CRITICAL'.
         fail_safe (bool): Whether to suppress errors and continue execution when possible.
+        log_session_replay_url (bool): Whether to log session replay URLs to the console. Defaults to True.
         exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
             be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
         **kwargs: Additional configuration parameters to be passed to the client.
@@ -145,6 +161,7 @@ def init(
         "env_data_opt_out": env_data_opt_out,
         "log_level": log_level,
         "fail_safe": fail_safe,
+        "log_session_replay_url": log_session_replay_url,
         "exporter_endpoint": exporter_endpoint,
         **kwargs,
     }
@@ -255,37 +272,217 @@ def end_trace(
     tracer.end_trace(trace_context=trace_context, end_state=end_state)
 
 
+def update_trace_metadata(metadata: Dict[str, Any], prefix: str = "trace.metadata") -> bool:
+    """
+    Update metadata on the current running trace.
+
+    Args:
+        metadata: Dictionary of key-value pairs to set as trace metadata.
+                 Values must be strings, numbers, booleans, or lists of these types.
+                 Lists are converted to JSON string representation.
+                 Keys can be either custom keys or semantic convention aliases.
+        prefix: Prefix for metadata attributes (default: "trace.metadata").
+               Ignored for semantic convention attributes.
+
+    Returns:
+        bool: True if metadata was successfully updated, False otherwise.
+
+    """
+    if not tracer.initialized:
+        logger.warning("AgentOps SDK not initialized. Cannot update trace metadata.")
+        return False
+
+    # Build semantic convention mappings dynamically
+    def build_semconv_mappings():
+        """Build mappings from user-friendly keys to semantic convention attributes."""
+        mappings = {}
+
+        # Helper function to extract attribute name from semantic convention
+        def extract_key_from_attr(attr_value: str) -> str:
+            parts = attr_value.split(".")
+            if len(parts) >= 2:
+                # Handle special cases
+                if parts[0] == "error":
+                    # error.type -> error_type
+                    return "_".join(parts)
+                else:
+                    # Default: entity.attribute -> entity_attribute
+                    return "_".join(parts)
+            return attr_value
+
+        # Process each semantic convention class
+        for cls in [AgentAttributes, ToolAttributes, WorkflowAttributes, CoreAttributes, SpanAttributes]:
+            for attr_name, attr_value in cls.__dict__.items():
+                if not attr_name.startswith("_") and isinstance(attr_value, str):
+                    # Skip gen_ai attributes
+                    if attr_value.startswith("gen_ai."):
+                        continue
+
+                    # Generate user-friendly key
+                    user_key = extract_key_from_attr(attr_value)
+                    mappings[user_key] = attr_value
+
+                    # Add some additional convenience mappings
+                    if attr_value == CoreAttributes.TAGS:
+                        mappings["tags"] = attr_value
+
+        return mappings
+
+    # Build mappings if using semantic conventions
+    SEMCONV_MAPPINGS = build_semconv_mappings()
+
+    # Collect all valid semantic convention attributes
+    VALID_SEMCONV_ATTRS = set()
+    for cls in [AgentAttributes, ToolAttributes, WorkflowAttributes, CoreAttributes, SpanAttributes]:
+        for key, value in cls.__dict__.items():
+            if not key.startswith("_") and isinstance(value, str):
+                # Include all attributes except gen_ai ones
+                if not value.startswith("gen_ai."):
+                    VALID_SEMCONV_ATTRS.add(value)
+
+    # Find the current trace span
+    span = None
+
+    # Get the current span from OpenTelemetry context
+    current_span = get_current_span()
+
+    # Check if the current span is valid and recording
+    if current_span and hasattr(current_span, "is_recording") and current_span.is_recording():
+        # Check if this is a trace/session span or a child span
+        span_name = getattr(current_span, "name", "")
+
+        # If it's a session/trace span, use it directly
+        if span_name.endswith(f".{SpanKind.SESSION}"):
+            span = current_span
+        else:
+            # It's a child span, try to find the root trace span
+            # Get all active traces
+            active_traces = tracer.get_active_traces()
+            if active_traces:
+                # Find the trace that contains the current span
+                current_trace_id = current_span.get_span_context().trace_id
+
+                for trace_id_str, trace_ctx in active_traces.items():
+                    try:
+                        # Convert hex string back to int for comparison
+                        trace_id = int(trace_id_str, 16)
+                        if trace_id == current_trace_id:
+                            span = trace_ctx.span
+                            break
+                    except (ValueError, AttributeError):
+                        continue
+
+                # If we couldn't find the parent trace, use the current span
+                if not span:
+                    span = current_span
+            else:
+                # No active traces, use the current span
+                span = current_span
+
+    # If no current span or it's not recording, check active traces
+    if not span:
+        active_traces = tracer.get_active_traces()
+        if active_traces:
+            # Get the most recently created trace (last in the dict)
+            trace_context = list(active_traces.values())[-1]
+            span = trace_context.span
+            logger.debug("Using most recent active trace for metadata update")
+        else:
+            logger.warning("No active trace found. Cannot update metadata.")
+            return False
+
+    # Ensure the span is recording before updating
+    if not span or (hasattr(span, "is_recording") and not span.is_recording()):
+        logger.warning("Span is not recording. Cannot update metadata.")
+        return False
+
+    # Update the span attributes with the metadata
+    try:
+        updated_count = 0
+        for key, value in metadata.items():
+            # Validate the value type
+            if value is None:
+                continue
+
+            # Convert lists to JSON string representation for OpenTelemetry compatibility
+            if isinstance(value, list):
+                # Ensure all list items are valid types
+                if all(isinstance(item, (str, int, float, bool)) for item in value):
+                    value = json.dumps(value)
+                else:
+                    logger.warning(f"Skipping metadata key '{key}': list contains invalid types")
+                    continue
+            elif not isinstance(value, (str, int, float, bool)):
+                logger.warning(f"Skipping metadata key '{key}': value type {type(value)} not supported")
+                continue
+
+            # Determine the attribute key
+            attribute_key = key
+
+            # Check if key is already a valid semantic convention attribute
+            if key in VALID_SEMCONV_ATTRS:
+                # Key is already a valid semantic convention, use as-is
+                attribute_key = key
+            elif key in SEMCONV_MAPPINGS:
+                # It's a user-friendly key, map it to semantic convention
+                attribute_key = SEMCONV_MAPPINGS[key]
+                logger.debug(f"Mapped '{key}' to semantic convention '{attribute_key}'")
+            else:
+                # Not a semantic convention, use with prefix
+                attribute_key = f"{prefix}.{key}"
+
+            # Set the attribute
+            span.set_attribute(attribute_key, value)
+            updated_count += 1
+
+        if updated_count > 0:
+            logger.debug(f"Successfully updated {updated_count} metadata attributes on trace")
+            return True
+        else:
+            logger.warning("No valid metadata attributes were updated")
+            return False
+
+    except Exception as e:
+        logger.error(f"Error updating trace metadata: {e}")
+        return False
+
+
 __all__ = [
-    "init",
-    "configure",
-    "get_client",
-    "record",
-    "start_trace",
-    "end_trace",
+    # Legacy exports
     "start_session",
     "end_session",
     "track_agent",
     "track_tool",
     "end_all_sessions",
+    "Session",
     "ToolEvent",
     "ErrorEvent",
     "ActionEvent",
     "LLMEvent",
-    "Session",
+    # Modern exports
+    "init",
+    "start_trace",
+    "end_trace",
+    "update_trace_metadata",
+    "Client",
+    "get_client",
+    # Decorators
     "trace",
     "session",
     "agent",
     "task",
     "workflow",
     "operation",
-    "guardrail",
-    "tracer",
     "tool",
-    # Trace state enums
+    "guardrail",
+    "track_endpoint",
+    # Enums
     "TraceState",
     "SUCCESS",
     "ERROR",
     "UNSET",
-    # OpenTelemetry status codes (for advanced users)
-    "StatusCode",
+    # Validation
+    "validate_trace_spans",
+    "print_validation_summary",
+    "ValidationError",
 ]

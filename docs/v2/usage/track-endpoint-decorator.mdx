@@ -1,0 +1,66 @@
+---
+title: "Track Endpoint Decorator"
+description: "HTTP endpoint tracing for Flask applications using the @track_endpoint decorator"
+---
+
+## Overview
+
+The `@track_endpoint` decorator provides HTTP endpoint tracing for Flask applications with automatic request/response monitoring. It's designed to work seamlessly with Flask and extends the functionality of the basic `@trace` decorator.
+
+## Quick Example with OpenAI
+
+Here's a simple Flask endpoint that generates text using OpenAI:
+
+```python
+from flask import Flask, request
+from openai import OpenAI
+import agentops
+
+# Initialize AgentOps
+agentops.init(
+    api_key="your-api-key",
+    auto_start_session=False,  # Required for endpoint tracing
+)
+
+app = Flask(__name__)
+client = OpenAI()
+
+@app.route("/api/generate", methods=["POST"])
+@agentops.track_endpoint(
+    name="generate_text",
+    tags=["ai", "openai"]
+)
+def generate_text():
+    """Generate text using OpenAI"""
+    data = request.get_json()
+    prompt = data.get("prompt", "Hello!")
+    
+    # OpenAI call is automatically traced
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=150
+    )
+    
+    return {
+        "text": response.choices[0].message.content,
+        "usage": {
+            "total_tokens": response.usage.total_tokens
+        }
+    }
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+The decorator automatically captures:
+- HTTP request data (method, URL, headers, body)
+- HTTP response data (status code, headers, body)
+- OpenAI API calls and their results
+- Any errors that occur during request processing
+
+You can customize tracing with parameters like:
+- `name`: Custom name for the trace
+- `tags`: List or dict of tags for categorizing traces
+- `capture_request`: Whether to capture request data (default: True)
+- `capture_response`: Whether to capture response data (default: True) 
