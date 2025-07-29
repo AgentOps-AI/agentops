@@ -527,7 +527,7 @@ class LiteLLMInstrumentor(CommonInstrumentor):
                         span.set_attribute("llm.response.content_length", len(content))
                 if hasattr(first_choice.message, "function_call"):
                     span.set_attribute("llm.response.has_function_call", True)
-                if hasattr(first_choice.message, "tool_calls"):
+                if hasattr(first_choice.message, "tool_calls") and first_choice.message.tool_calls:
                     span.set_attribute("llm.response.tool_calls_count", len(first_choice.message.tool_calls))
 
             if hasattr(first_choice, "finish_reason"):
