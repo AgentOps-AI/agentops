@@ -601,17 +601,7 @@ def create_metrics_wrapper(tracer, streaming_context_manager):
                 for key, value in attributes.items():
                     span.set_attribute(key, value)
 
-                # Execute the original function
-                result = wrapped(*args, **kwargs)
-
-                # Set result attributes
-                result_attributes = get_metrics_attributes(args=(instance,) + args, kwargs=kwargs, return_value=result)
-                for key, value in result_attributes.items():
-                    if key not in attributes:  # Avoid duplicates
-                        span.set_attribute(key, value)
-
                 span.set_status(Status(StatusCode.OK))
-                return result
 
             except Exception as e:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
