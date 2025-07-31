@@ -57,18 +57,36 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 
 ## Key Integrations 🔌
 
+### Agent Frameworks
 <div align="center" style="background-color: white; padding: 20px; border-radius: 10px; margin: 0 auto; max-width: 800px;">
   <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;">
     <a href="https://docs.agentops.ai/v2/integrations/openai_agents_python"><img src="docs/images/external/openai/agents-sdk.svg" height="45" alt="OpenAI Agents SDK"></a>
-    <a href="https://docs.agentops.ai/v1/integrations/crewai"><img src="docs/v1/img/docs-icons/crew-banner.png" height="45" alt="CrewAI"></a>
-    <a href="https://docs.ag2.ai/docs/ecosystem/agentops"><img src="docs/images/external/ag2/ag2-logo.svg" height="45" alt="AG2 (AutoGen)"></a>
-    <a href="https://docs.agentops.ai/v1/integrations/microsoft"><img src="docs/images/external/microsoft/microsoft_logo.svg" height="45" alt="Microsoft"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/crewai"><img src="docs/v1/img/docs-icons/crew-banner.png" height="45" alt="CrewAI"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/ag2"><img src="docs/images/external/ag2/ag2-logo.svg" height="45" alt="AG2 (AutoGen)"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/langchain"><img src="docs/images/external/langchain/langchain-logo.svg" height="45" alt="LangChain"></a>
   </div>
   
   <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;">
-    <a href="https://docs.agentops.ai/v1/integrations/langchain"><img src="docs/images/external/langchain/langchain-logo.svg" height="45" alt="LangChain"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/google_adk"><img src="docs/images/external/google-adk/google-adk-logo.png" height="45" alt="Google ADK"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/smolagents"><img src="docs/images/external/huggingface/hf-logo.png" height="45" alt="Smolagents"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/agno"><img src="docs/images/external/agno/agno.png" height="45" alt="Agno"></a>
     <a href="https://docs.agentops.ai/v1/integrations/camel"><img src="docs/images/external/camel/camel.png" height="45" alt="Camel AI"></a>
-    <a href="https://docs.llamaindex.ai/en/stable/module_guides/observability/?h=agentops#agentops"><img src="docs/images/external/ollama/ollama-icon.png" height="45" alt="LlamaIndex"></a>
+  </div>
+</div>
+
+### LLM Providers
+<div align="center" style="background-color: white; padding: 20px; border-radius: 10px; margin: 0 auto; max-width: 800px;">
+  <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;">
+    <a href="https://docs.agentops.ai/v2/integrations/openai"><img src="docs/images/external/openai/openai-logomark.png" height="45" alt="OpenAI"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/anthropic"><img src="docs/images/external/anthropic/anthropic_icon_slate.png" height="45" alt="Anthropic"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/google_generative_ai"><img src="docs/images/external/deepmind/gemini-logo.png" height="45" alt="Google Generative AI"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/xai"><img src="docs/images/external/xai/xai-logo.png" height="45" alt="x.AI"></a>
+  </div>
+  
+  <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;">
+    <a href="https://docs.agentops.ai/v2/integrations/litellm"><img src="docs/images/external/litellm/litellm.png" height="45" alt="LiteLLM"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/ibm_watsonx_ai"><img src="docs/images/external/ibm/ibm-logo.svg" height="45" alt="Watsonx"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/mem0"><img src="docs/images/external/mem0/mem0.png" height="45" alt="Mem0"></a>
     <a href="https://docs.agentops.ai/v1/integrations/cohere"><img src="docs/images/external/cohere/cohere-logo.svg" height="45" alt="Cohere"></a>
   </div>
 </div>
@@ -79,31 +97,39 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 | 💸 **LLM Cost Management**            | Track spend with LLM foundation model providers               |
 | 🧪 **Agent Benchmarking**             | Test your agents against 1,000+ evals                         |
 | 🔐 **Compliance and Security**        | Detect common prompt injection and data exfiltration exploits |
-| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AG2 (AutoGen), Camel AI, & LangChain         |
+| 🤝 **Framework Integrations**         | Native Integrations with OpenAI Agents, CrewAI, AG2, LangChain, Google ADK, Smolagents & more         |
 
 ## Quick Start ⌨️
 
+### Installation
+First, install the AgentOps SDK. We recommend including `python-dotenv` for easy API key management.
+
 ```bash
-pip install agentops
+pip install agentops python-dotenv
 ```
 
+### Initial Setup (2 Lines of Code)
 
-#### Session replays in 2 lines of code
-
-Initialize the AgentOps client and automatically get analytics on all your LLM calls.
+At its simplest, AgentOps can start monitoring your supported LLM and agent framework calls with just two lines of Python code.
 
 [Get an API key](https://app.agentops.ai/settings/projects)
 
 ```python
 import agentops
+import os
+from dotenv import load_dotenv
 
-# Beginning of your program (i.e. main.py, __init__.py)
-agentops.init( < INSERT YOUR API KEY HERE >)
+# Load environment variables (recommended for API keys)
+load_dotenv()
 
-...
+# Initialize AgentOps
+# The API key can be passed directly or set as an environment variable AGENTOPS_API_KEY
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") 
+agentops.init(AGENTOPS_API_KEY) 
 
-# End of program
-agentops.end_session('Success')
+# That's it for basic auto-instrumentation!
+# If you're using a supported library (like OpenAI, LangChain, CrewAI, etc.),
+# AgentOps will now automatically track LLM calls and agent actions.
 ```
 
 All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
@@ -146,66 +172,52 @@ Add powerful observability to your agents, tools, and functions with as little c
 Refer to our [documentation](http://docs.agentops.ai)
 
 ```python
-# Create a session span (root for all other spans)
-from agentops.sdk.decorators import session
+# Track custom operations with @operation
+from agentops.sdk.decorators import operation
 
-@session
-def my_workflow():
-    # Your session code here
-    return result
-```
-
-```python
-# Create an agent span for tracking agent operations
-from agentops.sdk.decorators import agent
-
-@agent
-class MyAgent:
-    def __init__(self, name):
-        self.name = name
-        
-    # Agent methods here
-```
-
-```python
-# Create operation/task spans for tracking specific operations
-from agentops.sdk.decorators import operation, task
-
-@operation  # or @task
+@operation
 def process_data(data):
-    # Process the data
-    return result
+    # Your function logic here
+    processed_result = data.upper()
+    return processed_result
 ```
 
 ```python
-# Create workflow spans for tracking multi-operation workflows
-from agentops.sdk.decorators import workflow
+# Track agent logic with @agent
+from agentops.sdk.decorators import agent, operation
 
-@workflow
-def my_workflow(data):
-    # Workflow implementation
-    return result
-```
-
-```python
-# Nest decorators for proper span hierarchy
-from agentops.sdk.decorators import session, agent, operation
-
-@agent
+@agent(name="MyCustomAgent")
 class MyAgent:
-    @operation
-    def nested_operation(self, message):
-        return f"Processed: {message}"
+    def __init__(self, agent_id):
+        self.agent_id = agent_id
         
     @operation
-    def main_operation(self):
-        result = self.nested_operation("test message")
-        return result
+    def perform_task(self, task_description):
+        # Agent task logic here
+        return f"Agent {self.agent_id} completed: {task_description}"
+```
 
-@session
-def my_session():
-    agent = MyAgent()
-    return agent.main_operation()
+```python
+# Track tools with @tool
+from agentops.sdk.decorators import tool
+
+@tool(name="WebSearchTool", cost=0.05)
+def web_search(query: str) -> str:
+    # Tool logic here
+    return f"Search results for: {query}"
+```
+
+```python
+# Group operations with @trace
+from agentops.sdk.decorators import trace
+
+@trace(name="MyMainWorkflow", tags=["main-flow"])
+def my_workflow(task_to_perform):
+    # Your workflow code here
+    main_agent = MyAgent(agent_id="workflow-agent")
+    result = main_agent.perform_task(task_to_perform)
+    tool_result = web_search(f"details for {task_to_perform}")
+    return result, tool_result
 ```
 
 All decorators support:
@@ -214,6 +226,7 @@ All decorators support:
 - Async/await functions
 - Generator functions
 - Custom attributes and names
+- Hierarchical span nesting
 
 ## Integrations 🦾
 
@@ -247,12 +260,17 @@ Build Crew agents with observability in just 2 lines of code. Simply set an `AGE
 pip install 'crewai[agentops]'
 ```
 
-- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/crewai)
+- [AgentOps integration example](https://docs.agentops.ai/v2/integrations/crewai)
 - [Official CrewAI documentation](https://docs.crewai.com/how-to/AgentOps-Observability)
 
 ### AG2 🤖
 With only two lines of code, add full observability and monitoring to AG2 (formerly AutoGen) agents. Set an `AGENTOPS_API_KEY` in your environment and call `agentops.init()`
 
+```bash
+pip install agentops pyautogen
+```
+
+- [AG2 Integration Guide](https://docs.agentops.ai/v2/integrations/ag2)
 - [AG2 Observability Example](https://docs.ag2.ai/notebooks/agentchat_agentops)
 - [AG2 - AgentOps Documentation](https://docs.ag2.ai/docs/ecosystem/agentops)
 
@@ -357,7 +375,7 @@ Check out the [Langchain Examples Notebook](./examples/langchain/langchain_examp
 
 First class support for Cohere(>=5.4.0). This is a living integration, should you need any added functionality please message us on Discord!
 
-- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/cohere)
+- [AgentOps integration example](https://docs.agentops.ai/v2/integrations/cohere)
 - [Official Cohere documentation](https://docs.cohere.com/reference/about)
 
 <details>
@@ -410,7 +428,11 @@ agentops.end_session('Success')
 
 Track agents built with the Anthropic Python SDK (>=0.32.0).
 
-- [AgentOps integration guide](https://docs.agentops.ai/v1/integrations/anthropic)
+```bash
+pip install anthropic
+```
+
+- [AgentOps integration guide](https://docs.agentops.ai/v2/integrations/anthropic)
 - [Official Anthropic documentation](https://docs.anthropic.com/en/docs/welcome)
 
 <details>
@@ -697,7 +719,7 @@ agentops_api_key = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
 
 AgentOps provides support for LiteLLM(>=1.3.1), allowing you to call 100+ LLMs using the same Input/Output Format. 
 
-- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/litellm)
+- [AgentOps integration example](https://docs.agentops.ai/v2/integrations/litellm)
 - [Official LiteLLM documentation](https://docs.litellm.ai/docs/providers)
 
 <details>
@@ -746,7 +768,8 @@ from llama_index.core import set_global_handler
 set_global_handler("agentops")
 ```
 
-Check out the [LlamaIndex docs](https://docs.llamaindex.ai/en/stable/module_guides/observability/?h=agentops#agentops) for more details.
+- [AgentOps integration guide](https://docs.agentops.ai/v2/integrations/llamaindex)
+- [LlamaIndex docs](https://docs.llamaindex.ai/en/stable/module_guides/observability/?h=agentops#agentops)
 
 </details>
 
@@ -757,6 +780,90 @@ AgentOps provides support for Llama Stack Python Client(>=0.0.53), allowing you 
 - [AgentOps integration example 1](https://github.com/AgentOps-AI/agentops/pull/530/files/65a5ab4fdcf310326f191d4b870d4f553591e3ea#diff-fdddf65549f3714f8f007ce7dfd1cde720329fe54155d54389dd50fbd81813cb)
 - [AgentOps integration example 2](https://github.com/AgentOps-AI/agentops/pull/530/files/65a5ab4fdcf310326f191d4b870d4f553591e3ea#diff-6688ff4fb7ab1ce7b1cc9b8362ca27264a3060c16737fb1d850305787a6e3699)
 - [Official Llama Stack Python Client](https://github.com/meta-llama/llama-stack-client-python)
+
+### Google Generative AI (Gemini) 🔮
+
+Monitor and analyze your Google Gemini API calls with AgentOps automatically.
+
+```bash
+pip install agentops google-genai
+```
+
+- [AgentOps integration guide](https://docs.agentops.ai/v2/integrations/google_generative_ai)
+- [Official Google AI documentation](https://ai.google.dev/)
+
+<details>
+  <summary>Usage Example</summary>
+
+```python
+import agentops
+from google import genai
+
+# Initialize AgentOps
+agentops.init()
+
+# Create a client
+client = genai.Client(api_key="YOUR_GEMINI_API_KEY")
+
+# Generate content
+for chunk in client.models.generate_content_stream(
+    model='gemini-2.0-flash-001',
+    contents='Explain quantum computing in simple terms.',
+):
+    print(chunk.text, end="", flush=True)
+```
+</details>
+
+### x.AI (Grok) 🚀
+
+Track and analyze your x.AI Grok API calls with AgentOps using the OpenAI SDK.
+
+```bash
+pip install agentops openai
+```
+
+- [AgentOps integration guide](https://docs.agentops.ai/v2/integrations/xai)
+- [Official x.AI documentation](https://console.x.ai/)
+
+<details>
+  <summary>Usage Example</summary>
+
+```python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init()
+
+# Create OpenAI client configured for xAI
+client = OpenAI(
+    api_key=os.getenv("XAI_API_KEY"),
+    base_url="https://api.x.ai/v1",
+)
+
+# Basic chat completion
+completion = client.chat.completions.create(
+    model="grok-3-latest",
+    messages=[
+        {"role": "system", "content": "You are a helpful AI assistant."},
+        {"role": "user", "content": "Explain AI observability."},
+    ],
+)
+
+print(completion.choices[0].message.content)
+```
+</details>
+
+### Mem0 🧠
+
+Track memory operations and AI interactions with Mem0's memory layer.
+
+```bash
+pip install agentops mem0ai
+```
+
+- [AgentOps integration guide](https://docs.agentops.ai/v2/integrations/mem0)
+- [Official Mem0 documentation](https://docs.mem0.ai/)
 
 ### SwarmZero AI 🐝
 
