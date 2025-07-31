@@ -349,7 +349,7 @@ agent = initialize_agent(tools,
                          handle_parsing_errors=True)
 ```
 
-Check out the [Langchain Examples Notebook](./examples/langchain_examples.ipynb) for more details including Async handlers.
+Check out the [Langchain Examples Notebook](./examples/langchain/langchain_examples.ipynb) for more details including Async handlers.
 
 </details>
 
