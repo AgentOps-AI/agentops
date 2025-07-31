@@ -1,9 +1,10 @@
 import atexit
+import asyncio
+import threading
 from typing import Optional, Any
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
-from agentops.exceptions import NoApiKeyException
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
 from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
@@ -47,6 +48,10 @@ class Client:
     __instance = None  # Class variable for singleton pattern
 
     api: ApiClient
+    _auth_token: Optional[str] = None
+    _project_id: Optional[str] = None
+    _auth_lock = threading.Lock()
+    _auth_task: Optional[asyncio.Task] = None
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "Client":
         if cls.__instance is None:
@@ -54,6 +59,10 @@ class Client:
             # Initialize instance variables that should only be set once per instance
             cls.__instance._init_trace_context = None
             cls.__instance._legacy_session_for_init_trace = None
+            cls.__instance._auth_token = None
+            cls.__instance._project_id = None
+            cls.__instance._auth_lock = threading.Lock()
+            cls.__instance._auth_task = None
         return cls.__instance
 
     def __init__(self):
@@ -67,6 +76,73 @@ class Client:
             self._initialized = False
             # self._init_trace_context = None # Already done in __new__
             # self._legacy_session_for_init_trace = None # Already done in __new__
+
+    def get_current_jwt(self) -> Optional[str]:
+        """Get the current JWT token."""
+        with self._auth_lock:
+            return self._auth_token
+
+    def _set_auth_data(self, token: str, project_id: str):
+        """Set authentication data thread-safely."""
+        with self._auth_lock:
+            self._auth_token = token
+            self._project_id = project_id
+
+        # Update the HTTP client's project ID
+        from agentops.client.http.http_client import HttpClient
+
+        HttpClient.set_project_id(project_id)
+
+    async def _fetch_auth_async(self, api_key: str) -> Optional[dict]:
+        """Asynchronously fetch authentication token."""
+        try:
+            response = await self.api.v3.fetch_auth_token(api_key)
+            if response:
+                self._set_auth_data(response["token"], response["project_id"])
+
+                # Update V4 client with token
+                self.api.v4.set_auth_token(response["token"])
+
+                # Update tracer config with real project ID
+                tracing_config = {"project_id": response["project_id"]}
+                tracer.update_config(tracing_config)
+
+                logger.debug("Successfully fetched authentication token asynchronously")
+                return response
+            else:
+                logger.debug("Authentication failed - will continue without authentication")
+                return None
+        except Exception:
+            return None
+
+    def _start_auth_task(self, api_key: str):
+        """Start the async authentication task."""
+        if self._auth_task and not self._auth_task.done():
+            return  # Task already running
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Use existing event loop
+                self._auth_task = loop.create_task(self._fetch_auth_async(api_key))
+            else:
+                # Create new event loop in background thread
+                def run_async_auth():
+                    asyncio.run(self._fetch_auth_async(api_key))
+
+                import threading
+
+                auth_thread = threading.Thread(target=run_async_auth, daemon=True)
+                auth_thread.start()
+        except RuntimeError:
+            # Create new event loop in background thread
+            def run_async_auth():
+                asyncio.run(self._fetch_auth_async(api_key))
+
+            import threading
+
+            auth_thread = threading.Thread(target=run_async_auth, daemon=True)
+            auth_thread.start()
 
     def init(self, **kwargs: Any) -> None:  # Return type updated to None
         # Recreate the Config object to parse environment variables at the time of initialization
@@ -94,35 +170,36 @@ class Client:
             return None  # If not auto-starting, and already initialized, return None
 
         if not self.config.api_key:
-            raise NoApiKeyException
+            logger.warning(
+                "No API key provided. AgentOps will initialize but authentication will fail. "
+                "Set AGENTOPS_API_KEY environment variable or pass api_key parameter."
+            )
+            # Continue without API key - spans will be created but exports will fail gracefully
 
         configure_logging(self.config)
         intercept_opentelemetry_logging()
 
         self.api = ApiClient(self.config.endpoint)
 
-        try:
-            response = self.api.v3.fetch_auth_token(self.config.api_key)
-            if response is None:
-                # If auth fails, we cannot proceed with tracer initialization that depends on project_id
-                logger.error("Failed to fetch auth token. AgentOps SDK will not be initialized.")
-                return None  # Explicitly return None if auth fails
-        except Exception as e:
-            # Re-raise authentication exceptions so they can be caught by tests and calling code
-            logger.error(f"Authentication failed: {e}")
-            raise
-
-        self.api.v4.set_auth_token(response["token"])
-
+        # Initialize tracer with JWT provider for dynamic updates
         tracing_config = self.config.dict()
-        tracing_config["project_id"] = response["project_id"]
+        tracing_config["project_id"] = "temporary"  # Will be updated when auth completes
 
-        tracer.initialize_from_config(tracing_config, jwt=response["token"])
+        # Create JWT provider function for dynamic updates
+        def jwt_provider():
+            return self.get_current_jwt()
+
+        # Initialize tracer with JWT provider
+        tracer.initialize_from_config(tracing_config, jwt_provider=jwt_provider)
 
         if self.config.instrument_llm_calls:
             instrument_all()
 
-        # self._initialized = True # Set initialized to True here - MOVED to after trace start attempt
+        # Start authentication task only if we have an API key
+        if self.config.api_key:
+            self._start_auth_task(self.config.api_key)
+        else:
+            logger.debug("No API key available - skipping authentication task")
 
         global _atexit_registered
         if not _atexit_registered:
@@ -201,11 +278,3 @@ class Client:
     # Deprecate and remove the old global _active_session from this module.
     # Consumers should use agentops.start_trace() or rely on the auto-init trace.
     # For a transition, the auto-init trace's legacy wrapper is set to legacy module's globals.
-
-
-# Ensure the global _active_session (if needed for some very old compatibility) points to the client's legacy session for init trace.
-# This specific global _active_session in client.py is problematic and should be phased out.
-# For now, _client_legacy_session_for_init_trace is the primary global for the auto-init trace's legacy Session.
-
-# Remove the old global _active_session defined at the top of this file if it's no longer the primary mechanism.
-# The new globals _client_init_trace_context and _client_legacy_session_for_init_trace handle the auto-init trace.

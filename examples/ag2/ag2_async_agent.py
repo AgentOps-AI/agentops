@@ -1,7 +1,7 @@
 # AG2 Async Agent Chat with Automated Responses
 #
-# This notebook demonstrates how to leverage asynchronous programming with AG2 agents 
-# to create automated conversations between AI agents, eliminating the need for human 
+# This notebook demonstrates how to leverage asynchronous programming with AG2 agents
+# to create automated conversations between AI agents, eliminating the need for human
 # input while maintaining full traceability.
 #
 # Overview
@@ -12,9 +12,9 @@
 # 3. Automate the entire conversation flow without requiring manual intervention
 # 4. Track all interactions using AgentOps for monitoring and analysis
 #
-# By using async operations and automated responses, you can create fully autonomous 
-# agent conversations that simulate real-world scenarios. This is particularly useful 
-# for testing, prototyping, and creating demos where you want to showcase agent 
+# By using async operations and automated responses, you can create fully autonomous
+# agent conversations that simulate real-world scenarios. This is particularly useful
+# for testing, prototyping, and creating demos where you want to showcase agent
 # capabilities without manual input.
 
 # %pip install agentops
@@ -38,7 +38,8 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 agentops.init(auto_start_session=False, trace_name="AG2 Async Demo")
 tracer = agentops.start_trace(trace_name="AG2 Async Agent Demo", tags=["ag2-async-demo", "agentops-example"])
 
-# Define an asynchronous function that simulates async processing 
+
+# Define an asynchronous function that simulates async processing
 async def simulate_async_processing(task_name: str, delay: float = 1.0) -> str:
     """
     Simulate some asynchronous processing (e.g., API calls, file operations, etc.)
@@ -47,6 +48,7 @@ async def simulate_async_processing(task_name: str, delay: float = 1.0) -> str:
     await asyncio.sleep(delay)  # Simulate async work
     print(f"✅ Completed async task: {task_name}")
     return f"Processed: {task_name}"
+
 
 # Define a custom UserProxyAgent that simulates automated user responses
 class AutomatedUserProxyAgent(UserProxyAgent):
@@ -80,6 +82,7 @@ class AutomatedUserProxyAgent(UserProxyAgent):
         silent: Optional[bool] = False,
     ):
         await super().a_receive(message, sender, request_reply, silent)
+
 
 # Define an AssistantAgent that simulates async processing before responding
 class AsyncAssistantAgent(AssistantAgent):
@@ -149,7 +152,7 @@ async def main():
 
     print("\n🎉 Demo completed successfully!")
 
+
 # Run the main async demo
 nest_asyncio.apply()
 asyncio.run(main())
-

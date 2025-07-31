@@ -40,17 +40,13 @@ llm_config = {
 researcher = autogen.AssistantAgent(
     name="researcher",
     llm_config=llm_config,
-    system_message="You are a researcher who specializes in finding accurate information."
+    system_message="You are a researcher who specializes in finding accurate information.",
 )
 coder = autogen.AssistantAgent(
-    name="coder",
-    llm_config=llm_config,
-    system_message="You are an expert programmer who writes clean, efficient code."
+    name="coder", llm_config=llm_config, system_message="You are an expert programmer who writes clean, efficient code."
 )
 critic = autogen.AssistantAgent(
-    name="critic",
-    llm_config=llm_config,
-    system_message="You review solutions and provide constructive feedback."
+    name="critic", llm_config=llm_config, system_message="You review solutions and provide constructive feedback."
 )
 
 # The user proxy agent simulates a human participant in the chat
@@ -65,13 +61,10 @@ user_proxy = autogen.UserProxyAgent(
 groupchat = autogen.GroupChat(
     agents=[user_proxy, researcher, coder, critic],
     messages=[],
-    max_round=4  # Limits the total number of chat rounds
+    max_round=4,  # Limits the total number of chat rounds
 )
 # The manager coordinates the group chat and LLM configuration
-manager = autogen.GroupChatManager(
-    groupchat=groupchat,
-    llm_config=llm_config
-)
+manager = autogen.GroupChatManager(groupchat=groupchat, llm_config=llm_config)
 # Start the group chat with an initial task and a maximum number of user turns
 user_proxy.initiate_chat(
     manager,
@@ -89,4 +82,3 @@ try:
 except agentops.ValidationError as e:
     print(f"\n❌ Error validating spans: {e}")
     raise
-
