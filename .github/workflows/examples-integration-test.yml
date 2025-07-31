@@ -102,7 +102,10 @@ jobs:
           - { path: 'examples/openai_agents/agents_tools.py', name: 'OpenAI Agents Tools' }
           - { path: 'examples/openai_agents/customer_service_agent.py', name: 'OpenAI Agents Customer Service' }
           
+          # DSPy examples
+          - { path: 'examples/dspy/dspy_calculator.py', name: 'DSPy ReAct Agent' }
           # Add more examples as needed
+
 
     steps:
     - uses: actions/checkout@v4
