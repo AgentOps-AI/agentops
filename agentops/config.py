@@ -9,7 +9,6 @@ from uuid import UUID
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
-from agentops.exceptions import InvalidApiKeyException
 from agentops.helpers.env import get_env_bool, get_env_int, get_env_list
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 
@@ -166,7 +165,14 @@ class Config:
                 try:
                     UUID(api_key)
                 except ValueError:
-                    raise InvalidApiKeyException(api_key, self.endpoint)
+                    # Log warning but don't throw exception - let async auth handle it
+                    from agentops.logging import logger
+
+                    logger.warning(
+                        f"API key format appears invalid: {api_key[:8]}... "
+                        f"Authentication may fail. Find your API key at {self.endpoint}/settings/projects"
+                    )
+                    # Continue with the invalid key - async auth will handle the failure gracefully
 
         if endpoint is not None:
             self.endpoint = endpoint
