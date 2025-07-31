@@ -1,24 +1,25 @@
 ---
 title: 'Agno'
-description: 'Async Operations with Agno'
+description: 'Tool Integration Example with Agno'
 ---
-{/*  SOURCE_FILE: examples/agno/agno_async_operations.ipynb  */}
+{/*  SOURCE_FILE: examples/agno/agno_tool_integrations.ipynb  */}
 
-_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_async_operations.ipynb'} target={'_blank'}>Github</a>_
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_tool_integrations.ipynb'} target={'_blank'}>Github</a>_
 
-# Async Operations with Agno
+# Tool Integration Example with Agno
 
-This notebook demonstrates how to leverage asynchronous programming with Agno agents to execute multiple AI tasks concurrently, significantly improving performance and efficiency.
+This example demonstrates how to integrate and use various tools with Agno agents,
+showing how AgentOps automatically tracks tool usage and agent interactions.
 
 ## Overview
-This notebook demonstrates a practical example of concurrent AI operations where we:
+This example demonstrates:
 
-1. **Initialize an Agno agent** with OpenAI's GPT-4o-mini model
-2. **Create multiple async tasks** that query the AI about different programming languages
-3. **Compare performance** between concurrent and sequential execution
+1. **Using built-in Agno tools** like GoogleSearch, DuckDuckGo, and Arxiv
+2. **Creating agents with tools** and seeing how they use them
+3. **Tool execution tracking** with AgentOps
+4. **Combining multiple tools** for comprehensive research
 
-By using async operations, you can run multiple AI queries simultaneously instead of waiting for each one to complete sequentially. This is particularly beneficial when dealing with I/O-bound operations like API calls to AI models.
-
+This example uses actual Agno components to show real tool integration patterns.
 
 
 
@@ -26,92 +27,175 @@ By using async operations, you can run multiple AI queries simultaneously instea
 ## Installation
 <CodeGroup>
   ```bash pip
-  pip install agentops agno python-dotenv
+  pip install "agno[tools]" agentops python-dotenv
   ```
   ```bash poetry
-  poetry add agentops agno python-dotenv
+  poetry add "agno[tools]" agentops python-dotenv
   ```
   ```bash uv
-  uv add agentops agno python-dotenv
+  uv add "agno[tools]" agentops python-dotenv
   ```
 </CodeGroup>
 
 ```python
 import os
-import asyncio
 from dotenv import load_dotenv
-
 import agentops
 from agno.agent import Agent
-from agno.team import Team
 from agno.models.openai import OpenAIChat
+from agno.tools.googlesearch import GoogleSearchTools
+from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.tools.arxiv import ArxivTools
 ```
 
 
 ```python
+# Load environment variables
 load_dotenv()
+
+# Set environment variables if not already set
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+
+# Initialize AgentOps
+agentops.init(
+    auto_start_session=False, trace_name="Agno Tool Integrations", tags=["agno-tools", "tool-integration", "demo"]
+)
 ```
 
 
 ```python
-agentops.init(auto_start_session=False, tags=["agno-example", "async-operation"])
-```
+def demonstrate_tool_integration():
+    """Demonstrate tool integration with Agno agents."""
+    print("🚀 Agno Tool Integration Demonstration")
+    print("=" * 60)
 
-
-```python
-async def demonstrate_async_operations():
-    """
-    Demonstrate concurrent execution of multiple AI agent tasks.
-    
-    This function creates multiple async tasks that execute concurrently rather than sequentially.
-    Each task makes an independent API call to the AI model, and asyncio.gather() 
-    waits for all tasks to complete before returning results.
-    
-    Performance benefit: Instead of 3 sequential calls taking ~90 seconds total,
-    concurrent execution typically completes in ~30 seconds.
-    """
-    tracer = agentops.start_trace(trace_name="Agno Async Operations Example",)
+    # Start AgentOps trace
+    tracer = agentops.start_trace(trace_name="Agno Tool Integration Demo")
 
     try:
-        # Initialize AI agent with specified model
-        agent = Agent(model=OpenAIChat(id="gpt-4o-mini"))
-        
-        async def task1():
-            """Query AI about Python programming language."""
-            response = await agent.arun("Explain Python programming language in one paragraph")
-            return f"Python: {response.content}"
+        # Example 1: Single Tool Agent
+        print("\n📌 Example 1: Agent with Google Search Tool")
+        print("-" * 40)
 
-        async def task2():
-            """Query AI about JavaScript programming language."""
-            response = await agent.arun("Explain JavaScript programming language in one paragraph")
-            return f"JavaScript: {response.content}"
+        search_agent = Agent(
+            name="Search Agent",
+            role="Research information using Google Search",
+            model=OpenAIChat(id="gpt-4o-mini"),
+            tools=[GoogleSearchTools()],
+            instructions="You are a research assistant. Use Google Search to find accurate, up-to-date information.",
+        )
 
-        async def task3():
-            """Query AI for comparison between programming languages."""
-            response = await agent.arun("Compare Python and JavaScript briefly")
-            return f"Comparison: {response.content}"
+        response = search_agent.run("What are the latest developments in AI agents?")
+        print(f"Search Agent Response:\n{response.content}")
 
-        # Execute all tasks concurrently using asyncio.gather()
-        results = await asyncio.gather(task1(), task2(), task3())
-        
-        for i, result in enumerate(results, 1):
-            print(f"\nTask {i} Result:")
-            print(result)
-            print("-" * 50)
+        # Example 2: Multi-Tool Agent
+        print("\n\n📌 Example 2: Agent with Multiple Tools")
+        print("-" * 40)
 
+        research_agent = Agent(
+            name="Research Agent",
+            role="Comprehensive research using multiple tools",
+            model=OpenAIChat(id="gpt-4o-mini"),
+            tools=[GoogleSearchTools(), ArxivTools(), DuckDuckGoTools()],
+            instructions="""You are a comprehensive research assistant. 
+            Use Google Search for general information, Arxiv for academic papers, 
+            and DuckDuckGo as an alternative search engine. 
+            Provide well-researched, balanced information from multiple sources.""",
+        )
+
+        response = research_agent.run(
+            "Find information about recent advances in tool-use for AI agents. "
+            "Include both academic research and practical implementations."
+        )
+        print(f"Research Agent Response:\n{response.content}")
+
+        # Example 3: Specialized Tool Usage
+        print("\n\n📌 Example 3: Academic Research with Arxiv")
+        print("-" * 40)
+
+        academic_agent = Agent(
+            name="Academic Agent",
+            role="Find and summarize academic papers",
+            model=OpenAIChat(id="gpt-4o-mini"),
+            tools=[ArxivTools()],
+            instructions="You are an academic research assistant. Use Arxiv to find relevant papers and provide concise summaries.",
+        )
+
+        response = academic_agent.run("Find recent papers about tool augmented language models")
+        print(f"Academic Agent Response:\n{response.content}")
+
+        # Example 4: Comparing Search Tools
+        print("\n\n📌 Example 4: Comparing Different Search Tools")
+        print("-" * 40)
+
+        comparison_agent = Agent(
+            name="Comparison Agent",
+            role="Compare results from different search engines",
+            model=OpenAIChat(id="gpt-4o-mini"),
+            tools=[GoogleSearchTools(), DuckDuckGoTools()],
+            instructions="""Compare search results from Google and DuckDuckGo. 
+            Note any differences in results, ranking, or information quality.
+            Be objective in your comparison.""",
+        )
+
+        response = comparison_agent.run(
+            "Search for 'AgentOps observability platform' on both search engines and compare the results"
+        )
+        print(f"Comparison Agent Response:\n{response.content}")
+
+        print("\n\n✨ Demonstration Complete!")
+        print("\nKey Takeaways:")
+        print("- Agno agents can use multiple tools seamlessly")
+        print("- Tools are automatically invoked based on the agent's task")
+        print("- AgentOps tracks all tool executions automatically")
+        print("- Different tools serve different purposes (web search, academic search, etc.)")
+        print("- Agents can compare and synthesize information from multiple tools")
+
+        # End the AgentOps trace successfully
+        print("\n📊 View your tool execution traces in AgentOps:")
+        print("   Visit https://app.agentops.ai/ to see detailed analytics")
         agentops.end_trace(tracer, end_state="Success")
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"\n❌ An error occurred: {e}")
         agentops.end_trace(tracer, end_state="Error")
+        raise
+
+    # Let's check programmatically that spans were recorded in AgentOps
+    print("\n" + "=" * 50)
+    print("Now let's verify that our LLM calls were tracked properly...")
+    try:
+        agentops.validate_trace_spans(trace_context=tracer)
+        print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+    except agentops.ValidationError as e:
+        print(f"\n❌ Error validating spans: {e}")
+        raise
 ```
 
 
 ```python
-await demonstrate_async_operations()
+demonstrate_tool_integration()
 ```
+
+## Summary
+
+This notebook demonstrated how to:
+
+- Set up Agno agents with various tools (Google Search, DuckDuckGo, Arxiv)
+- Create single-tool and multi-tool agents
+- Track tool usage with AgentOps
+- Compare results from different search engines
+- Validate that all operations are properly traced
+
+## Next Steps
+
+Visit the AgentOps dashboard to explore:
+- Detailed tool execution metrics
+- Agent performance analytics  
+- Error tracking and debugging information
+
+Each trace URL printed during execution provides direct access to that specific session's details.
 
 
 <script type="module" src="/scripts/github_stars.js"></script>
