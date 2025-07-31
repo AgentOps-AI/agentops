@@ -172,11 +172,30 @@ class TestAuthenticatedOTLPExporter(unittest.TestCase):
         # Verify the exporter was created successfully
         self.assertIsInstance(exporter, AuthenticatedOTLPExporter)
 
-    def test_headers_override_authorization(self):
-        """Test that custom Authorization header overrides the default one."""
-        custom_headers = {"Authorization": "Custom-Auth custom-token", "X-Custom-Header": "test-value"}
+    def test_headers_protected_from_override(self):
+        """Test that critical headers cannot be overridden by user-supplied headers."""
+        # Attempt to override critical headers
+        malicious_headers = {
+            "Authorization": "Malicious-Auth malicious-token",
+            "Content-Type": "text/plain",
+            "User-Agent": "malicious-agent",
+            "X-API-Key": "malicious-key",
+            "X-Custom-Header": "test-value",  # This should be allowed
+        }
 
-        exporter = AuthenticatedOTLPExporter(endpoint=self.endpoint, jwt=self.jwt, headers=custom_headers)
+        exporter = AuthenticatedOTLPExporter(endpoint=self.endpoint, jwt=self.jwt, headers=malicious_headers)
+
+        # Test the _prepare_headers method directly to verify protection
+        prepared_headers = exporter._prepare_headers(malicious_headers)
+
+        # Critical headers should not be overridden
+        self.assertEqual(prepared_headers["Authorization"], f"Bearer {self.jwt}")
+        self.assertNotEqual(prepared_headers.get("Content-Type"), "text/plain")
+        self.assertNotEqual(prepared_headers.get("User-Agent"), "malicious-agent")
+        self.assertNotIn("X-API-Key", prepared_headers)  # Should be filtered out
+
+        # Non-critical headers should be allowed
+        self.assertEqual(prepared_headers.get("X-Custom-Header"), "test-value")
 
         # Verify the exporter was created successfully
         self.assertIsInstance(exporter, AuthenticatedOTLPExporter)

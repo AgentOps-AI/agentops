@@ -117,6 +117,12 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "class_name": "LanggraphInstrumentor",
         "min_version": "0.2.0",
     },
+    "xpander_sdk": {
+        "module_name": "agentops.instrumentation.agentic.xpander",
+        "class_name": "XpanderInstrumentor",
+        "min_version": "1.0.0",
+        "package_name": "xpander-sdk",
+    },
 }
 
 # Combine all target packages for monitoring
