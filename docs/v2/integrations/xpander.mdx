@@ -1,0 +1,266 @@
+---
+title: 'Xpander'
+description: 'Monitor and analyze your Xpander agent workflows with automatic AgentOps instrumentation'
+---
+
+[Xpander](https://xpander.ai/) is a powerful platform for building and deploying AI agents with sophisticated workflow management capabilities. AgentOps provides seamless integration with the Xpander SDK, automatically instrumenting all agent activities, tool executions, and LLM interactions without any manual setup.
+
+## Installation
+
+Install AgentOps and the Xpander SDK, along with the required dependencies:
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops xpander-sdk xpander-utils openai python-dotenv loguru
+  ```
+  ```bash poetry
+  poetry add agentops xpander-sdk xpander-utils openai python-dotenv loguru
+  ```
+  ```bash uv
+  uv add agentops xpander-sdk xpander-utils openai python-dotenv loguru
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+You'll need API keys for AgentOps, Xpander, and OpenAI:
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+- **XPANDER_API_KEY**: From your [Xpander Dashboard](https://app.xpander.ai/)
+- **XPANDER_AGENT_ID**: The ID of your Xpander agent
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
+
+Set these as environment variables or in a `.env` file:
+
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  export XPANDER_API_KEY="your_xpander_api_key_here"
+  export XPANDER_AGENT_ID="your_xpander_agent_id_here"
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  XPANDER_API_KEY="your_xpander_api_key_here"
+  XPANDER_AGENT_ID="your_xpander_agent_id_here"
+  OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+</CodeGroup>
+
+You can also store your configuration in a `xpander_config.json` file:
+
+```json
+{
+  "api_key": "your_xpander_api_key_here",
+  "agent_id": "your_xpander_agent_id_here"
+}
+```
+
+## Quick Start
+
+The key to AgentOps + Xpander integration is **initialization order**: Initialize AgentOps **before** importing the Xpander SDK to enable automatic instrumentation.
+
+<Note>
+The following example shows the callback-based integration pattern. For a complete working example, see our [Xpander example](/v2/examples/xpander).
+</Note>
+
+```python
+# ruff: noqa: E402
+import os
+import json
+import asyncio
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables first
+load_dotenv()
+
+# 1. Initialize AgentOps FIRST (this enables auto-instrumentation)
+import agentops
+agentops.init(
+    api_key=os.getenv("AGENTOPS_API_KEY"),
+    trace_name="my-xpander-coding-agent-callbacks",
+    default_tags=["xpander", "coding-agent", "callbacks"],
+)
+
+# 2. Now import Xpander SDK (instrumentation will automatically activate)
+from xpander_sdk import XpanderClient, LLMProvider, LLMTokens, Tokens, Agent, ExecutionStatus
+from xpander_utils.events import XpanderEventListener, AgentExecutionResult, AgentExecution
+from openai import AsyncOpenAI
+
+class MyAgent:
+    def __init__(self):
+        # Load config
+        config_path = Path(__file__).parent / "xpander_config.json"
+        config = json.loads(config_path.read_text())
+        
+        # Get API keys
+        xpander_key = config.get("api_key") or os.getenv("XPANDER_API_KEY")
+        agent_id = config.get("agent_id") or os.getenv("XPANDER_AGENT_ID")
+        openai_key = os.getenv("OPENAI_API_KEY")
+        
+        # Initialize clients
+        self.openai = AsyncOpenAI(api_key=openai_key)
+        xpander_client = XpanderClient(api_key=xpander_key)
+        self.agent_backend: Agent = xpander_client.agents.get(agent_id=agent_id)
+        self.agent_backend.select_llm_provider(LLMProvider.OPEN_AI)
+
+    async def run(self, user_input: str) -> dict:
+        tokens = Tokens(worker=LLMTokens(0, 0, 0))
+        
+        while not self.agent_backend.is_finished():
+            # Call LLM
+            response = await self.openai.chat.completions.create(
+                model="gpt-4",
+                messages=self.agent_backend.messages,
+                tools=self.agent_backend.get_tools(),
+                tool_choice=self.agent_backend.tool_choice,
+                temperature=0,
+            )
+            
+            # Track tokens
+            if hasattr(response, "usage"):
+                tokens.worker.prompt_tokens += response.usage.prompt_tokens
+                tokens.worker.completion_tokens += response.usage.completion_tokens
+                tokens.worker.total_tokens += response.usage.total_tokens
+            
+            # Add response to agent context
+            self.agent_backend.add_messages(response.model_dump())
+            self.agent_backend.report_execution_metrics(llm_tokens=tokens, ai_model="gpt-4")
+            
+            # Execute any tool calls
+            tool_calls = self.agent_backend.extract_tool_calls(response.model_dump())
+            if tool_calls:
+                tool_results = await asyncio.to_thread(self.agent_backend.run_tools, tool_calls)
+        
+        result = self.agent_backend.retrieve_execution_result()
+        return {"result": result.result, "thread_id": result.memory_thread_id}
+
+# Set up event listener with callback handlers
+listener = XpanderEventListener(
+    api_key=os.getenv("XPANDER_API_KEY"),
+    agent_id=os.getenv("XPANDER_AGENT_ID")
+)
+
+async def on_execution_request(execution_task: AgentExecution) -> AgentExecutionResult:
+    agent = MyAgent()
+    agent.agent_backend.init_task(execution=execution_task.model_dump())
+    
+    try:
+        await agent.run(execution_task.input.text)
+        execution_result = agent.agent_backend.retrieve_execution_result()
+        return AgentExecutionResult(
+            result=execution_result.result,
+            is_success=execution_result.status == ExecutionStatus.COMPLETED,
+        )
+    except Exception as e:
+        print(f"Error: {e}")
+        raise
+
+# Register the callback
+listener.register(on_execution_request=on_execution_request)
+```
+
+## What's Automatically Tracked
+
+AgentOps automatically captures comprehensive telemetry from your Xpander agents:
+
+### 🤖 Agent Activities
+- Agent initialization and configuration
+- Task lifecycle (start, execution steps, completion)
+- Workflow phase transitions (planning → executing → finished)
+- Session management and context persistence
+
+### 🧠 LLM Interactions
+- All OpenAI API calls with full request/response data
+- Token usage and cost tracking across models
+- Conversation history and context management
+- Model parameters and settings
+
+### 🛠️ Tool Executions
+- Tool call detection with parameters and arguments
+- Tool execution results and success/failure status
+- Tool performance metrics and timing
+- Tool call hierarchies and dependencies
+
+### 📊 Performance Metrics
+- End-to-end execution duration and timing
+- Step-by-step workflow progression
+- Resource utilization and efficiency metrics
+- Error handling and exception tracking
+
+## Key Features
+
+### ✅ Zero-Configuration Setup
+No manual trace creation or span management required. Simply initialize AgentOps before importing Xpander SDK.
+
+### ✅ Complete Workflow Visibility
+Track the entire agent execution flow from task initiation to completion, including all intermediate steps.
+
+### ✅ Real-time Monitoring
+View your agent activities in real-time on the AgentOps dashboard as they execute.
+
+### ✅ Tool Execution Insights
+Monitor which tools are being called, their parameters, execution time, and results.
+
+### ✅ Cost Tracking
+Automatic token usage tracking for all LLM interactions with cost analysis.
+
+## Callback Handler Pattern
+
+The Xpander integration supports two main patterns:
+
+1. **Direct Integration**: Directly instrument your agent code (shown above)
+2. **Callback Handler**: Use XpanderEventListener for webhook-style integration
+
+The callback handler pattern is particularly useful for:
+- Production deployments with centralized monitoring
+- Multi-agent orchestration systems
+- Event-driven architectures
+
+## Runtime-Specific Instrumentation
+
+Xpander SDK uses JSII to create methods at runtime, which requires specialized instrumentation. AgentOps handles this automatically by:
+
+- **Method Wrapping**: Dynamically wrapping agent methods as they're created
+- **Context Persistence**: Maintaining session context across runtime object lifecycle
+- **Agent Detection**: Automatically detecting and instrumenting new agent instances
+- **Tool Result Extraction**: Properly extracting results from JSII object references
+
+## Troubleshooting
+
+### Import Order Issues
+If you're not seeing traces, ensure AgentOps is initialized before importing Xpander SDK:
+
+```python
+# ✅ Correct order
+import agentops
+agentops.init()
+from xpander_sdk import XpanderClient
+
+# ❌ Incorrect order
+from xpander_sdk import XpanderClient
+import agentops
+agentops.init()  # Too late - instrumentation won't activate
+```
+
+### Missing Tool Results
+If tool results show `{"__jsii_ref__": "..."}` instead of actual content, ensure you're using the latest version of AgentOps, which includes improved JSII object handling.
+
+### Import Errors (E402)
+If you see linting errors about imports not being at the top of the file, this is expected for Xpander integration. Add `# ruff: noqa: E402` at the top of your file to suppress these warnings, as the import order is required for proper instrumentation.
+
+## Examples
+
+<CardGroup cols={2}>
+  <Card title="Coding Agent Example" icon="robot" href="/v2/examples/xpander">
+    Complete single-file implementation with callback handlers
+  </Card>
+  <Card title="GitHub Repository" icon="github" href="https://github.com/AgentOps-AI/agentops/tree/main/examples/xpander" newTab={true}>
+    View the complete source code and configuration files
+  </Card>
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script> 

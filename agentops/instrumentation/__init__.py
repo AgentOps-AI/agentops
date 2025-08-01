@@ -117,6 +117,12 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "class_name": "LanggraphInstrumentor",
         "min_version": "0.2.0",
     },
+    "xpander_sdk": {
+        "module_name": "agentops.instrumentation.agentic.xpander",
+        "class_name": "XpanderInstrumentor",
+        "min_version": "1.0.0",
+        "package_name": "xpander-sdk",
+    },
 }
 
 # Combine all target packages for monitoring
@@ -337,7 +343,7 @@ def _perform_instrumentation(package_name: str):
             _has_agentic_library = True
 
         # Special case: If mem0 is instrumented, also instrument concurrent.futures
-        if package_name == "mem0" and is_newly_added:
+        if (package_name == "mem0" or package_name == "autogen") and is_newly_added:
             try:
                 # Check if concurrent.futures module is available
 
