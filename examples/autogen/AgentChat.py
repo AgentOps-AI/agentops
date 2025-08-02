@@ -13,12 +13,21 @@
 # AgentOps ensures all actions are tracked, making it easy to monitor, debug, and analyze your agent's performance in real time.
 #
 # First let's install the required packages
-# %pip install -U ag2[autogen-agentchat]
+# %pip install -U "ag2[autogen-agentchat]"
 # %pip install -U "autogen-ext[openai]"
 # %pip install -U agentops
 # %pip install -U python-dotenv
 # %pip install -U nest_asyncio
-# Then import them
+
+
+# Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+#
+# [Get an AgentOps API key](https://agentops.ai/settings/projects)
+#
+# 1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+#
+# 2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
 
 import os
 import asyncio
@@ -31,14 +40,6 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
 
-# Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
-#
-# [Get an AgentOps API key](https://agentops.ai/settings/projects)
-#
-# 1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
-#
-# 2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
-
 load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
@@ -46,10 +47,8 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY environment variable is required")
-# Define model and API key
-model_name = "gpt-4-turbo"  # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
 # Create the model client
-model_client = OpenAIChatCompletionClient(model=model_name, api_key=openai_api_key, seed=42, temperature=0)
+model_client = OpenAIChatCompletionClient(model="gpt-4-turbo", api_key=openai_api_key, seed=42, temperature=0)
 # When initializing AgentOps, you can pass in optional tags to help filter sessions
 agentops.init(trace_name="autogen-agent-chat", tags=["autogen-agent-chat", "agentops-example"])
 
@@ -83,7 +82,6 @@ assistant = AssistantAgent(
     tools=[calculator],
     reflect_on_tool_use=True,
 )
-
 # Create a user proxy agent to represent the human user
 user_proxy = UserProxyAgent(
     name="User",

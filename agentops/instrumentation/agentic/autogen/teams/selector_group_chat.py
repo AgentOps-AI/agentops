@@ -4,7 +4,6 @@ This module provides instrumentation specifically for SelectorGroupChat.
 """
 
 import logging
-from typing import List
 
 from opentelemetry.trace import SpanKind
 
@@ -75,4 +74,4 @@ class SelectorGroupChatInstrumentor:
                 # Continue with original constructor
                 return wrapped(*args, **kwargs)
 
-        return wrapper 
+        return wrapper

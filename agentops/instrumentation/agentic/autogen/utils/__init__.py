@@ -16,10 +16,10 @@ from .common import (
 
 __all__ = [
     "AutoGenSpanManager",
-    "extract_agent_attributes", 
+    "extract_agent_attributes",
     "safe_str",
     "safe_extract_content",
     "create_agent_span",
     "instrument_async_generator",
     "instrument_coroutine",
-] 
+]

@@ -2,28 +2,26 @@
 #
 # AgentOps automatically configures itself when it's initialized meaning your agent run data will be tracked and logged to your AgentOps dashboard right away.
 # First let's install the required packages
-# %pip install -U ag2[autogen-agentchat]
+# %pip install -U "ag2[autogen-agentchat]"
 # %pip install -U "autogen-ext[openai]"
 # %pip install -U agentops
 # %pip install -U python-dotenv
-# Then import them
+
 
 import asyncio
-from typing import List, Sequence
-from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
-from autogen_agentchat.messages import BaseAgentEvent, BaseChatMessage
 from autogen_agentchat.teams import SelectorGroupChat
 from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-import os
 import agentops
 from dotenv import load_dotenv
 import nest_asyncio
 
 load_dotenv()
-agentops.init(auto_start_session=False,tags=["autogen-group-chat", "agentops-example"])
+agentops.init(auto_start_session=False, tags=["autogen-group-chat", "agentops-example"])
 tracer = agentops.start_trace(trace_name="autogen-group-chat")
+
 
 # Define mock tools for the agents:
 # - search_web_tool: Simulates web search results for specific basketball queries (used by the WebSearchAgent).
@@ -41,6 +39,8 @@ def search_web_tool(query: str) -> str:
     elif "2008-2009" in query:
         return "The number of total rebounds for Dwayne Wade in the Miami Heat season 2008-2009 is 398."
     return "No data found."
+
+
 def percentage_change_tool(start: float, end: float) -> float:
     return ((end - start) / start) * 100
 

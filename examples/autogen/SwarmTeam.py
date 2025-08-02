@@ -5,14 +5,12 @@
 # All actions are tracked by AgentOps so you can see what happened in your dashboard.
 
 # First let's install the required packages
-# %pip install -U ag2[autogen-agentchat]
+# %pip install -U "ag2[autogen-agentchat]"
 # %pip install -U "autogen-ext[openai]"
 # %pip install -U agentops
 # %pip install -U python-dotenv
 # %pip install -U nest_asyncio
 
-# Then import them
-from typing import Any, Dict, List
 import asyncio
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination
@@ -31,10 +29,12 @@ load_dotenv()
 agentops.init(auto_start_session=False, tags=["autogen-swarm-team", "agentops-example"])
 tracer = agentops.start_trace(trace_name="autogen-swarm-team")
 
+
 # This is a pretend tool that "refunds" a flight when given a flight ID.
 def refund_flight(flight_id: str) -> str:
     """Refund a flight"""
     return f"Flight {flight_id} refunded"
+
 
 # Set up the AI model client (the brain for the agents)
 model_client = OpenAIChatCompletionClient(
@@ -75,6 +75,7 @@ team = Swarm([travel_agent, flights_refunder], termination_condition=termination
 # This is the task the user wants help with.
 task = "I need to refund my flight."
 
+
 # This function runs the team and handles the back-and-forth with the user.
 async def run_team_stream() -> None:
     task_result = await Console(team.run_stream(task=task))
@@ -96,15 +97,11 @@ async def run_team_stream() -> None:
         response_index += 1
 
         task_result = await Console(
-            team.run_stream(
-                task=HandoffMessage(
-                    source="user", target=last_message.source, content=user_message
-                )
-            )
+            team.run_stream(task=HandoffMessage(source="user", target=last_message.source, content=user_message))
         )
         last_message = task_result.messages[-1]
+
 
 # Start the team and let the agents and user work together to solve the problem.
 nest_asyncio.apply()
 asyncio.run(run_team_stream())
-

@@ -12,8 +12,8 @@ from .common import (
 __all__ = [
     "CommonAgentWrappers",
     "BaseChatAgentInstrumentor",
-    "AssistantAgentInstrumentor", 
+    "AssistantAgentInstrumentor",
     "UserProxyAgentInstrumentor",
     "CodeExecutorAgentInstrumentor",
     "SocietyOfMindAgentInstrumentor",
-] 
+]

@@ -13,22 +13,22 @@ LIBRARY_NAME = _library_info.name
 LIBRARY_VERSION = _library_info.version
 
 # Import after defining constants to avoid circular imports
-from .instrumentor import AutoGenInstrumentor
+from .instrumentor import AutoGenInstrumentor  # noqa: E402
 
 # Import modular components for advanced users
-from .agents import (
+from .agents import (  # noqa: E402
     BaseChatAgentInstrumentor,
     AssistantAgentInstrumentor,
     UserProxyAgentInstrumentor,
     CodeExecutorAgentInstrumentor,
     SocietyOfMindAgentInstrumentor,
 )
-from .teams import (
+from .teams import (  # noqa: E402
     RoundRobinGroupChatInstrumentor,
     SelectorGroupChatInstrumentor,
     SwarmInstrumentor,
 )
-from .utils import (
+from .utils import (  # noqa: E402
     AutoGenSpanManager,
     extract_agent_attributes,
     safe_str,
@@ -41,29 +41,25 @@ from .utils import (
 __all__ = [
     # Main instrumentors
     "AutoGenInstrumentor",
-    
     # Library info
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
-    
     # Agent instrumentors
     "BaseChatAgentInstrumentor",
-    "AssistantAgentInstrumentor", 
+    "AssistantAgentInstrumentor",
     "UserProxyAgentInstrumentor",
     "CodeExecutorAgentInstrumentor",
     "SocietyOfMindAgentInstrumentor",
-    
     # Team instrumentors
     "RoundRobinGroupChatInstrumentor",
     "SelectorGroupChatInstrumentor",
     "SwarmInstrumentor",
-    
     # Utilities
     "AutoGenSpanManager",
     "extract_agent_attributes",
     "safe_str",
-    "safe_extract_content", 
+    "safe_extract_content",
     "create_agent_span",
     "instrument_async_generator",
     "instrument_coroutine",
-] 
+]

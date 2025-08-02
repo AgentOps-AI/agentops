@@ -2,13 +2,12 @@
 #
 # AgentOps automatically configures itself when it's initialized meaning your agent run data will be tracked and logged to your AgentOps account right away.
 # First let's install the required packages
-# %pip install -U autogen-agentchat
+# %pip install -U "autogen-agentchat"
 # %pip install -U "autogen-ext[openai]"
 # %pip install -U agentops
 # %pip install -U python-dotenv
 # %pip install -U nest_asyncio
 
-# Then import them
 from typing import Annotated, Literal
 import asyncio
 import nest_asyncio

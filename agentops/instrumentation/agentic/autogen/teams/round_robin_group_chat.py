@@ -5,34 +5,29 @@ which handles round-robin multi-agent conversations.
 """
 
 import logging
-from typing import Dict, Any
-from opentelemetry.trace import SpanKind, Status, StatusCode
 
-from agentops.instrumentation.common import SpanAttributeManager, create_span
-from agentops.semconv.agent import AgentAttributes
+from agentops.instrumentation.common import SpanAttributeManager
 from agentops.semconv.span_attributes import SpanAttributes
-from agentops.semconv.span_kinds import AgentOpsSpanKindValues
 from ..utils.common import (
     AutoGenSpanManager,
     safe_str,
     safe_extract_content,
-    instrument_coroutine,
-    instrument_async_generator,
 )
 from inspect import iscoroutine
 from opentelemetry.trace import set_span_in_context
 from opentelemetry import context as context_api
+
 logger = logging.getLogger(__name__)
 
 
 class RoundRobinGroupChatInstrumentor:
     """Instrumentor for RoundRobinGroupChat operations."""
-    
+
     def __init__(self, tracer, attribute_manager: SpanAttributeManager):
         self.tracer = tracer
         self.attribute_manager = attribute_manager
         self.span_manager = AutoGenSpanManager(tracer, attribute_manager)
-    
+
     def get_wrappers(self):
         """Get list of methods to wrap for RoundRobinGroupChat and base group chat manager.
 
@@ -57,11 +52,9 @@ class RoundRobinGroupChatInstrumentor:
                 lambda: self._transition_wrapper(),
             ),
         ]
-        
+
     def _transition_wrapper(self):
         """Create a wrapper for `_transition_to_next_speakers` to emit an *agent* span."""
-
-
 
         def wrapper(wrapped, instance, args, kwargs):
             agent_name = getattr(instance, "_name", "group_chat")
@@ -78,7 +71,6 @@ class RoundRobinGroupChatInstrumentor:
 
             # Start span manually so we can end it after async completes
             span = self.tracer.start_span(span_name)
-
 
             token = context_api.attach(set_span_in_context(span))
 
@@ -125,5 +117,5 @@ class RoundRobinGroupChatInstrumentor:
             context_api.detach(token)
 
             return result
-         
+
         return wrapper

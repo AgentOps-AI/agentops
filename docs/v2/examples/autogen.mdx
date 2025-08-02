@@ -2,7 +2,7 @@
 title: 'Autogen'
 description: 'Microsoft Autogen Assistant Chat Example'
 ---
-{/*  SOURCE_FILE: examples/agno/agno_async_operations.ipynb  */}
+{/*  SOURCE_FILE: examples/autogen/AgentChat.ipynb  */}
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/autogen/AgentChat.ipynb'} target={'_blank'}>Github</a>_
 
@@ -24,17 +24,26 @@ This approach is useful for building conversational AI agents that can reason th
 ### Installation
 <CodeGroup>
   ```bash pip
-  pip install "autogen-ext[openai]" -U ag2[autogen-agentchat] agentops python-dotenv nest_asyncio
+  pip install "autogen-ext[openai]" -U "ag2[autogen-agentchat]" agentops python-dotenv nest_asyncio
   ```
   ```bash poetry
-  poetry add "autogen-ext[openai]" -U ag2[autogen-agentchat] agentops python-dotenv nest_asyncio
+  poetry add "autogen-ext[openai]" -U "ag2[autogen-agentchat]" agentops python-dotenv nest_asyncio
   ```
   ```bash uv
-  uv add "autogen-ext[openai]" -U ag2[autogen-agentchat] agentops python-dotenv nest_asyncio
+  uv add "autogen-ext[openai]" -U "ag2[autogen-agentchat]" agentops python-dotenv nest_asyncio
   ```
 </CodeGroup>
 
-### Then import them
+
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
+
 ```python
 import os
 import asyncio
@@ -49,35 +58,22 @@ from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
-```
 
-Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
-
-[Get an AgentOps API key](https://agentops.ai/settings/projects)
-
-1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
-
-2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
-
-
-```python
 load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
+
 # Ensure API key is available
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY environment variable is required")
-# Define model and API key
-model_name = "gpt-4-turbo" 
+
 # Create the model client
-model_client = OpenAIChatCompletionClient(model=model_name, api_key=openai_api_key, seed=42, temperature=0)
+model_client = OpenAIChatCompletionClient(model="gpt-4-turbo", api_key=openai_api_key, seed=42, temperature=0)
+
 # When initializing AgentOps, you can pass in optional tags to help filter sessions
 agentops.init(trace_name="autogen-agent-chat", tags=["autogen-agent-chat", "agentops-example"])
-```
 
-
-```python
 # Define a simple calculator tool the assistant can use
 Operator = Literal["+", "-", "*", "/"]
 def calculator(a: int, b: int, operator: Annotated[Operator, "operator"]) -> int:
@@ -91,10 +87,7 @@ def calculator(a: int, b: int, operator: Annotated[Operator, "operator"]) -> int
         return int(a / b)
     else:
         raise ValueError("Invalid operator")
-```
 
-
-```python
 # Create the assistant agent with access to the calculator tool
 assistant = AssistantAgent(
     name="Assistant",
@@ -108,19 +101,13 @@ assistant = AssistantAgent(
     tools=[calculator],
     reflect_on_tool_use=True,
 )
-```
 
-
-```python
 # Create a user proxy agent to represent the human user
 user_proxy = UserProxyAgent(
     name="User",
     description="A user proxy agent that represents the human user.",
 )
-```
 
-
-```python
 # Main async function to run the chat loop
 async def main():
     # The initial question for the assistant to solve
@@ -163,10 +150,7 @@ async def main():
         else:
             print("Assistant did not provide a response.")
             break
-```
 
-
-```python
 nest_asyncio.apply()
 asyncio.run(main())
 ```

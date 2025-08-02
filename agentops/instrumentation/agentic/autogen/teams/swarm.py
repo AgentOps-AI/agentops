@@ -4,7 +4,6 @@ This module provides instrumentation specifically for Swarm.
 """
 
 import logging
-from typing import List
 
 from opentelemetry.trace import SpanKind
 
@@ -25,7 +24,6 @@ class SwarmInstrumentor:
         self.tracer = tracer
         self.attribute_manager = attribute_manager
         self.span_manager = AutoGenSpanManager(tracer, attribute_manager)
-
 
     def get_wrappers(self):
         """Return wrapper descriptors to patch AutoGen Swarm team.
@@ -53,7 +51,7 @@ class SwarmInstrumentor:
 
         def wrapper(wrapped, instance, args, kwargs):
             # Extract participant names (best-effort).
-            participants = [] 
+            participants = []
             if len(args) > 0 and isinstance(args[0], list):
                 participants = args[0]
             elif "participants" in kwargs and isinstance(kwargs["participants"], list):
@@ -62,7 +60,7 @@ class SwarmInstrumentor:
             participant_names = []
             try:
                 participant_names = [p.name for p in participants if hasattr(p, "name")]
-            except Exception:  
+            except Exception:
                 pass
 
             # Build span name – e.g., "swarm.Alice,Bob.workflow"
@@ -81,4 +79,4 @@ class SwarmInstrumentor:
                 # Delegate to original __init__
                 return wrapped(*args, **kwargs)
 
-        return wrapper 
+        return wrapper

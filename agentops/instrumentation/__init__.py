@@ -85,7 +85,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "autogen_agentchat": {
         "module_name": "agentops.instrumentation.agentic.autogen",
         "class_name": "AutoGenInstrumentor",
-        "min_version": "0.0.1",  # Original AutoGen versions are older
+        "min_version": "0.6.4",
     },
     "autogen": {
         "module_name": "agentops.instrumentation.agentic.ag2",
