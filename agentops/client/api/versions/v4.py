@@ -25,6 +25,7 @@ class V4Client(BaseApiClient):
     def __init__(self, endpoint: str):
         """Initialize the V4Client."""
         super().__init__(endpoint)
+        self.auth_token: Optional[str] = None
         V4Client._instance = self
 
     def set_auth_token(self, token: str):
@@ -154,6 +155,7 @@ class V4Client(BaseApiClient):
                 raise ApiServerException(f"Failed to process upload response: {str(e)}")
         except requests.exceptions.RequestException as e:
             raise ApiServerException(f"Failed to upload logfile: {e}")
+
 
     def upload_file_content(self, filepath: str, content: str) -> Optional[UploadedObjectResponse]:
         """
