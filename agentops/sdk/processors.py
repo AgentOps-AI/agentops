@@ -5,7 +5,7 @@ This module contains processors for OpenTelemetry spans.
 """
 
 from typing import Optional
-
+import importlib
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 
@@ -58,9 +58,12 @@ class InternalSpanProcessor(SpanProcessor):
         if self._root_span_id and (span.context.span_id is self._root_span_id):
             logger.debug(f"[agentops.InternalSpanProcessor] Ending root span: {span.name}")
             try:
+                v4_module = importlib.import_module("agentops.client.api.versions.v4")
+                V4Client = getattr(v4_module, "V4Client")
+                V4Client.collect_all()
                 upload_logfile(span.context.trace_id)
             except Exception as e:
-                logger.error(f"[agentops.InternalSpanProcessor] Error uploading logfile: {e}")
+                logger.error(f"[agentops.InternalSpanProcessor] Error uploading files: {e}")
 
     def shutdown(self) -> None:
         """Shutdown the processor."""
