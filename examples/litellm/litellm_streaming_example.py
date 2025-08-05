@@ -32,19 +32,13 @@ print("-" * 40)
 
 messages = [
     {"role": "system", "content": "You are a helpful assistant that writes creative stories."},
-    {"role": "user", "content": "Write a short story about a robot learning to paint. Make it about 3 paragraphs."}
+    {"role": "user", "content": "Write a short story about a robot learning to paint. Make it about 3 paragraphs."},
 ]
 
 try:
     print("🎯 Making streaming completion call...")
-    response = litellm.completion(
-        model="gpt-4o-mini",
-        messages=messages,
-        stream=True,
-        temperature=0.7,
-        max_tokens=300
-    )
-    
+    response = litellm.completion(model="gpt-4o-mini", messages=messages, stream=True, temperature=0.7, max_tokens=300)
+
     print("📝 Streaming response:")
     full_content = ""
     for chunk in response:
@@ -52,9 +46,9 @@ try:
             content = chunk.choices[0].delta.content
             print(content, end="", flush=True)
             full_content += content
-    
+
     print(f"\n\n✅ Streaming completed! Total content length: {len(full_content)} characters")
-    
+
 except Exception as e:
     print(f"❌ Error in streaming completion: {e}")
     agentops.end_trace(tracer, end_state="Fail")
@@ -71,27 +65,20 @@ providers_to_test = [
 for model, provider_name in providers_to_test:
     try:
         print(f"\n🔄 Testing {provider_name} ({model})...")
-        
-        simple_messages = [
-            {"role": "user", "content": "Count from 1 to 5 with a brief description of each number."}
-        ]
-        
-        response = litellm.completion(
-            model=model,
-            messages=simple_messages,
-            stream=True,
-            max_tokens=100
-        )
-        
+
+        simple_messages = [{"role": "user", "content": "Count from 1 to 5 with a brief description of each number."}]
+
+        response = litellm.completion(model=model, messages=simple_messages, stream=True, max_tokens=100)
+
         print(f"📡 {provider_name} streaming response:")
         chunk_count = 0
         for chunk in response:
             if chunk.choices[0].delta.content:
                 print(chunk.choices[0].delta.content, end="", flush=True)
                 chunk_count += 1
-        
+
         print(f"\n✅ {provider_name} completed with {chunk_count} chunks")
-        
+
     except Exception as e:
         print(f"⚠️  {provider_name} failed (likely missing API key): {e}")
         continue
@@ -108,39 +95,29 @@ tools = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "location": {
-                        "type": "string",
-                        "description": "The city and state, e.g. San Francisco, CA"
-                    }
+                    "location": {"type": "string", "description": "The city and state, e.g. San Francisco, CA"}
                 },
-                "required": ["location"]
-            }
-        }
+                "required": ["location"],
+            },
+        },
     }
 ]
 
-function_messages = [
-    {"role": "user", "content": "What's the weather like in San Francisco?"}
-]
+function_messages = [{"role": "user", "content": "What's the weather like in San Francisco?"}]
 
 try:
     print("🔧 Making streaming completion with function calling...")
-    response = litellm.completion(
-        model="gpt-4o-mini",
-        messages=function_messages,
-        tools=tools,
-        stream=True
-    )
-    
+    response = litellm.completion(model="gpt-4o-mini", messages=function_messages, tools=tools, stream=True)
+
     print("📡 Function calling streaming response:")
     for chunk in response:
         if chunk.choices[0].delta.content:
             print(chunk.choices[0].delta.content, end="", flush=True)
-        elif hasattr(chunk.choices[0].delta, 'tool_calls') and chunk.choices[0].delta.tool_calls:
+        elif hasattr(chunk.choices[0].delta, "tool_calls") and chunk.choices[0].delta.tool_calls:
             print(f"\n🔧 Tool call detected: {chunk.choices[0].delta.tool_calls}")
-    
+
     print("\n✅ Function calling streaming completed!")
-    
+
 except Exception as e:
     print(f"❌ Error in function calling: {e}")
 
