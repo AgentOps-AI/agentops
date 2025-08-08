@@ -109,6 +109,13 @@ agentops.end_session('Success')
 All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
 <br/>
 
+## Run the App and API locally
+
+Looking to run the full AgentOps app (Dashboard + API backend) on your machine? Follow the setup guide in `app/README.md`:
+
+- [Run the App and Backend (Dashboard + API)](app/README.md)
+
+
 <details>
   <summary>Agent Debugging</summary>
   <a href="https://app.agentops.ai?ref=gh">
