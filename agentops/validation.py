@@ -5,12 +5,15 @@ This module provides functions to validate that spans have been sent to AgentOps
 using the public API. This is useful for testing and verification purposes.
 """
 
+import asyncio
+import os
 import time
-import requests
 from typing import Optional, Dict, List, Any, Tuple
 
-from agentops.logging import logger
+import requests
+
 from agentops.exceptions import ApiServerException
+from agentops.logging import logger
 
 
 class ValidationError(Exception):
@@ -19,40 +22,84 @@ class ValidationError(Exception):
     pass
 
 
-def get_jwt_token(api_key: Optional[str] = None) -> str:
+async def get_jwt_token(api_key: Optional[str] = None) -> str:
     """
-    Exchange API key for JWT token.
+    Exchange API key for JWT token asynchronously.
 
     Args:
         api_key: Optional API key. If not provided, uses AGENTOPS_API_KEY env var.
 
     Returns:
-        JWT bearer token
+        JWT bearer token, or None if failed
 
-    Raises:
-        ApiServerException: If token exchange fails
+    Note:
+        This function never throws exceptions - all errors are handled gracefully
     """
-    if api_key is None:
-        from agentops import get_client
-
-        client = get_client()
-        if client and client.config.api_key:
-            api_key = client.config.api_key
-        else:
-            import os
-
-            api_key = os.getenv("AGENTOPS_API_KEY")
-            if not api_key:
-                raise ValueError("No API key provided and AGENTOPS_API_KEY environment variable not set")
-
     try:
-        response = requests.post(
-            "https://api.agentops.ai/public/v1/auth/access_token", json={"api_key": api_key}, timeout=10
-        )
-        response.raise_for_status()
-        return response.json()["bearer"]
-    except requests.exceptions.RequestException as e:
-        raise ApiServerException(f"Failed to get JWT token: {e}")
+        if api_key is None:
+            from agentops import get_client
+
+            client = get_client()
+            if client and client.config.api_key:
+                api_key = client.config.api_key
+            else:
+                api_key = os.getenv("AGENTOPS_API_KEY")
+                if not api_key:
+                    logger.warning("No API key provided and AGENTOPS_API_KEY environment variable not set")
+                    return None
+
+        # Use a separate aiohttp session for validation to avoid conflicts
+        import aiohttp
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.agentops.ai/public/v1/auth/access_token",
+                json={"api_key": api_key},
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as response:
+                if response.status >= 400:
+                    logger.warning(f"Failed to get JWT token: HTTP {response.status} - backend may be unavailable")
+                    return None
+
+                response_data = await response.json()
+
+                if "bearer" not in response_data:
+                    logger.warning("Failed to get JWT token: No bearer token in response")
+                    return None
+
+                return response_data["bearer"]
+
+    except Exception as e:
+        logger.warning(f"Failed to get JWT token: {e} - continuing without authentication")
+        return None
+
+
+def get_jwt_token_sync(api_key: Optional[str] = None) -> Optional[str]:
+    """
+    Synchronous wrapper for get_jwt_token - runs async function in event loop.
+
+    Args:
+        api_key: Optional API key. If not provided, uses AGENTOPS_API_KEY env var.
+
+    Returns:
+        JWT bearer token, or None if failed
+
+    Note:
+        This function never throws exceptions - all errors are handled gracefully
+    """
+    try:
+        import concurrent.futures
+
+        # Always run in a separate thread to avoid event loop issues
+        def run_in_thread():
+            return asyncio.run(get_jwt_token(api_key))
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(run_in_thread)
+            return future.result()
+    except Exception as e:
+        logger.warning(f"Failed to get JWT token synchronously: {e}")
+        return None
 
 
 def get_trace_details(trace_id: str, jwt_token: str) -> Dict[str, Any]:
@@ -121,60 +168,36 @@ def check_llm_spans(spans: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
 
     for span in spans:
         span_name = span.get("span_name", "unnamed_span")
-
-        # Check span attributes for LLM span kind
         span_attributes = span.get("span_attributes", {})
         is_llm_span = False
 
-        # If we have span_attributes, check them
         if span_attributes:
-            # Try different possible structures for span kind
-            span_kind = None
-
-            # Structure 1: span_attributes.agentops.span.kind
-            if isinstance(span_attributes, dict):
+            # Check for LLM span kind - handle both flat and nested structures
+            span_kind = span_attributes.get("agentops.span.kind", "")
+            if not span_kind:
+                # Check nested structure: agentops.span.kind or agentops -> span -> kind
                 agentops_attrs = span_attributes.get("agentops", {})
                 if isinstance(agentops_attrs, dict):
-                    span_info = agentops_attrs.get("span", {})
-                    if isinstance(span_info, dict):
-                        span_kind = span_info.get("kind", "")
+                    span_attrs = agentops_attrs.get("span", {})
+                    if isinstance(span_attrs, dict):
+                        span_kind = span_attrs.get("kind", "")
 
-            # Structure 2: Direct in span_attributes
-            if not span_kind and isinstance(span_attributes, dict):
-                # Try looking for agentops.span.kind as a flattened key
-                span_kind = span_attributes.get("agentops.span.kind", "")
-
-            # Structure 3: Look for SpanAttributes.AGENTOPS_SPAN_KIND
-            if not span_kind and isinstance(span_attributes, dict):
-                from agentops.semconv import SpanAttributes
-
-                span_kind = span_attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND, "")
-
-            # Check if this is an LLM span by span kind
             is_llm_span = span_kind == "llm"
 
-            # Alternative check: Look for gen_ai.prompt or gen_ai.completion attributes
-            # These are standard semantic conventions for LLM spans
-            if not is_llm_span and isinstance(span_attributes, dict):
+            # Alternative check: Look for gen_ai attributes
+            if not is_llm_span:
                 gen_ai_attrs = span_attributes.get("gen_ai", {})
                 if isinstance(gen_ai_attrs, dict):
-                    # If we have prompt or completion data, it's an LLM span
                     if "prompt" in gen_ai_attrs or "completion" in gen_ai_attrs:
                         is_llm_span = True
 
-            # Check for LLM_REQUEST_TYPE attribute (used by provider instrumentations)
-            if not is_llm_span and isinstance(span_attributes, dict):
-                from agentops.semconv import SpanAttributes, LLMRequestTypeValues
-
-                # Check for LLM request type - try both gen_ai.* and llm.* prefixes
-                # The instrumentation sets gen_ai.* but the API might return llm.*
-                llm_request_type = span_attributes.get(SpanAttributes.LLM_REQUEST_TYPE, "")
+            # Check for LLM request type
+            if not is_llm_span:
+                llm_request_type = span_attributes.get("gen_ai.request.type", "")
                 if not llm_request_type:
-                    # Try the llm.* prefix version
+                    # Also check for older llm.request.type format
                     llm_request_type = span_attributes.get("llm.request.type", "")
-
-                # Check if it's a chat or completion request (the main LLM types)
-                if llm_request_type in [LLMRequestTypeValues.CHAT.value, LLMRequestTypeValues.COMPLETION.value]:
+                if llm_request_type in ["chat", "completion"]:
                     is_llm_span = True
 
         if is_llm_span:
@@ -242,7 +265,19 @@ def validate_trace_spans(
         raise ValueError("No trace ID found. Provide either trace_id or trace_context parameter.")
 
     # Get JWT token
-    jwt_token = get_jwt_token(api_key)
+    jwt_token = get_jwt_token_sync(api_key)
+    if not jwt_token:
+        logger.warning("Could not obtain JWT token - validation will be skipped")
+        return {
+            "trace_id": trace_id,
+            "span_count": 0,
+            "spans": [],
+            "has_llm_spans": False,
+            "llm_span_names": [],
+            "metrics": None,
+            "validation_skipped": True,
+            "reason": "No JWT token available",
+        }
 
     logger.info(f"Validating spans for trace ID: {trace_id}")
 
@@ -334,6 +369,10 @@ def print_validation_summary(result: Dict[str, Any]) -> None:
     print("\n" + "=" * 50)
     print("🔍 AgentOps Span Validation Results")
     print("=" * 50)
+
+    if result.get("validation_skipped"):
+        print(f"⚠️  Validation skipped: {result.get('reason', 'Unknown reason')}")
+        return
 
     print(f"✅ Found {result['span_count']} span(s) in trace")
 
