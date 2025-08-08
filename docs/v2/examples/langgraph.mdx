@@ -1,254 +1,260 @@
 ---
 title: 'Langgraph'
-description: 'LangGraph Integration with AgentOps'
+description: 'Build a basic chatbot with LangGraph and AgentOps tracking'
 ---
 {/*  SOURCE_FILE: examples/langgraph/langgraph_example.ipynb  */}
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/langgraph/langgraph_example.ipynb'} target={'_blank'}>Github</a>_
 
-# LangGraph Integration with AgentOps
+# LangGraph Basic Chatbot with AgentOps
 
-This example demonstrates how to use LangGraph with AgentOps for comprehensive observability of your graph-based agent workflows.
+This example shows you how to build a basic chatbot using LangGraph's StateGraph with comprehensive tracking via AgentOps.
 
-LangGraph is a framework for building stateful, multi-step applications with LLMs. AgentOps automatically instruments LangGraph to track:
-- Graph compilation and structure
-- Node executions and transitions
-- Tool usage within the graph
-- LLM calls made by agents
-- Complete execution flow with timing
+## What We're Building
+
+A **stateful chatbot** using LangGraph fundamentals:
+- 🗃️ **StateGraph**: Core LangGraph structure for managing conversation state
+- 💬 **Chat Model**: LLM integration for generating responses
+- 🔄 **State Management**: Automatic message history tracking with `add_messages`
+- 🎯 **Graph Flow**: START → chatbot node → END pattern
+
+**With AgentOps**, you'll get complete visibility into graph execution, state transitions, and LLM interactions.
+
+## Step-by-Step Implementation
 
 
 
-## Installation
+### Step 1: Install Dependencies
+
+Install LangGraph with your preferred chat model and AgentOps for tracking:
+
 <CodeGroup>
   ```bash pip
-  pip install agentops langchain-openai langgraph python-dotenv
+  pip install langgraph langchain agentops python-dotenv
   ```
   ```bash poetry
-  poetry add agentops langchain-openai langgraph python-dotenv
+  poetry add langgraph langchain agentops python-dotenv
   ```
   ```bash uv
-  uv add agentops langchain-openai langgraph python-dotenv
+  uv pip install langgraph langchain agentops python-dotenv
   ```
 </CodeGroup>
 
-## Setup
+**What AgentOps adds:**
+- 📊 **Graph execution tracking** with node transitions and timing
+- 💰 **LLM cost monitoring** with token usage breakdown
+- 🔄 **State change visualization** showing message flow
+- 📈 **Performance metrics** for each graph execution
+- 🐛 **Execution replay** for debugging graph flows
 
-First, let's import the necessary libraries and initialize AgentOps:
+### Step 2: Create Your Project Structure
 
+Create a simple Python project for your chatbot:
+
+```bash
+# Create project directory
+mkdir langgraph_chatbot
+cd langgraph_chatbot
+
+# Create main chatbot file
+touch chatbot.py
+touch .env
+```
+
+**This creates the basic structure:**
+```
+langgraph_chatbot/
+├── chatbot.py           # Main chatbot implementation
+└── .env                 # API keys
+```
+
+### Step 3: Set Up Environment Variables
+
+Create your `.env` file with the necessary API keys:
+
+```bash
+# .env
+OPENAI_API_KEY=your_openai_api_key_here
+AGENTOPS_API_KEY=your_agentops_api_key_here
+```
+
+**Get your API keys:**
+- **OpenAI API Key**: [OpenAI Platform](https://platform.openai.com/api-keys)
+- **AgentOps API Key**: [AgentOps Settings](https://agentops.ai/settings/projects)
+
+**Note**: You can use any LangChain-compatible model (Anthropic, Google, etc.) by adjusting the imports and model initialization.
+
+### Step 4: Build Your Basic Chatbot
+
+Edit `chatbot.py` to create your LangGraph chatbot:
 
 ```python
+# chatbot.py
 import os
-from typing import Annotated, Literal, TypedDict
-from langgraph.graph import StateGraph, END
+from typing import Annotated
+from typing_extensions import TypedDict
+
+from langchain.chat_models import init_chat_model
+from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from langchain_core.tools import tool
 import agentops
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables and initialize AgentOps
 load_dotenv()
+agentops.init(auto_start_session=False)
 
-# Initialize AgentOps - this enables automatic instrumentation
-agentops.init(os.getenv("AGENTOPS_API_KEY"), auto_start_session=False)
-trace = agentops.start_trace("langgraph_example")
-```
-
-## Define Tools
-
-Let's create some simple tools that our agent can use:
-
-
-```python
-@tool
-def get_weather(location: str) -> str:
-    """Get the weather for a given location."""
-    # Simulated weather data
-    weather_data = {
-        "New York": "Sunny, 72°F",
-        "London": "Cloudy, 60°F", 
-        "Tokyo": "Rainy, 65°F",
-        "Paris": "Partly cloudy, 68°F",
-        "Sydney": "Clear, 75°F"
-    }
-    return weather_data.get(location, f"Weather data not available for {location}")
-
-@tool
-def calculate(expression: str) -> str:
-    """Evaluate a mathematical expression."""
-    try:
-        result = eval(expression)
-        return f"The result is: {result}"
-    except Exception as e:
-        return f"Error calculating expression: {str(e)}"
-
-# Collect tools for binding to the model
-tools = [get_weather, calculate]
-```
-
-## Define Agent State
-
-In LangGraph, we need to define the state that will be passed between nodes:
-
-
-```python
-class AgentState(TypedDict):
+# Define the State schema
+class State(TypedDict):
+    # Messages have the type "list". The `add_messages` function
+    # in the annotation defines how this state key should be updated
+    # (in this case, it appends messages to the list, rather than overwriting them)
     messages: Annotated[list, add_messages]
 ```
 
-## Create the Model and Node Functions
+### Step 5: Initialize the Chat Model and Create the Chatbot Node
 
-We'll create a model with tool binding and define the functions that will be our graph nodes:
-
+Add the model and node function:
 
 ```python
-# Create model with tool binding
-model = ChatOpenAI(temperature=0, model="gpt-4o-mini").bind_tools(tools)
+# Initialize the chat model (you can change to any provider)
+llm = init_chat_model("openai:gpt-4o-mini")
 
-def should_continue(state: AgentState) -> Literal["tools", "end"]:
-    """Determine if we should continue to tools or end."""
-    messages = state["messages"]
-    last_message = messages[-1]
-    
-    # If the LLM wants to use tools, continue to the tools node
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-    # Otherwise, we're done
-    return "end"
-
-def call_model(state: AgentState):
-    """Call the language model."""
-    messages = state["messages"]
-    response = model.invoke(messages)
-    return {"messages": [response]}
-
-def call_tools(state: AgentState):
-    """Execute the tool calls requested by the model."""
-    messages = state["messages"]
-    last_message = messages[-1]
-    
-    tool_messages = []
-    for tool_call in last_message.tool_calls:
-        tool_name = tool_call["name"]
-        tool_args = tool_call["args"]
-        
-        # Find and execute the requested tool
-        for tool in tools:
-            if tool.name == tool_name:
-                result = tool.invoke(tool_args)
-                tool_messages.append(
-                    ToolMessage(
-                        content=str(result),
-                        tool_call_id=tool_call["id"]
-                    )
-                )
-                break
-    
-    return {"messages": tool_messages}
+# Create the chatbot node function
+def chatbot(state: State):
+    """Main chatbot function that processes messages and returns responses."""
+    return {"messages": [llm.invoke(state["messages"])]}
 ```
 
-## Build the Graph
+### Step 6: Build and Compile the StateGraph
 
-Now let's construct the LangGraph workflow:
-
+Construct your LangGraph workflow:
 
 ```python
-# Create the graph
-workflow = StateGraph(AgentState)
+# Create the StateGraph
+graph_builder = StateGraph(State)
 
-# Add nodes
-workflow.add_node("agent", call_model)
-workflow.add_node("tools", call_tools)
+# Add the chatbot node
+# The first argument is the unique node name
+# The second argument is the function that will be called
+graph_builder.add_node("chatbot", chatbot)
 
-# Set the entry point
-workflow.set_entry_point("agent")
+# Add entry point (where to start)
+graph_builder.add_edge(START, "chatbot")
 
-# Add conditional edges
-workflow.add_conditional_edges(
-    "agent",
-    should_continue,
-    {
-        "tools": "tools",
-        "end": END
-    }
-)
-
-# Add edge from tools back to agent
-workflow.add_edge("tools", "agent")
+# Add exit point (where to end)
+graph_builder.add_edge("chatbot", END)
 
 # Compile the graph
-app = workflow.compile()
+graph = graph_builder.compile()
 ```
 
-## Run Examples
+### Step 7: Add the Streaming Chat Function
 
-Let's test our agent with different queries that require tool usage:
-
+Create the interactive chat interface with AgentOps tracking:
 
 ```python
-# Example 1: Weather query
-print("Example 1: Weather Query")
-print("=" * 50)
+def stream_graph_updates(user_input: str):
+    """Stream graph updates for the given user input."""
+    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
+        for value in event.values():
+            print("Assistant:", value["messages"][-1].content)
 
-messages = [HumanMessage(content="What's the weather in New York and Tokyo?")]
-result = app.invoke({"messages": messages})
+def run_chatbot():
+    """Main function to run the chatbot with AgentOps tracking."""
+    # Start AgentOps session
+    session = agentops.start_session(tags=["langgraph", "chatbot"])
+    
+    try:
+        print("🤖 LangGraph Chatbot Started!")
+        print("Type 'quit', 'exit', or 'q' to stop.\n")
+        
+        while True:
+            try:
+                user_input = input("User: ")
+                if user_input.lower() in ["quit", "exit", "q"]:
+                    print("Goodbye!")
+                    break
+                stream_graph_updates(user_input)
+                print()  # Add blank line for readability
+            except KeyboardInterrupt:
+                print("\nGoodbye!")
+                break
+            except Exception as e:
+                print(f"Error: {e}")
+                break
+        
+        # End session successfully
+        agentops.end_session("Success")
+        
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        agentops.end_session("Failed", end_state_reason=str(e))
+        raise
 
-final_message = result["messages"][-1]
-print(f"Response: {final_message.content}\n")
+# Main execution
+if __name__ == "__main__":
+    run_chatbot()
 ```
 
+### Step 8: Run Your Chatbot
 
-```python
-# Example 2: Math calculation
-print("Example 2: Math Calculation")
-print("=" * 50)
+Execute your chatbot:
 
-messages = [HumanMessage(content="Calculate 25 * 4 + 10")]
-result = app.invoke({"messages": messages})
-
-final_message = result["messages"][-1]
-print(f"Response: {final_message.content}\n")
+```bash
+cd langgraph_chatbot
+python chatbot.py
 ```
 
+**What happens:**
+1. AgentOps session starts automatically
+2. Interactive chat loop begins
+3. Each user message flows through: START → chatbot node → END
+4. LLM generates responses based on conversation history
+5. AgentOps captures all state transitions and LLM interactions
+6. Session ends when you type 'quit'
 
-```python
-# Example 3: Combined query
-print("Example 3: Combined Query")
-print("=" * 50)
+**Example conversation:**
+```
+🤖 LangGraph Chatbot Started!
+Type 'quit', 'exit', or 'q' to stop.
 
-messages = [HumanMessage(content="What's the weather in Paris? Also calculate 100/5")]
-result = app.invoke({"messages": messages})
+User: Hello! What can you help me with?
+Assistant: Hello! I'm a helpful AI assistant. I can help you with a wide variety of tasks...
 
-final_message = result["messages"][-1]
-print(f"Response: {final_message.content}\n")
+User: Tell me a joke
+Assistant: Why don't scientists trust atoms? Because they make up everything!
+
+User: quit
+Goodbye!
 ```
 
-## View in AgentOps Dashboard
+## View Results in AgentOps Dashboard
 
-After running this notebook, you can view the traces in your AgentOps dashboard. You'll see:
+After running your chatbot, visit your [AgentOps Dashboard](https://app.agentops.ai) to see:
 
-1. **Graph Compilation**: The structure of your LangGraph with nodes and edges
-2. **Execution Flow**: How the graph executed, including:
-   - Agent node calls
-   - Tool node executions
-   - State transitions
-3. **LLM Calls**: Each ChatGPT call with prompts and completions
-4. **Tool Usage**: Which tools were called and their results
-5. **Timing Information**: How long each step took
+1. **Graph Structure**: Visual representation of your StateGraph (START → chatbot → END)
+2. **State Transitions**: How messages flow through the graph
+3. **LLM Interactions**: Every conversation turn with prompts and responses
+4. **Execution Timing**: How long each node takes to process
+5. **Session Analytics**: Conversation length, token usage, and costs
+6. **Message History**: Complete conversation flow with state management
 
-The instrumentation captures the full context of your LangGraph application automatically!
+## Key Files Created
 
+**Project structure you built:**
+- `chatbot.py` - Complete LangGraph chatbot with AgentOps integration
+- `.env` - API keys for OpenAI and AgentOps
 
-```python
-print("✅ Check your AgentOps dashboard for comprehensive traces!")
-print("🔍 You'll see the graph structure, execution flow, and all LLM/tool calls.")
-agentops.end_trace(trace)
-```
+**AgentOps Integration Points:**
+- `agentops.init()` - Enables automatic LangGraph instrumentation
+- `agentops.start_session()` - Begins tracking each chat session
+- `agentops.end_session()` - Completes the session with status
 
+## Next Steps
 
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+- Add tools to your chatbot (web search, calculators, etc.)
+- Implement more complex graph structures with conditional edges
+- Add memory persistence across sessions
+- Create multi-agent workflows with LangGraph
+- Use AgentOps analytics to optimize conversation flows
