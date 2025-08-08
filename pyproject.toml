@@ -181,6 +181,8 @@ exclude = [
     ".ruff_cache",
     "__pycache__",
     "*.pyc",
+    "app/*",
+    "app/**",
 ]
 
 [tool.hatch.metadata]
