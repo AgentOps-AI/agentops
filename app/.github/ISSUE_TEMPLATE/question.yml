@@ -1,0 +1,56 @@
+name: Question / Help
+description: Ask a question or get help with AgentOps
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question or need help? We're here to assist!
+        
+        **Before asking:** Please check if your question has already been answered in:
+        - [Documentation](https://github.com/AgentOps-AI/AgentOps.Next/blob/main/README.md)
+        - [Existing Issues](https://github.com/AgentOps-AI/AgentOps.Next/issues)
+        - [Discussions](https://github.com/AgentOps-AI/AgentOps.Next/discussions)
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: Ask your question here...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What category does your question fall into?
+      options:
+        - Setup / Installation
+        - Configuration
+        - Usage / How-to
+        - API / Integration
+        - Performance
+        - Deployment
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide any relevant context about your setup or use case.
+      placeholder: |
+        - What are you trying to achieve?
+        - What have you already tried?
+        - Any relevant environment details?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Any additional information that might help us answer your question.
+      placeholder: Code snippets, error messages, screenshots, etc. 

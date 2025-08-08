@@ -1,0 +1,31 @@
+{
+    "id": "org-test-xxxx-yyyy-zzzz",
+    "name": "Test Free Org",
+    "slug": "test-free-org",
+    "created_at": "2023-01-01T12:00:00Z",
+    "updated_at": "2023-01-01T12:00:00Z",
+    "is_personal": false,
+    "avatar_url": null,
+    "prem_status": "free",
+    "max_project_count": 1,
+    "max_member_count": 1,
+    "projects": [
+        {
+            "id": "proj-test-aaaa-bbbb-cccc",
+            "name": "Default Test Project",
+            "api_key": "agentops_xxxxxxxxxxxxxxxxxxxxxxx",
+            "org_id": "org-test-xxxx-yyyy-zzzz",
+            "created_at": "2023-01-01T12:00:00Z",
+            "updated_at": "2023-01-01T12:00:00Z"
+        }
+    ],
+    "members": [
+        {
+            "id": "user-test-xxxx-yyyy-zzzz",
+            "role": "admin",
+            "email": "testuser@example.com",
+            "full_name": "Test User Cypress",
+            "avatar_url": "https://example.com/avatar.png"
+        }
+    ]
+}

@@ -1,0 +1,71 @@
+include:
+  - opentelemetry-collector/compose.yaml
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    environment:
+      SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      APP_URL: ${APP_URL}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT}
+      LOGGING_LEVEL: ${LOGGING_LEVEL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      # Clickhouse Configuration
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE}
+      CLICKHOUSE_SECURE: ${CLICKHOUSE_SECURE}
+      CLICKHOUSE_ENDPOINT: ${CLICKHOUSE_ENDPOINT}
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME}
+    network_mode: 'host'
+    volumes:
+      - ./api:/app/api
+
+  dashboard:
+    profiles: ['dashboard']
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      # Supabase Configuration
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_PROJECT_ID: ${SUPABASE_PROJECT_ID}
+
+      # Application URLs
+      NEXT_PUBLIC_APP_URL: ${APP_URL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+
+      # Analytics and Monitoring
+      NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY}
+      NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+      NEXT_PUBLIC_SENTRY_ORG: ${NEXT_PUBLIC_SENTRY_ORG}
+      NEXT_PUBLIC_SENTRY_PROJECT: ${NEXT_PUBLIC_SENTRY_PROJECT}
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${NEXT_PUBLIC_SENTRY_ENVIRONMENT}
+
+      # Application Configuration
+      NEXT_PUBLIC_SIGNIN_METHODS: ${NEXT_PUBLIC_SIGNIN_METHODS}
+      NEXT_PUBLIC_ENVIRONMENT_TYPE: ${NEXT_PUBLIC_ENVIRONMENT_TYPE}
+      NEXT_PUBLIC_FALLBACK_API_KEY: ${NEXT_PUBLIC_FALLBACK_API_KEY}
+      NEXT_PUBLIC_PLAYGROUND: ${NEXT_PUBLIC_PLAYGROUND}
+
+      # Stripe Configuration
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+      STRIPE_SECRET_KEY: ${NEXT_STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${NEXT_STRIPE_WEBHOOK_SECRET}
+    network_mode: 'host'
+    depends_on:
+      - api
+    volumes:
+      - ./dashboard:/app/

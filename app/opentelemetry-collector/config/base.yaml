@@ -1,0 +1,72 @@
+
+receivers:
+  fluentforward:
+    endpoint: 0.0.0.0:24224
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+        auth:
+          authenticator: jwtauthextension
+      grpc:
+        endpoint: 0.0.0.0:4317
+        auth:
+          authenticator: jwtauthextension
+
+processors:
+  batch:
+    send_batch_size: 100000
+    timeout: 5s
+  memory_limiter:
+    check_interval: 60s
+    limit_mib: 1800
+    spike_limit_mib: 500
+
+exporters:
+  clickhouse/otel_traces:
+    # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/clickhouseexporter/
+    # Existing exporter for logs and traces (otel_traces)
+    endpoint: ${CLICKHOUSE_ENDPOINT}
+    username: ${CLICKHOUSE_USERNAME}
+    password: ${CLICKHOUSE_PASSWORD}
+    database: ${CLICKHOUSE_DATABASE}
+    logs_table_name: ${LOGS_TABLE_NAME}
+    traces_table_name: ${TRACES_TABLE_NAME}
+    ttl: ${CLICKHOUSE_TTL}
+    timeout: ${CLICKHOUSE_TIMEOUT}
+    sending_queue:
+      queue_size: 100
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    # we don't need to create tables on every startup
+    create_schema: false
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
+  jwtauthextension:
+    secret: ${JWT_SECRET}
+
+service:
+  extensions: [pprof, zpages, health_check, jwtauthextension]
+  # telemetry:
+  #   logs:
+  #     level: debug
+
+  pipelines:
+    logs:
+      receivers: [fluentforward, otlp]
+      processors: [memory_limiter, resourcedetection/system, resource, batch]
+      exporters: [clickhouse/otel_traces]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection/system, resource, transform, batch]
+      exporters: [clickhouse/otel_traces]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection/system, resource, batch]
+      exporters: [clickhouse/otel_traces]
