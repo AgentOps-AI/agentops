@@ -165,6 +165,7 @@
       "group": "Usage",
       "pages": [
         "v2/usage/dashboard-info",
+        "v2/usage/running-backend",
         "v2/usage/sdk-reference",
         "v2/usage/typescript-sdk",
         "v2/usage/advanced-configuration",
