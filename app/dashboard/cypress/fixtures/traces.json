@@ -1,0 +1,43 @@
+{
+    "traces": [
+        {
+            "trace_id": "trace-id-001",
+            "root_service_name": "frontend-service",
+            "root_span_name": "HTTP GET /users",
+            "start_time": "2024-05-21T10:00:00.123456Z",
+            "end_time": "2024-05-21T10:00:01.567890Z",
+            "duration": 1444,
+            "span_count": 5,
+            "error_count": 0
+        },
+        {
+            "trace_id": "trace-id-002",
+            "root_service_name": "backend-service",
+            "root_span_name": "POST /process-data",
+            "start_time": "2024-05-21T09:55:30.000000Z",
+            "end_time": "2024-05-21T09:55:32.100000Z",
+            "duration": 2100,
+            "span_count": 12,
+            "error_count": 1
+        },
+        {
+            "trace_id": "trace-id-003",
+            "root_service_name": "auth-service",
+            "root_span_name": "RPC /verifyToken",
+            "start_time": "2024-05-21T09:50:05.987654Z",
+            "end_time": "2024-05-21T09:50:06.123456Z",
+            "duration": 135,
+            "span_count": 2,
+            "error_count": 0
+        }
+    ],
+    "metrics": {
+        "total_traces": 3,
+        "total_spans": 19,
+        "total_errors": 1,
+        "latency_avg": 1226.33
+    },
+    "total": 3,
+    "limit": 20,
+    "offset": 0
+}

@@ -1,0 +1,46 @@
+{
+    "id": "org-pro-xxxx-yyyy-zzzz",
+    "name": "Test Pro Org",
+    "slug": "test-pro-org",
+    "created_at": "2023-01-01T12:00:00Z",
+    "updated_at": "2023-01-01T12:00:00Z",
+    "is_personal": false,
+    "avatar_url": null,
+    "prem_status": "pro",
+    "max_project_count": null,
+    "max_member_count": null,
+    "projects": [
+        {
+            "id": "proj-pro-aaaa-bbbb-cccc",
+            "name": "Pro Project 1",
+            "api_key": "agentops_pro_xxxxxxxxxxxxxxxxxxxxxxx",
+            "org_id": "org-pro-xxxx-yyyy-zzzz",
+            "created_at": "2023-01-01T12:00:00Z",
+            "updated_at": "2023-01-01T12:00:00Z"
+        },
+        {
+            "id": "proj-pro-dddd-eeee-ffff",
+            "name": "Pro Project 2",
+            "api_key": "agentops_pro_yyyyyyyyyyyyyyyyyyyyyyy",
+            "org_id": "org-pro-xxxx-yyyy-zzzz",
+            "created_at": "2023-01-02T12:00:00Z",
+            "updated_at": "2023-01-02T12:00:00Z"
+        }
+    ],
+    "members": [
+        {
+            "id": "user-pro-xxxx-yyyy-zzzz",
+            "role": "admin",
+            "email": "prouser@example.com",
+            "full_name": "Pro User Cypress",
+            "avatar_url": "https://example.com/pro-avatar.png"
+        },
+        {
+            "id": "user-pro-aaaa-bbbb-cccc",
+            "role": "member",
+            "email": "member@example.com",
+            "full_name": "Team Member",
+            "avatar_url": "https://example.com/member-avatar.png"
+        }
+    ]
+}

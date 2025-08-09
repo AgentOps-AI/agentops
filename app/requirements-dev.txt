@@ -1,0 +1,4 @@
+# Root development requirements
+# Install using: uv pip install -r requirements-dev.txt
+
+ruff==0.11.2  # Pin to specific version for consistency 

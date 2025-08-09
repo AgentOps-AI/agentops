@@ -1,0 +1,215 @@
+#!/usr/bin/env bash
+
+# Function to get status emoji
+get_status_emoji() {
+    local status=$1
+    case $status in
+        0) echo "✅";;  # Success
+        1) echo "❌";;  # Failure
+        2) echo "⚠️";;  # Warning
+        3) echo "🙈";;  # Skipped
+        *) echo "❓";;  # Unknown
+    esac
+}
+
+# Export the function so it's available to sourced scripts
+export -f get_status_emoji
+
+echo "🔍 Running pre-commit hook..."
+
+# Get the repository root directory
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Function to get staged Python files
+get_python_files() {
+  git diff --cached --name-only --diff-filter=ACMR | grep '\.py$' || echo ""
+}
+
+# Function to get staged JS/TS files
+get_js_ts_files() {
+  git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(js|jsx|ts|tsx)$' || echo ""
+}
+
+# 1. Create Temp Directory
+TEMP_DIR=$(mktemp -d -t precommit-checks-XXXXXXXXXX)
+trap 'rm -rf "$TEMP_DIR"' EXIT
+if [ ! -d "$TEMP_DIR" ]; then echo "❌ Error: Could not create temp dir." >&2; exit 1; fi
+
+# --- 2. Conditionally Run Checks ---
+STAGED_PYTHON_FILES=$(get_python_files)
+STAGED_JS_TS_FILES=$(get_js_ts_files)
+
+if [ ! -z "$STAGED_PYTHON_FILES" ]; then
+    bash "$REPO_ROOT/scripts/git-hooks/check-python-deps.sh" "$TEMP_DIR"
+    bash "$REPO_ROOT/scripts/git-hooks/python-checks.sh" "$TEMP_DIR"
+fi
+
+if [ ! -z "$STAGED_JS_TS_FILES" ]; then
+    bash "$REPO_ROOT/scripts/git-hooks/check-js-deps.sh" "$TEMP_DIR"
+    bash "$REPO_ROOT/scripts/git-hooks/js-checks.sh" "$TEMP_DIR"
+fi
+
+bash "$REPO_ROOT/scripts/git-hooks/check-unstaged.sh" "$TEMP_DIR"
+
+# --- 3. Read and Aggregate Results ---
+declare -A RESULTS
+
+# Function to safely read file content
+read_file_content() {
+    local file_path="$1"
+    local default_value="$2"
+    if [[ -f "$file_path" ]]; then
+        # Use process substitution to handle potential final newline issues
+        read -r -d '' content < <(cat "$file_path" && printf '\0') || true
+        echo "$content"
+    else
+        echo "$default_value"
+    fi
+}
+
+# Read all potential results
+RESULTS[python_deps_status]=$(read_file_content "$TEMP_DIR/python_deps_status.txt" "3") # Default to skipped
+RESULTS[python_deps_message]=$(read_file_content "$TEMP_DIR/python_deps_message.txt" "")
+RESULTS[python_run_status]=$(read_file_content "$TEMP_DIR/python_run_status.txt" "3") # Default to skipped
+RESULTS[python_run_message]=$(read_file_content "$TEMP_DIR/python_run_message.txt" "")
+
+RESULTS[js_deps_status]=$(read_file_content "$TEMP_DIR/js_deps_status.txt" "3") # Default to skipped
+RESULTS[js_deps_message]=$(read_file_content "$TEMP_DIR/js_deps_message.txt" "")
+RESULTS[js_run_status]=$(read_file_content "$TEMP_DIR/js_run_status.txt" "3") # Default to skipped
+RESULTS[js_run_message]=$(read_file_content "$TEMP_DIR/js_run_message.txt" "")
+
+RESULTS[unstaged_status]=$(read_file_content "$TEMP_DIR/unstaged_status.txt" "-1")
+RESULTS[unstaged_message]=$(read_file_content "$TEMP_DIR/unstaged_message.txt" "Error reading message")
+
+# Aggregate language results
+get_combined_status() {
+    local deps_status=$1
+    local run_status=$2
+    # Prioritize errors, then failure, then warnings, then run status, then deps status
+    if [ "$deps_status" = "-1" ] || [ "$run_status" = "-1" ]; then echo "-1"; # File read error
+    elif [ "$deps_status" = "1" ] || [ "$run_status" = "1" ]; then echo "1"; # Failure
+    elif [ "$deps_status" = "2" ]; then echo "2"; # Dep Warning
+    elif [ "$run_status" = "2" ]; then echo "2"; # Run Warning (if any)
+    elif [ "$run_status" = "0" ]; then echo "0"; # Run Success
+    # If checks weren't run (deps=3, run=3), overall is skipped (3)
+    elif [ "$deps_status" = "3" ] && [ "$run_status" = "3" ]; then echo "3";
+    else echo "3"; # Fallback to skipped if something unexpected happened
+    fi
+}
+
+get_combined_message() {
+    local deps_status=$1
+    local run_status=$2
+    local deps_msg=$3
+    local run_msg=$4
+    # Show dep warning message first if it exists
+    if [ "$deps_status" = "2" ]; then echo "$deps_msg";
+    # Then show run message if it exists and wasn't skipped
+    elif [ -n "$run_msg" ] && [ "$run_status" != "3" ]; then echo "$run_msg";
+    # Fallback to dep message if it exists and wasn't skipped
+    elif [ -n "$deps_msg" ] && [ "$deps_status" != "3" ]; then echo "$deps_msg";
+    # If both were skipped, show nothing
+    elif [ "$run_status" = "3" ] && [ "$deps_status" = "3" ]; then echo "";
+    else echo "Check skipped or no message"; # Fallback
+    fi
+}
+
+RESULTS[python_combined_status]=$(get_combined_status ${RESULTS[python_deps_status]} ${RESULTS[python_run_status]})
+RESULTS[python_combined_message]=$(get_combined_message ${RESULTS[python_deps_status]} ${RESULTS[python_run_status]} "${RESULTS[python_deps_message]}" "${RESULTS[python_run_message]}")
+
+RESULTS[js_combined_status]=$(get_combined_status ${RESULTS[js_deps_status]} ${RESULTS[js_run_status]})
+RESULTS[js_combined_message]=$(get_combined_message ${RESULTS[js_deps_status]} ${RESULTS[js_run_status]} "${RESULTS[js_deps_message]}" "${RESULTS[js_run_message]}")
+
+# --- 4. Assemble and Print Summary Table (Reduced) ---
+echo -e "\n📊 Pre-commit Hook Status:"
+
+declare -A data
+
+data[1,0]="Python"
+data[1,1]="$(get_status_emoji ${RESULTS[python_combined_status]})"
+data[1,2]="${RESULTS[python_combined_message]}"
+
+data[2,0]="JS/TS"
+data[2,1]="$(get_status_emoji ${RESULTS[js_combined_status]})"
+data[2,2]="${RESULTS[js_combined_message]}"
+
+data[3,0]="Unstaged"
+data[3,1]="$(get_status_emoji ${RESULTS[unstaged_status]})"
+data[3,2]="${RESULTS[unstaged_message]}"
+
+# Array of generic success/skip messages to potentially hide
+declare -a HIDDEN_MESSAGES=(
+    "Python dependencies (ruff) found."
+    "JS/TS dependencies (prettier, eslint) found."
+    "JS/TS files formatted and linted successfully"
+    "Python files formatted and linted successfully"
+    "No unstaged changes detected"
+    # Keep "No staged ... files found to check." visible
+)
+
+# Function to check if a message should be hidden
+should_hide_message() {
+    local msg="$1"
+    for hidden in "${HIDDEN_MESSAGES[@]}"; do
+        if [[ "$msg" == "$hidden" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Print data rows (now only 3 rows)
+for ((i=1; i<4; i++)); do
+    check_label="${data[$i,0]}"
+    status_emoji="${data[$i,1]}"
+    message="${data[$i,2]}"
+    status_val=-1
+    if [ "$check_label" == "Python" ]; then status_val=${RESULTS[python_combined_status]};
+    elif [ "$check_label" == "JS/TS" ]; then status_val=${RESULTS[js_combined_status]};
+    elif [ "$check_label" == "Unstaged" ]; then status_val=${RESULTS[unstaged_status]};
+    fi
+
+    # Always print the row (removed status != 3 check)
+    # or if it's the Unstaged check which always runs
+    # if [[ "$status_val" != "3" ]] || [[ "$check_label" == "Unstaged" ]]; then
+    echo -n "${check_label}: ${status_emoji}"
+    if [[ "$status_val" != "-1" && -n "$message" ]] && ! should_hide_message "$message"; then
+        echo # Newline before message
+        echo "$message" | sed 's/^/  /'
+    else
+        echo # Just a newline after the status
+    fi
+    # fi # Removed corresponding closing fi
+done
+
+# --- 5. Final Exit Status ---
+FINAL_EXIT_CODE=0
+FAILURE_MESSAGE=""
+
+# Check combined statuses for failure (1) or read error (-1)
+if [ ${RESULTS[python_combined_status]} -eq 1 ] || [ ${RESULTS[js_combined_status]} -eq 1 ] || [ ${RESULTS[unstaged_status]} -eq 1 ]; then
+    FAILURE_MESSAGE="\n❌ Pre-commit hook failed. Please fix the issues reported."
+    FINAL_EXIT_CODE=1
+elif [ ${RESULTS[python_combined_status]} -eq -1 ] || [ ${RESULTS[js_combined_status]} -eq -1 ] || [ ${RESULTS[unstaged_status]} -eq -1 ]; then
+    FAILURE_MESSAGE="\n❌ Pre-commit hook encountered an internal error (missing result files)."
+    FINAL_EXIT_CODE=1
+fi
+
+if [ $FINAL_EXIT_CODE -ne 0 ]; then
+    echo -e "$FAILURE_MESSAGE"
+else
+    # Check for warnings (status 2)
+    HAS_WARNINGS=0
+    if [ ${RESULTS[python_combined_status]} -eq 2 ] || [ ${RESULTS[js_combined_status]} -eq 2 ] || [ ${RESULTS[unstaged_status]} -eq 2 ]; then
+        HAS_WARNINGS=1
+    fi
+
+    if [ $HAS_WARNINGS -eq 1 ]; then
+        echo -e "\n⚠️ Pre-commit hook completed with warnings."
+    else
+        echo -e "\n✅ Pre-commit hook completed successfully."
+    fi
+fi
+
+# Cleanup is handled by trap
+exit $FINAL_EXIT_CODE

@@ -1,0 +1,13 @@
+bundle_analytics/
+.eslintignore
+.prettierignore
+package.json
+package-lock.json 
+**/*.md
+
+cypress/fixtures
+cypress/screenshots/*
+cypress/videos/*
+cypress/downloads/*
+.nyc_output
+coverage/*

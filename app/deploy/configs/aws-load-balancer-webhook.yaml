@@ -1,0 +1,35 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: aws-load-balancer-webhook-tls
+  namespace: kube-system
+spec:
+  dnsNames:
+  - aws-load-balancer-webhook-service.kube-system.svc
+  - aws-load-balancer-webhook-service.kube-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: aws-load-balancer-selfsigned-issuer
+  secretName: aws-load-balancer-webhook-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: aws-load-balancer-selfsigned-issuer
+  namespace: kube-system
+spec:
+  selfSigned: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aws-load-balancer-webhook-service
+  namespace: kube-system
+spec:
+  ports:
+  - name: webhook-server
+    port: 443
+    targetPort: 9443
+  selector:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: aws-load-balancer-controller

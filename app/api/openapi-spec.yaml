@@ -1,0 +1,193 @@
+openapi: 3.0.3
+info:
+  title: AgentOps API
+  description: API for managing sessions, agents, threads, and events.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.agentops.ai
+    description: Production server
+paths:
+  /health:
+    get:
+      summary: Health Check
+      responses:
+        '200':
+          description: Server Up
+          content:
+            application/json:
+              schema:
+                type: string
+  /sessions:
+    post:
+      summary: Create or Update a Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Session'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /agents:
+    post:
+      summary: Create or Update an Agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Agent'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /threads:
+    post:
+      summary: Create or Update a Thread
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Thread'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /events:
+    post:
+      summary: Create or Update an Event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    AgentopsAuth:
+      type: apiKey
+      in: header
+      name: X-Agentops-Auth
+  schemas:
+    Session:
+      type: object
+      properties:
+        session:
+          type: object
+          properties:
+            session_id:
+              type: string
+            init_timestamp:
+              type: string
+            end_timestamp:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            end_state:
+              type: string
+            end_state_reason:
+              type: string
+            video:
+              type: string
+            host_env:
+              type: string
+    Agent:
+      type: object
+      properties:
+        agent:
+          type: object
+          properties:
+            id:
+              type: string
+            session_id:
+              type: string
+            name:
+              type: string
+            logs:
+              type: array
+              items:
+                type: string
+    Thread:
+      type: object
+      properties:
+        threads:
+          type: object
+          properties:
+            id:
+              type: string
+            session_id:
+              type: string
+            agent_id:
+              type: string
+    Event:
+      type: object
+      properties:
+        session_id:
+          type: string
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              event_type:
+                type: string
+              init_timestamp:
+                type: string
+              end_timestamp:
+                type: string
+              # Additional properties based on event type
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+security:
+  - AgentopsAuth: []

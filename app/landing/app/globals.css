@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 25, 18, 34;
+  --background-start-rgb: 244, 245, 255;
+  --background-end-rgb: 244, 245, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: url('/bg-pattern-8-color.png') repeat;
+  background-size: 3px 3px;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+.font-jetbrains {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.language-python {
+  font-family: 'JetBrains Mono', monospace;
+  text-wrap: wrap !important;
+}

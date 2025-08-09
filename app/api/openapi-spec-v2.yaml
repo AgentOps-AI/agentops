@@ -1,0 +1,318 @@
+openapi: 3.0.3
+info:
+  title: AgentOps API
+  description: API for managing sessions, agents, threads, and events.
+  version: 2.0.0
+servers:
+  - url: https://api.agentops.ai
+    description: Production server
+paths:
+  /reauthorize_jwt:
+    post:
+      summary: Reauthorize a JWT token
+      operationId: reauthorizeJWT
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  jwt:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: string
+  /create_session:
+    post:
+      summary: Create a new session
+      operationId: createSession
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                init_timestamp:
+                  type: string
+                  format: date-time
+                end_timestamp:
+                  type: string
+                  format: date-time
+                end_state:
+                  type: string
+                  nullable: true
+                end_state_reason:
+                  type: string
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                host_env:
+                  type: object
+                  nullable: true
+              required:
+                - session_id
+      responses:
+        '200':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  jwt:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: string
+  /update_session:
+    post:
+      summary: Update an existing session
+      operationId: updateSession
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                init_timestamp:
+                  type: string
+                  format: date-time
+                  nullable: true
+                end_timestamp:
+                  type: string
+                  format: date-time
+                  nullable: true
+                end_state:
+                  type: string
+                  nullable: true
+                end_state_reason:
+                  type: string
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                host_env:
+                  type: object
+                  nullable: true
+              required:
+                - session_id
+      responses:
+        '200':
+          description: Session updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  token_cost:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: string
+  /create_agent:
+    post:
+      summary: Create a new agent
+      operationId: createAgent
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: string
+  /create_thread:
+    post:
+      summary: Create a new thread for an existing session
+      operationId: createThread
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Thread created successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: string
+  /create_events:
+    post:
+      summary: Create multiple event types in a session
+      operationId: createEvents
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Events created successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: string
+  /update_events:
+    post:
+      summary: Update multiple events in a session
+      operationId: updateEvents
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Events updated successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: string
+  /developer_errors:
+    post:
+      summary: Post a developer error
+      operationId: postDeveloperError
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Developer error posted successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Agentops-Api-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

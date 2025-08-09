@@ -1,0 +1,66 @@
+{#
+Auth Callback Handler
+
+Supabase redirects to this page after authentication.
+
+We process the parameters in JavaScript because they are only present on the URL
+hash, which prevents it from ever being leaked in logs and to proxies, but means
+that it is not accessible by the server.
+
+CSP is enforced as strictly as possible by passing a random nonce to the body and
+via the `Content-Security-Policy` header that only allows the script inside this
+template, as marked by the nonce, to run. No external scripts are allowed.
+(Note that if there is ever a need to load external content into this page, the CSP
+policies we have in place will need to be re-evaluated.)
+
+`window.location.hash` must *always* be called when this page is loaded to prevent
+sensitive data in the URL from being stored in the browser history.
+
+We also set the `Referrer-Policy` header to `no-referrer` to prevent the
+browser from sending the URL of this page to the next page, just in case.
+
+Given these constraints, the only way to leak sensitive data is if the user
+has a malicious browser extension that reads the URL and sends it to an attacker,
+or if the user manually copies and pastes the URL.
+
+#}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logging in...</title>
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+</head>
+
+<body>
+  <script nonce="{{ nonce }}">
+    (async () => {
+      if (location.hash) {
+        try {
+          const response = await fetch('{{ auth_session_url }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: location.hash.slice(1),
+          });
+
+          if (!response.ok) {
+            console.error('Failed to create session:', response.status);
+            // Redirect to signin with error message
+            window.location.replace('/signin?error=session_creation_failed');
+            return;
+          }
+        } catch (error) {
+          console.error('Error creating session:', error);
+          window.location.replace('/signin?error=session_creation_error');
+          return;
+        }
+      }
+
+      window.location.replace('{{ dashboard_url }}');
+    })();
+  </script>
+</body>
+
+</html>

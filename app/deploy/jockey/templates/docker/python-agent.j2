@@ -1,0 +1,43 @@
+# Dockerfile
+FROM {{ base_image | default('python:3.12-slim-bookworm') }}
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
+WORKDIR /app
+
+RUN apt update && apt install -y git gcc build-essential tree
+RUN apt clean
+
+# Copy requirements first to leverage Docker cache
+{% if repository_name %}
+COPY {{ repository_name }}/{{ requirements_file | default('pyproject.toml') }} .
+{% else %}
+COPY {{ requirements_file | default('pyproject.toml') }} .
+{% endif %}
+RUN pip install --no-cache-dir uv
+RUN pip install psutil flask
+
+{% if install_agentstack %}
+RUN #pip install agentstack
+RUN pip install git+https://github.com/AgentOps-AI/AgentStack.git@{{ agentstack_branch | default('deploy-command') }}
+RUN mkdir src
+RUN cp /usr/local/lib/python3.12/site-packages/agentstack/serve/serve.py ./src
+
+RUN pip uninstall -y agentstack
+{% endif %}
+
+RUN uv venv
+RUN source .venv/bin/activate
+RUN uv pip install --requirements {{ requirements_file | default('pyproject.toml') }}
+
+# Copy the rest of the application
+{% if repository_name %}
+COPY {{ repository_name }}/ .
+{% else %}
+COPY . .
+{% endif %}
+
+# Expose the port the app runs on
+EXPOSE {{ port | default(6969) }}
+
+# Command to run the application
+CMD {{ run_command | default('["/app/.venv/bin/agentstack", "run"]') | tojson }}
