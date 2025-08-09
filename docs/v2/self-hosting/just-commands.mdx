@@ -1,0 +1,467 @@
+---
+title: "Just Commands Reference"
+description: "Complete reference for all available Just commands in AgentOps development"
+---
+
+# Just Commands Reference
+
+[Just](https://github.com/casey/just) is a command runner that provides convenient shortcuts for common development tasks. The AgentOps project includes a comprehensive `justfile` with commands for setup, development, testing, and deployment.
+
+## Installation
+
+First, install Just if you haven't already:
+
+```bash
+# macOS
+brew install just
+
+# Linux (using cargo)
+cargo install just
+
+# Or download from GitHub releases
+curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/bin
+```
+
+## Quick Reference
+
+View all available commands:
+```bash
+just
+# or
+just --list
+```
+
+## Setup Commands
+
+### `just setup`
+Complete development environment setup - runs the full initialization process.
+
+```bash
+just setup
+```
+
+**What it does:**
+- Copies environment files (`.env.example` → `.env`, etc.)
+- Installs all dependencies (root, API, dashboard)
+- Sets up development environment
+
+**Use when:**
+- First time setting up the project
+- After a fresh clone
+- When you want to reset your development environment
+
+### `just install`
+Install all project dependencies across all services.
+
+```bash
+just install
+```
+
+**What it does:**
+- Installs root Node.js dependencies (`bun install`)
+- Installs Python development dependencies (`uv pip install -r requirements-dev.txt`)
+- Installs API dependencies (`cd api && uv pip install -e .`)
+- Installs dashboard dependencies (`cd dashboard && bun install`)
+
+**Use when:**
+- After pulling changes that modify dependencies
+- When `package.json`, `pyproject.toml`, or requirements files change
+
+## API Development Commands
+
+### `just api-native`
+Run the API server natively (fastest for development).
+
+```bash
+just api-native
+```
+
+**What it does:**
+- Starts the FastAPI server using `uv run python run.py`
+- Runs on `http://localhost:8000`
+- Provides fastest reload times for development
+
+**Use when:**
+- Active API development
+- You need fastest iteration cycles
+- Debugging API code
+
+### `just api-build`
+Build the API Docker image.
+
+```bash
+just api-build
+
+# With Stripe support
+just api-build stripe
+```
+
+**What it does:**
+- Builds Docker image for the API service
+- Uses `./scripts/just-api-build.sh`
+- Optional Stripe integration support
+
+**Use when:**
+- Preparing for Docker-based deployment
+- Testing Docker build process
+- Before running `just api-run`
+
+### `just api-run`
+Run the API server in a Docker container.
+
+```bash
+just api-run
+
+# With Stripe support
+just api-run stripe
+```
+
+**What it does:**
+- Runs the API service using Docker
+- Uses `./scripts/just-api-run.sh`
+- Includes all necessary environment variables
+- Optional Stripe integration
+
+**Use when:**
+- Testing Docker deployment locally
+- You need isolated environment
+- Production-like testing
+
+### `just api-test`
+Run API tests using pytest.
+
+```bash
+just api-test
+```
+
+**What it does:**
+- Changes to `api/` directory
+- Runs `pytest` with all configured tests
+- Includes unit and integration tests
+
+**Use when:**
+- Before committing API changes
+- Validating API functionality
+- Continuous integration
+
+## Frontend Development Commands
+
+### `just fe-run`
+Run the dashboard development server.
+
+```bash
+just fe-run
+```
+
+**What it does:**
+- Changes to `dashboard/` directory
+- Installs dependencies (`bun install`)
+- Starts development server (`bun run dev`)
+- Available at `http://localhost:3000`
+
+**Use when:**
+- Active dashboard development
+- Testing frontend changes
+- Full-stack development
+
+### `just fe-build`
+Build the dashboard for production.
+
+```bash
+just fe-build
+```
+
+**What it does:**
+- Changes to `dashboard/` directory
+- Builds optimized production bundle (`bun run build`)
+- Generates static assets
+
+**Use when:**
+- Preparing for production deployment
+- Testing production build locally
+- Performance optimization
+
+### `just fe-test`
+Run frontend tests.
+
+```bash
+just fe-test
+```
+
+**What it does:**
+- Changes to `dashboard/` directory
+- Runs test suite (`bun test`)
+- Includes unit and component tests
+
+**Use when:**
+- Before committing frontend changes
+- Validating UI functionality
+- Continuous integration
+
+## Code Quality Commands
+
+### `just lint`
+Run all linting checks across the project.
+
+```bash
+just lint
+```
+
+**What it does:**
+- Runs `bun run lint` from project root
+- Checks JavaScript/TypeScript files with ESLint
+- Checks Python files with Ruff
+- Validates code style and quality
+
+**Use when:**
+- Before committing changes
+- Code review preparation
+- Maintaining code quality
+
+### `just format`
+Format all code using project standards.
+
+```bash
+just format
+```
+
+**What it does:**
+- Runs `ruff format` for Python files
+- Applies consistent code formatting
+- Fixes automatically correctable issues
+
+**Use when:**
+- Before committing changes
+- Standardizing code style
+- Preparing for code review
+
+### `just test`
+Run all tests across the project.
+
+```bash
+just test
+```
+
+**What it does:**
+- Runs `just api-test` (API tests)
+- Runs `just fe-test` (frontend tests)
+- Comprehensive test suite execution
+
+**Use when:**
+- Before major releases
+- Validating entire system
+- Continuous integration
+
+## Docker Management Commands
+
+### `just up`
+Start all services with Docker Compose.
+
+```bash
+just up
+```
+
+**What it does:**
+- Runs `docker-compose up -d`
+- Starts all defined services in detached mode
+- Creates networks and volumes as needed
+
+**Use when:**
+- Starting development environment
+- Testing full system integration
+- Docker-based development
+
+### `just down`
+Stop all Docker services.
+
+```bash
+just down
+```
+
+**What it does:**
+- Runs `docker-compose down`
+- Stops and removes containers
+- Preserves volumes and networks
+
+**Use when:**
+- Stopping development environment
+- Switching between development modes
+- Cleaning up running services
+
+### `just logs`
+View Docker logs for all services.
+
+```bash
+just logs
+```
+
+**What it does:**
+- Runs `docker-compose logs -f`
+- Shows real-time logs from all services
+- Useful for debugging and monitoring
+
+**Use when:**
+- Debugging service issues
+- Monitoring application behavior
+- Troubleshooting problems
+
+### `just clean`
+Clean up Docker resources.
+
+```bash
+just clean
+```
+
+**What it does:**
+- Runs `docker-compose down -v` (stops services and removes volumes)
+- Runs `docker system prune -f` (removes unused Docker resources)
+- Frees up disk space
+
+**Use when:**
+- Cleaning up development environment
+- Freeing disk space
+- Resolving Docker issues
+- Fresh start needed
+
+## Command Combinations and Workflows
+
+### Full Development Setup
+```bash
+# First time setup
+just setup
+
+# Start development
+just api-native     # Terminal 1
+just fe-run         # Terminal 2
+```
+
+### Docker Development
+```bash
+# Setup and start with Docker
+just setup
+just up
+just logs
+```
+
+### Testing Workflow
+```bash
+# Run quality checks before committing
+just lint
+just format
+just test
+```
+
+### Production Preparation
+```bash
+# Build and test production assets
+just api-build
+just fe-build
+just test
+```
+
+## Environment-Specific Usage
+
+### Development Environment
+```bash
+# Fast iteration cycle
+just api-native    # Native API for speed
+just fe-run        # Frontend dev server
+```
+
+### Integration Testing
+```bash
+# Full Docker environment
+just up            # All services in Docker
+just test          # Run full test suite
+```
+
+### Production Testing
+```bash
+# Production-like environment
+just api-build     # Build production API image
+just fe-build      # Build production frontend
+just up            # Run with Docker
+```
+
+## Troubleshooting Just Commands
+
+### Command Not Found
+```bash
+# Verify Just is installed
+just --version
+
+# Install if missing
+brew install just  # macOS
+```
+
+### Permission Issues
+```bash
+# Make sure justfile is executable
+chmod +x justfile
+
+# Check file permissions
+ls -la justfile
+```
+
+### Environment Issues
+```bash
+# Verify environment files exist
+ls -la .env api/.env dashboard/.env.local
+
+# Run setup to create missing files
+just setup
+```
+
+### Docker Issues
+```bash
+# Clean Docker environment
+just clean
+
+# Restart Docker service
+sudo systemctl restart docker  # Linux
+```
+
+## Custom Commands and Extensions
+
+You can extend the `justfile` with your own commands. Add to the bottom of the file:
+
+```bash
+# Custom command example
+my-command:
+    @echo "Running my custom command"
+    # Your commands here
+
+# Command with parameters
+deploy env:
+    @echo "Deploying to {{env}}"
+    # Deployment commands
+```
+
+Use custom commands:
+```bash
+just my-command
+just deploy staging
+```
+
+## Best Practices
+
+### Daily Development
+1. `just api-native` for API development (fastest)
+2. `just fe-run` for frontend development
+3. `just lint && just test` before commits
+
+### Integration Testing
+1. `just up` for full environment
+2. `just logs` for monitoring
+3. `just clean` when issues arise
+
+### Production Preparation
+1. `just api-build && just fe-build` for production builds
+2. `just test` for validation
+3. `just up` for final testing
+
+## Related Documentation
+
+- [Backend Setup Guide](/v2/self-hosting/backend-setup) - Complete setup instructions
+- [Docker Guide](/v2/self-hosting/docker-guide) - Docker-specific commands
+- [Development Workflow](/v2/self-hosting/development) - Development best practices

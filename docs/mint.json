@@ -180,6 +180,17 @@
       "version": "v2"
     },
     {
+      "group": "Self-Hosting",
+      "pages": [
+        "v2/self-hosting/overview",
+        "v2/self-hosting/backend-setup",
+        "v2/self-hosting/docker-guide",
+        "v2/self-hosting/native-development",
+        "v2/self-hosting/just-commands"
+      ],
+      "version": "v2"
+    },
+    {
       "group": "Other Info",
       "pages": [
         "v2/concepts/host-env"

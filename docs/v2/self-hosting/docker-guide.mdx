@@ -1,0 +1,427 @@
+---
+title: "Docker Guide"
+description: "Complete guide for running AgentOps with Docker and Docker Compose"
+---
+
+# Docker Guide
+
+This guide covers how to run AgentOps backend services using Docker and Docker Compose. This is the recommended approach for both development and production deployments.
+
+## Overview
+
+The AgentOps Docker setup includes:
+
+- **API Server** - FastAPI backend service
+- **Dashboard** - Next.js frontend application  
+- **OpenTelemetry Collector** - Observability and trace collection
+- **External Services** - Supabase, ClickHouse (configured separately)
+
+## Docker Compose Configuration
+
+The main `compose.yaml` file in the `/app` directory defines the service architecture:
+
+```yaml
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    environment:
+      # Database connections
+      SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      # ... other environment variables
+    network_mode: 'host'
+    volumes:
+      - ./api:/app/api
+
+  dashboard:
+    profiles: ['dashboard']
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      # Frontend configuration
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # ... other environment variables
+    network_mode: 'host'
+    depends_on:
+      - api
+    volumes:
+      - ./dashboard:/app/
+```
+
+## Quick Start with Docker
+
+### 1. Prerequisites
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+- Git
+
+### 2. Clone and Setup
+```bash
+git clone https://github.com/AgentOps-AI/AgentOps.Next.git
+cd AgentOps.Next/app
+
+# Copy environment files
+cp .env.example .env
+cp api/.env.example api/.env
+cp dashboard/.env.example dashboard/.env.local
+```
+
+### 3. Configure Environment Variables
+Update your `.env` files with your external service credentials:
+
+```env
+# .env (root)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+CLICKHOUSE_HOST=your-clickhouse-host
+CLICKHOUSE_PASSWORD=your-password
+# ... other variables
+```
+
+### 4. Start Services
+```bash
+# Start all services
+docker-compose up -d
+
+# Or start with dashboard profile
+docker-compose --profile dashboard up -d
+
+# View logs
+docker-compose logs -f
+```
+
+### 5. Verify Services
+- **API Health**: http://localhost:8000/health
+- **API Docs**: http://localhost:8000/redoc
+- **Dashboard**: http://localhost:3000
+
+## Docker Commands Reference
+
+### Basic Operations
+
+```bash
+# Start all services in detached mode
+docker-compose up -d
+
+# Start services with dashboard
+docker-compose --profile dashboard up -d
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+
+# View service status
+docker-compose ps
+
+# View logs for all services
+docker-compose logs -f
+
+# View logs for specific service
+docker-compose logs -f api
+docker-compose logs -f dashboard
+```
+
+### Development Commands
+
+```bash
+# Rebuild services after code changes
+docker-compose build
+
+# Rebuild specific service
+docker-compose build api
+docker-compose build dashboard
+
+# Force recreate containers
+docker-compose up -d --force-recreate
+
+# Scale services (if needed)
+docker-compose up -d --scale api=2
+```
+
+### Debugging Commands
+
+```bash
+# Execute commands in running containers
+docker-compose exec api bash
+docker-compose exec dashboard sh
+
+# View container resource usage
+docker stats
+
+# Inspect service configuration
+docker-compose config
+
+# View service networks
+docker network ls
+docker network inspect app_default
+```
+
+## Using Just Commands
+
+The project includes a `justfile` with convenient Docker commands:
+
+```bash
+# Start all services
+just up
+
+# Stop all services  
+just down
+
+# View logs
+just logs
+
+# Clean up Docker resources
+just clean
+
+# Build and run API
+just api-build
+just api-run
+```
+
+## Service-Specific Configuration
+
+### API Service
+
+The API service runs a FastAPI application with the following configuration:
+
+**Dockerfile highlights:**
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["python", "run.py"]
+```
+
+**Key environment variables:**
+- `SUPABASE_URL`, `SUPABASE_KEY` - Database connection
+- `CLICKHOUSE_HOST`, `CLICKHOUSE_PASSWORD` - Analytics database
+- `LOGGING_LEVEL` - Log verbosity (DEBUG, INFO, WARNING, ERROR)
+- `SENTRY_DSN` - Error tracking
+
+### Dashboard Service
+
+The Dashboard service runs a Next.js application:
+
+**Dockerfile highlights:**
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+**Key environment variables:**
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Frontend auth
+- `NEXT_PUBLIC_APP_URL` - API server URL
+- `NEXT_PUBLIC_ENVIRONMENT_TYPE` - Environment (development/production)
+
+## OpenTelemetry Collector
+
+The OpenTelemetry Collector is included via a separate compose file:
+
+```yaml
+# opentelemetry-collector/compose.yaml
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics
+```
+
+## Production Configuration
+
+### Environment Variables for Production
+
+```env
+# Security
+DEBUG=false
+LOGGING_LEVEL=WARNING
+JWT_SECRET_KEY=your-secure-jwt-secret
+
+# URLs
+PROTOCOL=https
+API_DOMAIN=api.yourdomain.com
+APP_DOMAIN=yourdomain.com
+
+# Database
+CLICKHOUSE_SECURE=true
+SUPABASE_URL=https://your-prod-project.supabase.co
+
+# Monitoring
+SENTRY_ENVIRONMENT=production
+NEXT_PUBLIC_ENVIRONMENT_TYPE=production
+```
+
+### Production Docker Compose
+
+For production, you may want to:
+
+1. **Use specific image tags** instead of building locally
+2. **Configure resource limits**
+3. **Set up health checks**
+4. **Use external networks**
+
+Example production overrides (`compose.prod.yaml`):
+
+```yaml
+services:
+  api:
+    image: agentops/api:v1.0.0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  dashboard:
+    image: agentops/dashboard:v1.0.0
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+```
+
+Run with production config:
+```bash
+docker-compose -f compose.yaml -f compose.prod.yaml up -d
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Services won't start:**
+```bash
+# Check logs for errors
+docker-compose logs api
+docker-compose logs dashboard
+
+# Verify environment variables
+docker-compose config
+```
+
+**Port conflicts:**
+```bash
+# Check what's using ports
+lsof -i :3000
+lsof -i :8000
+
+# Use different ports
+docker-compose up -d -p 3001:3000 -p 8001:8000
+```
+
+**Database connection issues:**
+- Verify external service credentials in `.env` files
+- Check network connectivity from containers
+- Ensure services are accessible from Docker network
+
+**Build failures:**
+```bash
+# Clean build cache
+docker system prune -f
+docker-compose build --no-cache
+
+# Check Dockerfile syntax
+docker-compose config
+```
+
+### Performance Optimization
+
+**Resource monitoring:**
+```bash
+# Monitor container resources
+docker stats
+
+# View container processes
+docker-compose exec api top
+```
+
+**Volume optimization:**
+```bash
+# Use named volumes for better performance
+volumes:
+  - api_data:/app/data
+  - dashboard_cache:/app/.next
+```
+
+**Network optimization:**
+```bash
+# Create custom network for better isolation
+networks:
+  agentops:
+    driver: bridge
+```
+
+## Maintenance
+
+### Regular Maintenance Tasks
+
+```bash
+# Update images
+docker-compose pull
+docker-compose up -d
+
+# Clean up unused resources
+docker system prune -f
+
+# Backup volumes
+docker run --rm -v app_api_data:/data -v $(pwd):/backup alpine tar czf /backup/api_data.tar.gz -C /data .
+
+# View disk usage
+docker system df
+```
+
+### Monitoring
+
+```bash
+# Service health checks
+curl http://localhost:8000/health
+curl http://localhost:3000/api/health
+
+# Container logs
+docker-compose logs --tail=100 -f api
+
+# Resource usage
+docker stats --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+```
+
+## Next Steps
+
+- Set up [monitoring and observability](/v2/self-hosting/monitoring)
+- Configure [production deployment](/v2/self-hosting/deployment)
+- Set up [backup and recovery](/v2/self-hosting/backup)
+- Configure [SSL/TLS certificates](/v2/self-hosting/ssl)

@@ -1,0 +1,294 @@
+---
+title: "Backend Setup Guide"
+description: "Complete guide for setting up and running AgentOps backend services"
+---
+
+# Backend Setup Guide
+
+This guide covers how to set up and run the AgentOps backend services from the `/app` directory. The backend includes the API server, dashboard, database services, and observability infrastructure.
+
+## Architecture Overview
+
+The AgentOps backend consists of several interconnected services:
+
+- **API Server** (`api/`) - FastAPI backend with authentication, billing, and data processing
+- **Dashboard** (`dashboard/`) - Next.js frontend for visualization and management
+- **Supabase** - Authentication and primary PostgreSQL database
+- **ClickHouse** - Analytics database for traces and metrics
+- **OpenTelemetry Collector** - Observability and trace collection
+- **Redis** (optional) - Caching and session storage
+
+## Prerequisites
+
+Before setting up the backend, ensure you have the following installed:
+
+### Required Software
+- **Node.js** 18+ ([Download](https://nodejs.org/))
+- **Python** 3.12+ ([Download](https://www.python.org/downloads/))
+- **Docker & Docker Compose** ([Download](https://www.docker.com/get-started))
+- **Bun** (recommended) or npm ([Install Bun](https://bun.sh/))
+- **uv** (recommended for Python) ([Install uv](https://github.com/astral-sh/uv))
+- **Just** (optional, for convenience commands) ([Install Just](https://github.com/casey/just))
+
+### External Services
+You'll need accounts and setup for these external services:
+
+- **Supabase** - Database and authentication ([supabase.com](https://supabase.com))
+- **ClickHouse Cloud** - Analytics database ([clickhouse.com/cloud](https://clickhouse.com/cloud))
+- **Stripe** (optional) - Payment processing ([stripe.com](https://stripe.com))
+
+## Quick Start
+
+### 1. Clone and Navigate
+```bash
+git clone https://github.com/AgentOps-AI/AgentOps.Next.git
+cd AgentOps.Next/app
+```
+
+### 2. Environment Setup
+Copy and configure environment files:
+
+```bash
+# Root environment (for Docker Compose)
+cp .env.example .env
+
+# API environment
+cp api/.env.example api/.env
+
+# Dashboard environment  
+cp dashboard/.env.example dashboard/.env.local
+```
+
+### 3. Install Dependencies
+```bash
+# Using Just (recommended)
+just install
+
+# Or manually:
+bun install                              # Root dependencies
+uv pip install -r requirements-dev.txt  # Python dev tools
+cd api && uv pip install -e . && cd ..  # API dependencies
+cd dashboard && bun install && cd ..    # Dashboard dependencies
+```
+
+### 4. Configure External Services
+Update your `.env` files with your service credentials. See [External Services Configuration](#external-services-configuration) below.
+
+### 5. Start Services
+```bash
+# Option 1: Using Docker Compose (recommended)
+docker-compose up -d
+
+# Option 2: Using Just commands
+just api-run    # Start API server
+just fe-run     # Start dashboard (in another terminal)
+
+# Option 3: Native development
+cd api && uv run python run.py          # API server
+cd dashboard && bun dev                  # Dashboard (in another terminal)
+```
+
+### 6. Verify Setup
+- **Dashboard**: http://localhost:3000
+- **API Documentation**: http://localhost:8000/redoc
+- **API Health Check**: http://localhost:8000/health
+
+## External Services Configuration
+
+### Supabase Setup
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Settings → API to get your keys
+3. Run the database migrations:
+   ```bash
+   cd supabase
+   npx supabase db push
+   ```
+4. Update your `.env` files with:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   SUPABASE_PROJECT_ID=your-project-id
+   ```
+
+### ClickHouse Setup
+1. Sign up for [ClickHouse Cloud](https://clickhouse.com/cloud) or self-host
+2. Create a database and get connection details
+3. Run the ClickHouse migrations:
+   ```bash
+   # Apply schema from clickhouse/schema_dump.sql
+   ```
+4. Update your `.env` files with:
+   ```env
+   CLICKHOUSE_HOST=your-host.clickhouse.cloud
+   CLICKHOUSE_PORT=8123
+   CLICKHOUSE_USER=default
+   CLICKHOUSE_PASSWORD=your-password
+   CLICKHOUSE_DATABASE=your-database
+   CLICKHOUSE_SECURE=true
+   ```
+
+### Stripe Setup (Optional)
+For billing functionality:
+1. Create a [Stripe](https://stripe.com) account
+2. Get your API keys from the dashboard
+3. Update your `.env` files with:
+   ```env
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+
+### Additional Services (Optional)
+- **Sentry**: Error monitoring
+  ```env
+  SENTRY_DSN=https://your-dsn@sentry.io/project-id
+  SENTRY_ENVIRONMENT=development
+  ```
+- **PostHog**: Analytics
+  ```env
+  NEXT_PUBLIC_POSTHOG_KEY=phc_your-key
+  NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+  ```
+
+## Development Workflow
+
+### Using Just Commands (Recommended)
+
+The `justfile` provides convenient commands for development:
+
+```bash
+# Setup and installation
+just setup              # Complete development setup
+just install             # Install all dependencies
+
+# API Development
+just api-native          # Run API natively (fastest)
+just api-build           # Build API Docker image
+just api-run             # Run API in Docker
+just api-test            # Run API tests
+
+# Frontend Development  
+just fe-run              # Run dashboard development server
+just fe-build            # Build dashboard for production
+just fe-test             # Run frontend tests
+
+# Code Quality
+just lint                # Run all linting checks
+just format              # Format all code
+just test                # Run all tests
+
+# Docker Management
+just up                  # Start all services
+just down                # Stop all services
+just logs                # View service logs
+just clean               # Clean up Docker resources
+```
+
+### Manual Development
+
+If you prefer running services manually:
+
+```bash
+# Start API server
+cd api && uv run python run.py
+
+# Start dashboard (in another terminal)
+cd dashboard && bun dev
+
+# Start landing page (in another terminal)  
+cd landing && bun dev
+```
+
+## Service Configuration
+
+### API Server Configuration
+Key environment variables for the API server (`api/.env`):
+
+```env
+# Database connections
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+CLICKHOUSE_HOST=your-clickhouse-host
+
+# Application settings
+APP_URL=http://localhost:3000
+LOGGING_LEVEL=INFO
+JWT_SECRET_KEY=your-jwt-secret
+
+# External integrations
+SENTRY_DSN=your-sentry-dsn
+```
+
+### Dashboard Configuration
+Key environment variables for the dashboard (`dashboard/.env.local`):
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Application URLs
+NEXT_PUBLIC_APP_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# Features
+NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+NEXT_PUBLIC_PLAYGROUND=true
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Port conflicts:**
+```bash
+# Check what's running on ports 3000 and 8000
+lsof -i :3000
+lsof -i :8000
+```
+
+**Database connection issues:**
+- Verify your Supabase and ClickHouse credentials
+- Check network connectivity to external services
+- Ensure database migrations have been applied
+
+**Docker issues:**
+```bash
+# Reset Docker environment
+just clean
+docker system prune -f
+just up
+```
+
+**Dependency issues:**
+```bash
+# Clean and reinstall
+rm -rf node_modules api/.venv dashboard/node_modules
+just install
+```
+
+### Logs and Debugging
+
+```bash
+# View service logs
+just logs
+
+# View specific service logs
+docker-compose logs api
+docker-compose logs dashboard
+
+# Run with debug logging
+LOGGING_LEVEL=DEBUG just api-run
+```
+
+## Next Steps
+
+Once your backend is running:
+
+1. **Create an account** at http://localhost:3000
+2. **Generate an API key** in the dashboard
+3. **Install the AgentOps SDK** and start tracking your AI agents
+4. **Explore the dashboard** to view traces and analytics
+
+For production deployment, see our [Deployment Guide](/v2/self-hosting/deployment).
