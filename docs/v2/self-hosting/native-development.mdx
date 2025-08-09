@@ -1,0 +1,532 @@
+---
+title: "Native Development Guide"
+description: "Complete guide for running AgentOps backend services natively without Docker"
+---
+
+# Native Development Guide
+
+This guide covers how to run AgentOps backend services natively on your local machine without Docker. Native development provides the fastest iteration cycles and is ideal for active development work.
+
+## Overview
+
+Running natively means:
+- **Faster startup times** - No container overhead
+- **Direct file system access** - Immediate code changes
+- **Native debugging** - Use your preferred IDE debugger
+- **Resource efficiency** - Lower memory and CPU usage
+
+## Prerequisites
+
+### System Requirements
+- **Python 3.12+** with pip or uv
+- **Node.js 18+** with npm, yarn, or bun
+- **Git** for version control
+- **Just** (optional) for convenience commands
+
+### External Services
+You'll need these external services configured:
+- **Supabase** - Database and authentication
+- **ClickHouse** - Analytics database
+- **Stripe** (optional) - Payment processing
+
+## Quick Start
+
+### 1. Clone and Setup
+```bash
+git clone https://github.com/AgentOps-AI/AgentOps.Next.git
+cd AgentOps.Next/app
+
+# Copy environment files
+cp .env.example .env
+cp api/.env.example api/.env
+cp dashboard/.env.example dashboard/.env.local
+```
+
+### 2. Install Dependencies
+
+#### Root Dependencies
+```bash
+# Install shared tools (linting, formatting)
+bun install
+
+# Install Python development tools
+uv pip install -r requirements-dev.txt
+```
+
+#### API Dependencies
+```bash
+cd api
+
+# Using uv (recommended)
+uv pip install -e .
+
+# Or using pip
+pip install -e .
+
+cd ..
+```
+
+#### Dashboard Dependencies
+```bash
+cd dashboard
+
+# Using bun (recommended)
+bun install
+
+# Or using npm
+npm install
+
+cd ..
+```
+
+### 3. Configure Environment Variables
+Update your environment files with your service credentials. See [External Services Setup](#external-services-setup) below.
+
+### 4. Start Services
+```bash
+# Terminal 1: API Server
+cd api && uv run python run.py
+
+# Terminal 2: Dashboard (in a new terminal)
+cd dashboard && bun dev
+
+# Terminal 3: Landing Page (optional, in a new terminal)
+cd landing && bun dev
+```
+
+### 5. Verify Setup
+- **API Health**: http://localhost:8000/health
+- **API Documentation**: http://localhost:8000/redoc
+- **Dashboard**: http://localhost:3000
+- **Landing Page**: http://localhost:3001
+
+## External Services Setup
+
+### Supabase Configuration
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Get your project credentials from Settings → API
+3. Set up the database schema:
+   ```bash
+   cd supabase
+   npx supabase db push
+   ```
+4. Update `api/.env` and `dashboard/.env.local`:
+   ```env
+   # API environment
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_KEY=your-service-role-key
+   
+   # Dashboard environment
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+### ClickHouse Configuration
+1. Sign up for [ClickHouse Cloud](https://clickhouse.com/cloud) or self-host
+2. Create a database and get connection details
+3. Apply the schema:
+   ```bash
+   # Use the schema from clickhouse/schema_dump.sql
+   clickhouse-client --host your-host --query "$(cat clickhouse/schema_dump.sql)"
+   ```
+4. Update `api/.env`:
+   ```env
+   CLICKHOUSE_HOST=your-host.clickhouse.cloud
+   CLICKHOUSE_PORT=8123
+   CLICKHOUSE_USER=default
+   CLICKHOUSE_PASSWORD=your-password
+   CLICKHOUSE_DATABASE=your-database
+   CLICKHOUSE_SECURE=true
+   ```
+
+## API Server Setup
+
+### Environment Configuration
+Key variables in `api/.env`:
+
+```env
+# Database Connections
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+CLICKHOUSE_HOST=your-clickhouse-host
+CLICKHOUSE_PASSWORD=your-password
+
+# Application Settings
+APP_URL=http://localhost:3000
+LOGGING_LEVEL=INFO
+JWT_SECRET_KEY=your-jwt-secret-key
+
+# Optional Integrations
+SENTRY_DSN=your-sentry-dsn
+SENTRY_ENVIRONMENT=development
+```
+
+### Running the API Server
+
+#### Using Just (Recommended)
+```bash
+just api-native
+```
+
+#### Manual Command
+```bash
+cd api
+uv run python run.py
+```
+
+#### Alternative Methods
+```bash
+# Using pip and python directly
+cd api
+pip install -e .
+python run.py
+
+# Using uvicorn directly
+cd api
+uvicorn agentops.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### API Development Features
+- **Auto-reload** on file changes
+- **Interactive API docs** at http://localhost:8000/docs
+- **ReDoc documentation** at http://localhost:8000/redoc
+- **Health check** at http://localhost:8000/health
+
+## Dashboard Setup
+
+### Environment Configuration
+Key variables in `dashboard/.env.local`:
+
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Application URLs
+NEXT_PUBLIC_APP_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# Feature Flags
+NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+NEXT_PUBLIC_PLAYGROUND=true
+
+# Optional Services
+NEXT_PUBLIC_POSTHOG_KEY=your-posthog-key
+NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
+```
+
+### Running the Dashboard
+
+#### Using Just (Recommended)
+```bash
+just fe-run
+```
+
+#### Manual Commands
+```bash
+cd dashboard
+
+# Using bun
+bun install
+bun dev
+
+# Using npm
+npm install
+npm run dev
+
+# Using yarn
+yarn install
+yarn dev
+```
+
+### Dashboard Development Features
+- **Hot reload** on file changes
+- **Fast Refresh** for React components
+- **Development tools** integration
+- **Source maps** for debugging
+
+## Development Workflow
+
+### Daily Development Routine
+1. **Start services**:
+   ```bash
+   # Terminal 1
+   just api-native
+   
+   # Terminal 2
+   just fe-run
+   ```
+
+2. **Make changes** to your code
+3. **Test changes** - services auto-reload
+4. **Run tests** before committing:
+   ```bash
+   just test
+   ```
+
+### Code Quality Workflow
+```bash
+# Format code
+just format
+
+# Run linting
+just lint
+
+# Run tests
+just test
+
+# All-in-one quality check
+just format && just lint && just test
+```
+
+### Database Development
+```bash
+# Apply Supabase migrations
+cd supabase
+npx supabase db push
+
+# Reset database (development only)
+npx supabase db reset
+
+# Generate TypeScript types
+npx supabase gen types typescript --local > types/database.types.ts
+```
+
+## Testing
+
+### API Testing
+```bash
+cd api
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=agentops
+
+# Run specific test file
+pytest tests/test_auth.py
+
+# Run with verbose output
+pytest -v
+```
+
+### Dashboard Testing
+```bash
+cd dashboard
+
+# Run all tests
+bun test
+
+# Run tests in watch mode
+bun test --watch
+
+# Run tests with coverage
+bun test --coverage
+```
+
+### Integration Testing
+```bash
+# Run full test suite
+just test
+
+# Test API and dashboard separately
+just api-test
+just fe-test
+```
+
+## Debugging
+
+### API Debugging
+1. **Set breakpoints** in your IDE
+2. **Run with debugger**:
+   ```bash
+   cd api
+   python -m debugpy --listen 5678 --wait-for-client run.py
+   ```
+3. **Attach your IDE debugger** to port 5678
+
+### Dashboard Debugging
+1. **Use browser dev tools** (F12)
+2. **Next.js debugging**:
+   ```bash
+   cd dashboard
+   NODE_OPTIONS='--inspect' bun dev
+   ```
+3. **Attach debugger** at chrome://inspect
+
+### Log Debugging
+```bash
+# API logs with debug level
+cd api
+LOGGING_LEVEL=DEBUG uv run python run.py
+
+# Dashboard logs
+cd dashboard
+DEBUG=* bun dev
+```
+
+## Performance Optimization
+
+### API Performance
+- **Use native Python** for fastest development
+- **Enable hot reload** with uvicorn
+- **Profile with py-spy**:
+  ```bash
+  pip install py-spy
+  py-spy top --pid $(pgrep -f "python run.py")
+  ```
+
+### Dashboard Performance
+- **Use bun** for faster package management
+- **Enable Fast Refresh** (enabled by default)
+- **Analyze bundle size**:
+  ```bash
+  cd dashboard
+  ANALYZE=true bun run build
+  ```
+
+## Troubleshooting
+
+### Common Issues
+
+**Python import errors:**
+```bash
+# Reinstall in editable mode
+cd api
+uv pip install -e .
+```
+
+**Node.js module not found:**
+```bash
+# Clear and reinstall
+cd dashboard
+rm -rf node_modules package-lock.json
+bun install
+```
+
+**Port already in use:**
+```bash
+# Find and kill process
+lsof -i :8000  # API port
+lsof -i :3000  # Dashboard port
+kill -9 <PID>
+```
+
+**Database connection issues:**
+- Verify credentials in `.env` files
+- Check network connectivity
+- Ensure external services are running
+
+### Performance Issues
+
+**Slow API startup:**
+```bash
+# Use uv for faster Python package management
+uv pip install -e .
+```
+
+**Slow dashboard reload:**
+```bash
+# Use bun instead of npm
+cd dashboard
+rm -rf node_modules
+bun install
+```
+
+### Development Environment Reset
+```bash
+# Clean everything and start fresh
+rm -rf api/.venv dashboard/node_modules node_modules
+just setup
+```
+
+## IDE Configuration
+
+### VS Code
+Recommended extensions:
+- Python
+- Pylance
+- ES7+ React/Redux/React-Native snippets
+- Tailwind CSS IntelliSense
+- Prettier - Code formatter
+
+Settings (`.vscode/settings.json`):
+```json
+{
+  "python.defaultInterpreterPath": "./api/.venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}
+```
+
+### PyCharm
+1. **Set Python interpreter** to `./api/.venv/bin/python`
+2. **Enable Ruff** for Python linting
+3. **Configure Node.js** interpreter for dashboard
+4. **Set up run configurations** for API and dashboard
+
+## Advanced Configuration
+
+### Custom Environment Variables
+Add custom variables to your `.env` files:
+
+```env
+# Custom API settings
+CUSTOM_FEATURE_FLAG=true
+DEBUG_SQL_QUERIES=false
+
+# Custom dashboard settings
+NEXT_PUBLIC_CUSTOM_FEATURE=enabled
+```
+
+### Development Proxy
+Set up a proxy for API calls in development:
+
+```javascript
+// dashboard/next.config.js
+module.exports = {
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/:path*',
+      },
+    ]
+  },
+}
+```
+
+### Hot Reload Configuration
+Fine-tune hot reload behavior:
+
+```python
+# api/run.py
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "agentops.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        reload_dirs=["agentops"],  # Only watch specific directories
+        reload_excludes=["*.pyc", "*.log"],  # Exclude certain files
+    )
+```
+
+## Next Steps
+
+Once your native development environment is running:
+
+1. **Explore the codebase** - Start with `api/agentops/main.py` and `dashboard/pages/index.tsx`
+2. **Make your first changes** - Try modifying a simple component or API endpoint
+3. **Set up testing** - Write tests for your changes
+4. **Configure your IDE** - Set up debugging and linting
+5. **Join the community** - Connect with other developers
+
+For production deployment, see our [Deployment Guide](/v2/self-hosting/deployment).
