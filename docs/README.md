@@ -1,12 +1,19 @@
-# Mintlify Starter Kit
+# AgentOps Documentation
 
-Click on `Use this template` to copy the Mintlify starter kit. The starter kit contains examples including
+This directory contains the documentation for AgentOps, including setup guides, API references, and integration examples.
 
-- Guide pages
-- Navigation
-- Customizations
-- API Reference pages
-- Use of popular components
+## 📖 Documentation Structure
+
+- **v2/** - Latest SDK documentation and guides
+- **v1/** - Legacy SDK documentation  
+- **v0/** - Historical documentation
+- **backend-setup.md** - Complete guide for setting up and running backend services
+
+## 🚀 Quick Links
+
+- **[Backend Setup Guide](backend-setup.md)** - Instructions for running the app directory services
+- **API Reference** - Available in the versioned directories
+- **Integration Examples** - SDK integration examples and tutorials
 
 ### 👩‍💻 Development
 
