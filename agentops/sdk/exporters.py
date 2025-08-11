@@ -50,6 +50,9 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         self._lock = threading.Lock()
         self._last_auth_failure = 0
         self._auth_failure_threshold = 60  # Don't retry auth failures more than once per minute
+        self._export_attempts = 0
+        self._successful_exports = 0
+        self._failed_exports = 0
 
         # Store any additional kwargs for potential future use
         self._custom_kwargs = kwargs
@@ -125,16 +128,28 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         This method overrides the parent's export to ensure we always use
         the latest JWT token and handle authentication failures gracefully.
         """
+        with self._lock:
+            self._export_attempts += 1
+            
         # Check if we should skip due to recent auth failure
         with self._lock:
             current_time = time.time()
             if self._last_auth_failure > 0 and current_time - self._last_auth_failure < self._auth_failure_threshold:
                 logger.debug("Skipping export due to recent authentication failure")
+                self._failed_exports += 1
                 return SpanExportResult.FAILURE
 
         try:
             # Get current JWT and prepare headers
             current_headers = self._prepare_headers()
+            
+            # Check if we have authentication
+            jwt_token = self._get_current_jwt()
+            if not jwt_token:
+                logger.warning("No JWT token available for span export. Session data will not reach backend.")
+                with self._lock:
+                    self._failed_exports += 1
+                return SpanExportResult.FAILURE
 
             # Temporarily update the session headers for this request
             original_headers = dict(self._session.headers)
@@ -148,6 +163,15 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
                 if result == SpanExportResult.SUCCESS:
                     with self._lock:
                         self._last_auth_failure = 0
+                        self._successful_exports += 1
+                        
+                    # Log success for first few exports to confirm connectivity
+                    if self._successful_exports <= 3:
+                        logger.debug(f"Successfully exported spans to backend (attempt #{self._successful_exports})")
+                else:
+                    with self._lock:
+                        self._failed_exports += 1
+                    logger.warning(f"Span export failed with result: {result}")
 
                 return result
 
@@ -157,6 +181,9 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
                 self._session.headers.update(original_headers)
 
         except requests.exceptions.HTTPError as e:
+            with self._lock:
+                self._failed_exports += 1
+                
             if e.response and e.response.status_code in (401, 403):
                 # Authentication error - record timestamp and warn
                 with self._lock:
@@ -164,36 +191,46 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
 
                 logger.warning(
                     f"Authentication failed during span export: {e}. "
-                    f"Will retry in {self._auth_failure_threshold} seconds."
+                    f"Will retry in {self._auth_failure_threshold} seconds. "
+                    f"Session data is not reaching backend."
                 )
                 return SpanExportResult.FAILURE
             else:
-                logger.error(f"HTTP error during span export: {e}")
+                logger.error(f"HTTP error during span export: {e}. Session data not sent to backend.")
                 return SpanExportResult.FAILURE
 
         except AgentOpsApiJwtExpiredException as e:
             # JWT expired - record timestamp and warn
             with self._lock:
                 self._last_auth_failure = time.time()
+                self._failed_exports += 1
 
             logger.warning(
-                f"JWT token expired during span export: {e}. " f"Will retry in {self._auth_failure_threshold} seconds."
+                f"JWT token expired during span export: {e}. " 
+                f"Will retry in {self._auth_failure_threshold} seconds. "
+                f"Session data is not reaching backend."
             )
             return SpanExportResult.FAILURE
 
         except ApiServerException as e:
             # Server-side error
-            logger.error(f"API server error during span export: {e}")
+            with self._lock:
+                self._failed_exports += 1
+            logger.error(f"API server error during span export: {e}. Session data not sent to backend.")
             return SpanExportResult.FAILURE
 
         except requests.RequestException as e:
             # Network or HTTP error
-            logger.error(f"Network error during span export: {e}")
+            with self._lock:
+                self._failed_exports += 1
+            logger.error(f"Network error during span export: {e}. Session data not sent to backend.")
             return SpanExportResult.FAILURE
 
         except Exception as e:
             # Any other error
-            logger.error(f"Unexpected error during span export: {e}")
+            with self._lock:
+                self._failed_exports += 1
+            logger.error(f"Unexpected error during span export: {e}. Session data not sent to backend.")
             return SpanExportResult.FAILURE
 
     def clear(self):
@@ -204,3 +241,33 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         The OTLP exporter doesn't store spans, so this is a no-op.
         """
         pass
+    
+    def get_export_stats(self) -> Dict[str, int]:
+        """Get export statistics for debugging."""
+        with self._lock:
+            return {
+                "total_attempts": self._export_attempts,
+                "successful_exports": self._successful_exports,
+                "failed_exports": self._failed_exports,
+                "success_rate": round(self._successful_exports / max(self._export_attempts, 1) * 100, 2)
+            }
+    
+    def is_healthy(self) -> bool:
+        """Check if the exporter is healthy (has authentication and recent successful exports)."""
+        jwt_token = self._get_current_jwt()
+        if not jwt_token:
+            return False
+            
+        with self._lock:
+            # Consider healthy if we have recent successful exports or haven't tried yet
+            if self._export_attempts == 0:
+                return True  # Haven't tried yet, assume healthy
+            
+            # Check if we have recent auth failures
+            current_time = time.time()
+            if self._last_auth_failure > 0 and current_time - self._last_auth_failure < self._auth_failure_threshold:
+                return False
+                
+            # Consider healthy if success rate is above 50%
+            success_rate = self._successful_exports / max(self._export_attempts, 1)
+            return success_rate > 0.5
