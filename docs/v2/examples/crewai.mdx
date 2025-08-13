@@ -276,8 +276,8 @@ def run():
     """
     Run the crew with AgentOps tracking.
     """
-    # Start AgentOps session
-    session = agentops.start_session(tags=["crewai", "job-posting"])
+    # Start AgentOps trace for this run
+    tracer = agentops.start_trace(trace_name="CrewAI Job Posting", tags=["crewai", "job-posting"])
     
     try:
         # Define the inputs for the crew
@@ -298,13 +298,13 @@ def run():
         print(result)
         print("\nCheck 'job_posting.md' for the generated job posting.")
         
-        # End session successfully
-        agentops.end_session("Success")
+        # End trace successfully
+        agentops.end_trace(tracer, end_state="Success")
         return result
         
     except Exception as e:
         print(f"An error occurred: {e}")
-        agentops.end_session("Failed", end_state_reason=str(e))
+        agentops.end_trace(tracer, end_state="Failed")
         raise
 
 def train():
