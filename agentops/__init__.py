@@ -447,6 +447,141 @@ def update_trace_metadata(metadata: Dict[str, Any], prefix: str = "trace.metadat
         return False
 
 
+def diagnose_session() -> Dict[str, Any]:
+    """
+    Diagnose the current session status and connectivity.
+    
+    Returns:
+        Dictionary containing diagnostic information about the session status.
+    """
+    diagnosis = {
+        "sdk_initialized": False,
+        "client_initialized": False,
+        "has_api_key": False,
+        "has_auth_token": False,
+        "active_traces": 0,
+        "exporter_healthy": False,
+        "export_stats": {},
+        "issues": [],
+        "recommendations": []
+    }
+    
+    try:
+        # Check SDK initialization
+        diagnosis["sdk_initialized"] = tracer.initialized
+        if not tracer.initialized:
+            diagnosis["issues"].append("AgentOps SDK not initialized")
+            diagnosis["recommendations"].append("Call agentops.init() to initialize the SDK")
+            return diagnosis
+        
+        # Check client
+        client = get_client()
+        diagnosis["client_initialized"] = client.initialized
+        
+        # Check API key
+        diagnosis["has_api_key"] = bool(client.config.api_key)
+        if not client.config.api_key:
+            diagnosis["issues"].append("No API key provided")
+            diagnosis["recommendations"].append("Set AGENTOPS_API_KEY environment variable or pass api_key to init()")
+        
+        # Check auth token
+        auth_token = client.get_current_jwt()
+        diagnosis["has_auth_token"] = bool(auth_token)
+        if client.config.api_key and not auth_token:
+            diagnosis["issues"].append("Authentication failed - no JWT token available")
+            diagnosis["recommendations"].append("Check if API key is valid and network connectivity is working")
+        
+        # Check active traces
+        active_traces = tracer.get_active_traces()
+        diagnosis["active_traces"] = len(active_traces)
+        
+        # Check exporter health
+        try:
+            # Access the exporter from the tracer's span processors
+            span_processors = tracer._provider._active_span_processor._span_processors
+            for processor in span_processors:
+                if hasattr(processor, '_exporter') and hasattr(processor._exporter, 'is_healthy'):
+                    diagnosis["exporter_healthy"] = processor._exporter.is_healthy()
+                    diagnosis["export_stats"] = processor._exporter.get_export_stats()
+                    break
+        except Exception:
+            pass
+            
+        # Analyze issues
+        if diagnosis["export_stats"].get("failed_exports", 0) > 0:
+            total_attempts = diagnosis["export_stats"].get("total_attempts", 0)
+            failed_exports = diagnosis["export_stats"].get("failed_exports", 0)
+            if total_attempts > 0 and failed_exports / total_attempts > 0.5:
+                diagnosis["issues"].append(f"High export failure rate: {failed_exports}/{total_attempts} attempts failed")
+                diagnosis["recommendations"].append("Check network connectivity and API key validity")
+        
+        if diagnosis["has_api_key"] and not diagnosis["has_auth_token"]:
+            diagnosis["issues"].append("API key provided but authentication failed")
+            diagnosis["recommendations"].append("Verify API key is correct and check network connectivity")
+            
+        if not diagnosis["issues"]:
+            diagnosis["recommendations"].append("Session appears healthy - data should be reaching backend")
+            
+    except Exception as e:
+        diagnosis["issues"].append(f"Error during diagnosis: {e}")
+        
+    return diagnosis
+
+
+def print_session_status():
+    """
+    Print a user-friendly diagnostic report of the current session status.
+    This is helpful for debugging when sessions aren't reaching the backend.
+    """
+    from termcolor import colored
+    
+    diagnosis = diagnose_session()
+    
+    print("\n" + "="*50)
+    print(colored("AgentOps Session Diagnostic Report", "cyan", attrs=["bold"]))
+    print("="*50)
+    
+    # Status indicators
+    status_items = [
+        ("SDK Initialized", diagnosis["sdk_initialized"]),
+        ("Client Initialized", diagnosis["client_initialized"]),
+        ("API Key Present", diagnosis["has_api_key"]),
+        ("Authenticated", diagnosis["has_auth_token"]),
+        ("Exporter Healthy", diagnosis["exporter_healthy"]),
+    ]
+    
+    print("\nStatus:")
+    for item, status in status_items:
+        color = "green" if status else "red"
+        symbol = "✓" if status else "✗"
+        print(f"  {colored(symbol, color)} {item}: {colored(str(status), color)}")
+    
+    print(f"\nActive Traces: {diagnosis['active_traces']}")
+    
+    # Export statistics
+    if diagnosis["export_stats"]:
+        stats = diagnosis["export_stats"]
+        print(f"\nExport Statistics:")
+        print(f"  Total Attempts: {stats.get('total_attempts', 0)}")
+        print(f"  Successful: {stats.get('successful_exports', 0)}")
+        print(f"  Failed: {stats.get('failed_exports', 0)}")
+        print(f"  Success Rate: {stats.get('success_rate', 0)}%")
+    
+    # Issues
+    if diagnosis["issues"]:
+        print(colored("\nIssues Found:", "red", attrs=["bold"]))
+        for issue in diagnosis["issues"]:
+            print(f"  • {colored(issue, 'red')}")
+    
+    # Recommendations
+    if diagnosis["recommendations"]:
+        print(colored("\nRecommendations:", "yellow", attrs=["bold"]))
+        for rec in diagnosis["recommendations"]:
+            print(f"  • {colored(rec, 'yellow')}")
+    
+    print("\n" + "="*50)
+
+
 __all__ = [
     # Legacy exports
     "start_session",
@@ -466,6 +601,9 @@ __all__ = [
     "update_trace_metadata",
     "Client",
     "get_client",
+    # Diagnostics
+    "diagnose_session",
+    "print_session_status",
     # Decorators
     "trace",
     "session",

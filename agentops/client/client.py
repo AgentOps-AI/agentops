@@ -2,6 +2,7 @@ import atexit
 import asyncio
 import threading
 from typing import Optional, Any
+import time
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
@@ -110,9 +111,10 @@ class Client:
                 logger.debug("Successfully fetched authentication token asynchronously")
                 return response
             else:
-                logger.debug("Authentication failed - will continue without authentication")
+                logger.warning("Authentication failed - invalid API key or network issue. Session data will not reach backend.")
                 return None
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Authentication error: {e}. Session data will not reach backend.")
             return None
 
     def _start_auth_task(self, api_key: str):
@@ -143,6 +145,33 @@ class Client:
 
             auth_thread = threading.Thread(target=run_async_auth, daemon=True)
             auth_thread.start()
+    
+    def wait_for_auth(self, timeout_seconds: int = 10) -> bool:
+        """
+        Wait for authentication to complete.
+        
+        Args:
+            timeout_seconds: Maximum time to wait for authentication
+            
+        Returns:
+            True if authenticated successfully, False otherwise
+        """
+        if not self.config.api_key:
+            return False
+            
+        # If we already have a token, return immediately
+        if self.get_current_jwt():
+            return True
+            
+        # Wait for auth task to complete
+        start_time = time.time()
+        while time.time() - start_time < timeout_seconds:
+            if self.get_current_jwt():
+                return True
+            time.sleep(0.1)
+            
+        logger.warning(f"Authentication timeout after {timeout_seconds}s. Session data may not reach backend.")
+        return False
 
     def init(self, **kwargs: Any) -> None:  # Return type updated to None
         # Recreate the Config object to parse environment variables at the time of initialization

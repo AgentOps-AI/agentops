@@ -4,30 +4,30 @@ import atexit
 import threading
 from typing import Optional, Any, Dict, Union, Callable
 
-from opentelemetry import metrics, trace
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.context import context_api
 from opentelemetry.sdk.trace import TracerProvider, Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry import context as context_api
+from opentelemetry.trace import Tracer, get_current_span, get_tracer
+from opentelemetry import trace, metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.trace.status import StatusCode
+from opentelemetry.sdk.resources import Resource
 
-from agentops.exceptions import AgentOpsClientNotInitializedException
-from agentops.logging import logger, setup_print_logger
-from agentops.sdk.processors import InternalSpanProcessor
-from agentops.sdk.types import TracingConfig
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
+from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.attributes import (
     get_global_resource_attributes,
     get_trace_attributes,
-    get_span_attributes,
-    get_session_end_attributes,
     get_system_resource_attributes,
+    get_session_end_attributes,
 )
+from agentops.sdk.types import TracingConfig
+from agentops.logging import logger, setup_print_logger
+from agentops.helpers.dashboard import log_trace_url, get_trace_url
+from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.semconv import SpanKind
-from agentops.helpers.dashboard import log_trace_url
-from opentelemetry.trace.status import StatusCode
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 
@@ -315,7 +315,7 @@ class TracingCore:
         except Exception as e:
             logger.warning(f"Failed to force flush provider's span processors: {e}", exc_info=True)
 
-    def get_tracer(self, name: str = "agentops") -> trace.Tracer:
+    def get_tracer(self, name: str = "agentops") -> Tracer:
         """
         Get a tracer with the given name.
 
@@ -328,7 +328,7 @@ class TracingCore:
         if not self._initialized:
             raise AgentOpsClientNotInitializedException
 
-        return trace.get_tracer(name)
+        return get_tracer(name)
 
     @classmethod
     def initialize_from_config(
@@ -409,7 +409,28 @@ class TracingCore:
 
         # Log the session replay URL for this new trace
         try:
-            log_trace_url(span, title=trace_name)
+            # Check if we have authentication before showing the URL
+            # Import here to avoid circular imports
+            from agentops.client.client import Client
+            
+            # Get client instance without using agentops.get_client() to avoid circular import
+            client = Client()
+            
+            # Only log URL if we have a valid auth token or if auth is still pending
+            auth_token = client.get_current_jwt()
+            if auth_token or (client.config.api_key and hasattr(client, '_auth_task') and client._auth_task and not client._auth_task.done()):
+                log_trace_url(span, title=trace_name)
+            elif not client.config.api_key:
+                logger.warning(f"Session URL for '{trace_name}' trace: {get_trace_url(span)} - Note: No API key provided, session data will not be sent to backend")
+                # Still log the URL but with a warning
+                session_url = get_trace_url(span)
+                from termcolor import colored
+                logger.info(colored(f"\x1b[33mSession URL (local only - no API key): {session_url}\x1b[0m", "yellow"))
+            else:
+                logger.warning(f"Authentication failed for API key. Session URL: {get_trace_url(span)} - Session data may not reach backend")
+                session_url = get_trace_url(span)
+                from termcolor import colored
+                logger.info(colored(f"\x1b[31mSession URL (auth failed): {session_url}\x1b[0m", "red"))
         except Exception as e:
             logger.warning(f"Failed to log trace URL for '{trace_name}': {e}")
 
