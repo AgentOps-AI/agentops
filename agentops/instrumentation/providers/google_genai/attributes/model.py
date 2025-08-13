@@ -34,9 +34,12 @@ def _extract_content_from_prompt(content: Any) -> str:
             if isinstance(item, str):
                 text += item + "\n"
             elif isinstance(item, dict) and "text" in item:
-                text += item["text"] + "\n"
+                if item.get("text") is not None:
+                    text += str(item["text"]) + "\n"
             elif hasattr(item, "text"):
-                text += item.text + "\n"
+                part_text = getattr(item, "text", None)
+                if part_text:
+                    text += part_text + "\n"
             # Handle content as a list with mixed types
             elif hasattr(item, "parts"):
                 parts = item.parts
@@ -44,7 +47,9 @@ def _extract_content_from_prompt(content: Any) -> str:
                     if isinstance(part, str):
                         text += part + "\n"
                     elif hasattr(part, "text"):
-                        text += part.text + "\n"
+                        part_text = getattr(part, "text", None)
+                        if part_text:
+                            text += part_text + "\n"
         return text
 
     # Dict with text key
@@ -62,7 +67,9 @@ def _extract_content_from_prompt(content: Any) -> str:
             if isinstance(part, str):
                 text += part + "\n"
             elif hasattr(part, "text"):
-                text += part.text + "\n"
+                part_text = getattr(part, "text", None)
+                if part_text:
+                    text += part_text + "\n"
         return text
 
     # Other object types - try to convert to string
@@ -155,7 +162,9 @@ def _set_response_attributes(attributes: AttributeMap, response: Any) -> None:
                         if isinstance(part, str):
                             text += part
                         elif hasattr(part, "text"):
-                            text += part.text
+                            part_text = getattr(part, "text", None)
+                            if part_text:
+                                text += part_text
 
                     attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = text
                     attributes[MessageAttributes.COMPLETION_ROLE.format(i=i)] = "assistant"
