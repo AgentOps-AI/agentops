@@ -19,7 +19,7 @@ The [decorators](/v2/concepts/decorators) system allows you to add tracing to yo
 
 AgentOps is built on [OpenTelemetry](https://opentelemetry.io/), a widely-adopted standard for observability instrumentation. This provides a robust and standardized approach to collecting, processing, and exporting telemetry data.
 
-# Sessions
+## Sessions
 
 A [Session](/v2/concepts/sessions) represents a single user interaction with your agent. When you initialize AgentOps using the `init` function, a session is automatically created for you:
 
@@ -30,14 +30,16 @@ import agentops
 agentops.init(api_key="YOUR_API_KEY")
 ```
 
-By default, all events and API calls will be associated with this session. For more advanced use cases, you can control session creation manually:
+By default, all events and API calls will be associated with this session. For workflows where you want explicit lifecycle control, prefer creating traces explicitly:
 
 ```python
-# Initialize without auto-starting a session
+# Initialize without starting a trace automatically
 agentops.init(api_key="YOUR_API_KEY", auto_start_session=False)
 
-# Later, manually start a session when needed
-agentops.start_session(tags=["customer-query"])
+# Later, wrap a workflow in a trace context manager
+with agentops.start_trace(trace_name="Customer Workflow", tags=["customer-query", "high-priority"]):
+    # your workflow code
+    pass
 ```
 
 # Span Hierarchy
@@ -109,14 +111,14 @@ response = client.chat.completions.create(
 
 # Tags
 
-[Tags](/v2/concepts/tags) help you organize and filter your sessions. You can add tags when initializing AgentOps or when starting a session:
+[Tags](/v2/concepts/tags) help you organize and filter your sessions and traces. You can add tags when initializing AgentOps or when starting a trace:
 
 ```python
 # Add tags when initializing
-agentops.init(api_key="YOUR_API_KEY", tags=["production", "web-app"])
+agentops.init(api_key="YOUR_API_KEY", default_tags=["production", "web-app"])
 
-# Or when manually starting a session
-agentops.start_session(tags=["customer-service", "tier-1"])
+# Or when manually starting a trace
+agentops.start_trace(trace_name="customer-service-workflow", tags=["customer-service", "tier-1"])
 ```
 
 # Host Environment

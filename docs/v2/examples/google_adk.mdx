@@ -243,20 +243,18 @@ Create the function to run the approval workflow with AgentOps tracking:
 ```python
 async def run_approval_workflow(user_request: str, session_id: str):
     """Run the complete approval workflow with AgentOps tracking"""
-    # Start AgentOps session
-    session = agentops.start_session(tags=["google-adk", "approval-workflow"])
-    
-    try:
+    # Start AgentOps trace
+    with agentops.start_trace(trace_name="Google ADK Approval Workflow", tags=["google-adk", "approval-workflow"]):
         print(f"{'=' * 60}")
         print(f" Starting Approval Workflow for Session: {session_id}")
         print(f"{'=' * 60}")
         print(f"User Request: {user_request}")
-        
+
         # Create user message
         user_content = types.Content(role="user", parts=[types.Part(text=user_request)])
         step_count = 0
         final_response = "No response received"
-        
+
         # Run the workflow
         async for event in workflow_runner.run_async(
             user_id=USER_ID,
@@ -268,31 +266,12 @@ async def run_approval_workflow(user_request: str, session_id: str):
                 print(f"📋 Step {step_count} - {event.author}:")
                 if event.content.parts:
                     response_text = event.content.parts[0].text
-                    print(f"   {response_text}")
-                    if event.is_final_response():
-                        final_response = response_text
-        
-        # Display session state
-        session_data = await session_service.get_session(
-            app_name=APP_NAME,
-            user_id=USER_ID,
-            session_id=session_id,
-        )
-        print(f"{'=' * 60}")
-        print(f"📊 Workflow Complete - Session State ({session_id}):")
-        print(f"{'=' * 60}")
-        for key, value in session_data.state.items():
-            print(f"   {key}: {value}")
-        print(f"🎯 Final Response: {final_response}")
-        
-        # End AgentOps session successfully
-        agentops.end_session("Success")
+                    print(response_text)
+                    final_response = response_text
+
+        print(f"\n✅ Workflow Completed in {step_count} steps")
+        print(f"Final Response: {final_response}")
         return final_response
-        
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        agentops.end_session("Failed", end_state_reason=str(e))
-        raise
 ```
 
 Finally, add the main execution logic:
@@ -374,8 +353,7 @@ After running your approval workflow, visit your [AgentOps Dashboard](https://ap
 
 **AgentOps Integration Points:**
 - `agentops.init()` - Enables automatic instrumentation
-- `agentops.start_session()` - Begins tracking each workflow run
-- `agentops.end_session()` - Completes the session with status
+- `agentops.start_trace()` - Wraps each workflow run in a trace
 
 ## Next Steps
 

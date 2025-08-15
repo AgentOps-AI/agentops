@@ -261,7 +261,7 @@ class JobPostingAgentCrew():
 
 ### Step 7: Update the Main Execution File
 
-Edit `src/job_posting_agent/main.py` to add AgentOps session management:
+Edit `src/job_posting_agent/main.py` to add AgentOps trace management:
 
 ```python
 #!/usr/bin/env python
@@ -276,10 +276,8 @@ def run():
     """
     Run the crew with AgentOps tracking.
     """
-    # Start AgentOps session
-    session = agentops.start_session(tags=["crewai", "job-posting"])
-    
-    try:
+    # Start an AgentOps trace for this run
+    with agentops.start_trace(trace_name="CrewAI Job Posting", tags=["crewai", "job-posting"]):
         # Define the inputs for the crew
         inputs = {
             'company_description': 'A fast-paced tech startup focused on AI-driven solutions for e-commerce.',
@@ -287,25 +285,19 @@ def run():
             'hiring_needs': 'Senior Software Engineer with experience in Python, AI, and cloud platforms.',
             'specific_benefits': 'Competitive salary, stock options, remote work flexibility, and great team culture.'
         }
-        
+
         # Initialize and run the crew
         crew = JobPostingAgentCrew().crew()
         result = crew.kickoff(inputs=inputs)
-        
+
         print("\n" + "="*50)
         print("Job Posting Creation Completed!")
         print("Result:")
         print(result)
         print("\nCheck 'job_posting.md' for the generated job posting.")
-        
-        # End session successfully
-        agentops.end_session("Success")
+
         return result
-        
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        agentops.end_session("Failed", end_state_reason=str(e))
-        raise
+
 
 def train():
     """
@@ -321,6 +313,7 @@ def train():
         JobPostingAgentCrew().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
     except Exception as e:
         raise Exception(f"An error occurred while training the crew: {e}")
+
 
 def replay():
     """
@@ -390,13 +383,9 @@ After running your job posting generator, visit your [AgentOps Dashboard](https:
 
 **AgentOps Integration Points:**
 - `agentops.init()` in `crew.py` - Enables automatic instrumentation
-- `agentops.start_session()` in `main.py` - Begins tracking
-- `agentops.end_session()` in `main.py` - Completes the session
+- `agentops.start_trace()` in `main.py` - Wraps execution with a trace
+- Context manager automatically completes the trace on exit
 
 ## Next Steps
 
-- Customize the input parameters in `main.py`
-- Modify agent configurations in `agents.yaml`
-- Add more tasks or change the workflow in `tasks.yaml`
-- Add custom tools in the `tools/` directory
-- Use AgentOps analytics to optimize agent performance
+- Customize the input parameters in `
