@@ -1,5 +1,4 @@
 import os
-import time
 
 import dspy
 from dspy import Tool
@@ -16,8 +15,10 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "")
 lm = dspy.LM("openai/gpt-4o-mini", temperature=0.5)
 dspy.configure(lm=lm, callbacks=[handler])
 
+
 def multiplier(*, a: int, b: int) -> int:
     return a * b
+
 
 multiplier = Tool(multiplier)
 

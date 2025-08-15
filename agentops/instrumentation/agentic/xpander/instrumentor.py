@@ -11,7 +11,7 @@ REPLACEMENTS MADE:
 ✅ Span creation: Using tracer.make_span() instead of manual span creation
 ✅ Error handling: Using _finish_span_success/_finish_span_error utilities
 ✅ Attribute management: Using existing SpanAttributeManager
-✅ Serialization: Using safe_serialize and model_to_dict utilities  
+✅ Serialization: Using safe_serialize and model_to_dict utilities
 ✅ Attribute setting: Using _update_span utility
 
 RUNTIME-SPECIFIC LOGIC KEPT (Cannot be replaced):
