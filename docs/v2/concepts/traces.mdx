@@ -48,14 +48,15 @@ You can use the `@trace` decorator to create a trace for a specific function:
 
 ```python
 import agentops
+from agentops.sdk.decorators import trace
 
-@agentops.trace
+@trace
 def process_customer_data(customer_id):
     # This entire function execution will be tracked as a trace
     return analyze_data(customer_id)
 
 # Or with custom parameters
-@agentops.trace(name="data_processing", tags=["analytics"])
+@trace(name="data_processing", tags=["analytics"])
 def analyze_user_behavior(user_data):
     return perform_analysis(user_data)
 ```
