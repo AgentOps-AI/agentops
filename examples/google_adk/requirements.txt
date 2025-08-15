@@ -1,4 +1,4 @@
-google-adk==1.0.0
+google-adk
 google-genai==1.16.1
 nest-asyncio==1.6.0
 agentops

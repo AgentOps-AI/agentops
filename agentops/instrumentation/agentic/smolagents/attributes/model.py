@@ -102,13 +102,13 @@ def get_model_attributes(
                 if hasattr(return_value, "tool_calls") and return_value.tool_calls:
                     for j, tool_call in enumerate(return_value.tool_calls):
                         if hasattr(tool_call, "function"):
-                            attributes[
-                                MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=j)
-                            ] = tool_call.function.name
+                            attributes[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=j)] = (
+                                tool_call.function.name
+                            )
                             if hasattr(tool_call.function, "arguments"):
-                                attributes[
-                                    MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=j)
-                                ] = tool_call.function.arguments
+                                attributes[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=j)] = (
+                                    tool_call.function.arguments
+                                )
                             if hasattr(tool_call, "id"):
                                 attributes[MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=j)] = tool_call.id
 

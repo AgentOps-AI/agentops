@@ -15,11 +15,13 @@ RunConfig: Optional[object] = None
 StreamingMode: Optional[object] = None
 try:
     from google.adk.runners import RunConfig as _RunConfig, StreamingMode as _StreamingMode  # type: ignore
+
     RunConfig = _RunConfig
     StreamingMode = _StreamingMode
 except Exception:
     try:
         from google.adk.types import RunConfig as _RunConfig2, StreamingMode as _StreamingMode2  # type: ignore
+
         RunConfig = _RunConfig2
         StreamingMode = _StreamingMode2
     except Exception:
@@ -73,7 +75,9 @@ async def main():
         run_config_kw["run_config"] = RunConfig(streaming_mode=StreamingMode.SSE, response_modalities=["TEXT"])  # type: ignore
 
     final_text = None
-    async for event in runner.run_async(user_id=USER_ID, session_id=SESSION_ID, new_message=user_message, **run_config_kw):
+    async for event in runner.run_async(
+        user_id=USER_ID, session_id=SESSION_ID, new_message=user_message, **run_config_kw
+    ):
         # Print out any parts safely; this will include function_call parts when they occur
         if hasattr(event, "content") and event.content and getattr(event.content, "parts", None):
             for part in event.content.parts:
