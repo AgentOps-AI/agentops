@@ -114,8 +114,8 @@ def _extract_messages_from_contents(contents: list) -> dict:
         # Extract content from parts
         text_parts = []
         for part in parts:
-            if "text" in part:
-                text_parts.append(part["text"])
+            if "text" in part and part.get("text") is not None:
+                text_parts.append(str(part["text"]))
             elif "function_call" in part:
                 # Function calls in prompts are typically from the model's previous responses
                 func_call = part["function_call"]
@@ -227,8 +227,8 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
             # Extract content from parts
             text_parts = []
             for part in parts:
-                if "text" in part:
-                    text_parts.append(part["text"])
+                if "text" in part and part.get("text") is not None:
+                    text_parts.append(str(part["text"]))
                 elif "function_call" in part:
                     # Function calls in prompts are typically from the model's previous responses
                     func_call = part["function_call"]
@@ -299,8 +299,8 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
                 text_parts = []
                 tool_call_index = 0
                 for part in parts:
-                    if "text" in part:
-                        text_parts.append(part["text"])
+                    if "text" in part and part.get("text") is not None:
+                        text_parts.append(str(part["text"]))
                     elif "function_call" in part:
                         # This is a function call in the response
                         func_call = part["function_call"]
