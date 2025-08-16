@@ -118,6 +118,12 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "min_version": "1.0.0",
         "package_name": "xpander-sdk",
     },
+    "mcp_agent": {
+        "module_name": "agentops.instrumentation.providers.mcp_agent",
+        "class_name": "MCPAgentInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "mcp-agent",
+    },
 }
 
 # Combine all target packages for monitoring

@@ -22,3 +22,8 @@ class Meters:
     AGENT_RUNS = "gen_ai.agent.runs"
     AGENT_TURNS = "gen_ai.agent.turns"
     AGENT_EXECUTION_TIME = "gen_ai.agent.execution_time"
+    
+    # MCP Agent specific metrics
+    MCP_AGENT_TOOL_CALLS = "gen_ai.mcp_agent.tool_calls"
+    MCP_AGENT_WORKFLOW_DURATION = "gen_ai.mcp_agent.workflow_duration"
+    MCP_AGENT_EXECUTIONS = "gen_ai.mcp_agent.executions"
