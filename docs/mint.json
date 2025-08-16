@@ -157,7 +157,8 @@
         "v2/integrations/smolagents",
         "v2/integrations/ibm_watsonx_ai",
         "v2/integrations/xai",
-        "v2/integrations/xpander"
+        "v2/integrations/xpander",
+        "v2/integrations/mcp_agent"
       ],
       "version": "v2"
     },

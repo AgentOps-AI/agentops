@@ -1,0 +1,32 @@
+---
+title: MCP Agent
+---
+
+MCP Agent (lastmile-ai/mcp-agent) is now auto-instrumented by AgentOps.
+
+- No code changes needed. Ensure AgentOps is initialized in your app so OpenTelemetry spans export to AgentOps.
+- When `mcp-agent` is installed and imported as `mcp_agent`, AgentOps will activate the `McpAgentInstrumentor` and suppress duplicate provider instrumentation.
+
+Quick start:
+
+```python
+import agentops
+
+agentops.init("<AGENTOPS_API_KEY>")
+
+# Import and use mcp_agent normally
+from mcp_agent.app import MCPApp
+
+# ... your app code ...
+
+agentops.end_session("Success")
+```
+
+Requirements:
+
+- `mcp-agent >= 0.1.0`
+- AgentOps Python SDK installed (`pip install agentops`)
+
+Notes:
+
+- MCP Agent already emits OpenTelemetry spans via its telemetry manager; AgentOps will route them to your project with proper resource attributes and JWT-auth OTLP exporter.
