@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!app/dashboard/lib/
 lib64/
 parts/
 sdist/
