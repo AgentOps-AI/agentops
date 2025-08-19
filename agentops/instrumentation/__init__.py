@@ -118,6 +118,12 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "min_version": "1.0.0",
         "package_name": "xpander-sdk",
     },
+    "map_agent": {
+        "module_name": "agentops.instrumentation.agentic.map_agent",
+        "class_name": "MapAgentInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "map-agent",
+    },
 }
 
 # Combine all target packages for monitoring
