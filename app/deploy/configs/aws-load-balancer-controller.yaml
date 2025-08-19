@@ -1,0 +1,268 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: aws-load-balancer-controller
+  name: aws-load-balancer-controller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: aws-load-balancer-controller
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - elbv2.k8s.aws
+  resources:
+  - targetgroupbindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - elbv2.k8s.aws
+  resources:
+  - targetgroupbindings/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - elbv2.k8s.aws
+  resources:
+  - ingressclassparams
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aws-load-balancer-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aws-load-balancer-controller
+subjects:
+- kind: ServiceAccount
+  name: aws-load-balancer-controller
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: aws-load-balancer-controller
+  name: aws-load-balancer-controller
+  namespace: kube-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/name: aws-load-balancer-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/name: aws-load-balancer-controller
+    spec:
+      containers:
+      - args:
+        - --cluster-name=agentops-eks
+        - --ingress-class=alb
+        - --aws-vpc-id=vpc-087da2eb9031c2c29
+        image: public.ecr.aws/eks/aws-load-balancer-controller:v2.7.2
+        name: controller
+        env:
+        - name: AWS_DEFAULT_REGION
+          value: us-west-1
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: access-key
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: secret-key
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        livenessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /healthz
+            port: 61779
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 61779
+          name: metrics-server
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      serviceAccountName: aws-load-balancer-controller
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: aws-load-balancer-webhook-tls

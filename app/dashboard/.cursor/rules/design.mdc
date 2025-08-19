@@ -1,0 +1,30 @@
+---
+description: All tasks related to updating frontend components, CSS, and general styling
+globs: 
+alwaysApply: false
+---
+# Typography Guidelines
+
+## Fonts
+- **Figtree**: Main font used for UI elements
+- **Menlo**: Used for code blocks
+
+## Font Sizes
+- **Page title (Primary)**: 32px
+- **Page title**: 16px
+- **Paragraph**: 14px
+- **Label (Secondary)**: 14px
+
+## Usage
+- Primary styling should be used for main headings and important UI elements
+- Secondary styling should be used for supporting content and labels
+
+## Colors
+- Primary font: rgba(20, 27, 52, 1)
+- Secondary font: rgba(20, 27, 52, 0.74)
+- Icons: rgba(20, 27, 52, 0.68)
+- Border: rgba(222, 224, 244, 1)
+- Font/Icon White: rgba(225, 226, 242, 1)
+- Success: rgba(75, 196, 152, 1)
+- Warning: rgba(237, 216, 103, 1)
+- Error: rgba(230, 90, 126, 1)

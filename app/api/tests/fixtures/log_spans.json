@@ -1,0 +1,226 @@
+[
+  {
+    "body": "\u001b[31mThis is red text\u001b[0m\n",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 234
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187259Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187309Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  },
+  {
+    "body": "\u001b[34mBlue\u001b[0m and \u001b[32mgreen\u001b[0m mixed\n",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 234
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187540Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187555Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  },
+  {
+    "body": "\u001b[1;31mBold red\u001b[0m and \u001b[3;34mitalic blue\u001b[0m\n",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 234
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187719Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187728Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  },
+  {
+    "body": "\u001b[31mDirect red ANSI\u001b[0m\n",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 234
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187750Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187755Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  },
+  {
+    "body": "\u001b[34mBlue\u001b[0m and \u001b[32mgreen\u001b[0m mixed ANSI\n",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 234
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187770Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187775Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  },
+  {
+    "body": "\u001b[1;31mBold red ANSI\u001b[0m\n",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 234
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187789Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187793Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  },
+  {
+    "body": "\u001b[35mMagenta error\u001b[0m\n",
+    "severity_number": 17,
+    "severity_text": "ERROR",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 254
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187814Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187822Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  },
+  {
+    "body": "\u001b[33mYellow warning\u001b[0m\n",
+    "severity_number": 17,
+    "severity_text": "ERROR",
+    "attributes": {
+      "raw": true,
+      "preserve_color": true,
+      "code.filepath": "/Users/beyond/agentops/agentops/log_capture.py",
+      "code.function": "write",
+      "code.lineno": 254
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-01-31T12:29:57.187833Z",
+    "observed_timestamp": "2025-01-31T12:29:57.187836Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+      "attributes": {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.29.0",
+        "service.name": "agentops",
+        "session.id": "8685cc2c-0d9e-496c-96b3-d7b54c6894e5"
+      },
+      "schema_url": ""
+    }
+  }
+]

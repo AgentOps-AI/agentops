@@ -1,0 +1,14 @@
+{
+  "folders": [
+    {
+      "path": "../../../agentops"
+    },
+    {
+      "path": "../.."
+    },
+    {
+      "path": "../../../agentops-ts"
+    }
+  ],
+  "settings": {},
+}

@@ -1,0 +1,279 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 44% 14%;
+    --primary-foreground: 227 44% 14% / 0.74;
+
+    --secondary: 230 13% 35%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --primary-container: 235, 100%, 98%;
+
+    --icons: 229 11% 40%;
+    --icon-white: 236, 36%, 91%;
+    --border: 234 43% 91%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --success: 153, 40%, 59%;
+    --warning: 52, 72%, 69%;
+    --error: 345, 74%, 63%;
+
+    --radius: 0.5rem;
+
+    --chart-1: 248 100% 50% / 1;
+    --chart-2: 198 100% 50% / 1;
+    --chart-3: 248 100% 50% / 0.6;
+    --chart-4: 198 100% 50% / 0.5;
+
+    /* background: var(--Success, #4BC498); */
+    /* --chart-success: 153 40% 59%; */
+    /* background: var(--Background-Tint, #E1E3F2); */
+    /* --chart-indeterminate: rgb(250 204 21); */
+    /* background: var(--Error, #E65A7E); */
+    --chart-error: 345 74% 63%;
+  }
+
+  /* TODO: Update to match new style guide */
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: hsl(212.7, 26.8%, 83.9);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    /* overscroll-behavior: none; */
+    scrollbar-width: thin;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Fix for SVG pointer events */
+  button svg,
+  a svg,
+  [role='button'] svg,
+  .cursor-pointer svg {
+    pointer-events: none;
+  }
+}
+
+.max-90-vh {
+  max-height: 90vh;
+}
+
+.max-90-vh-header {
+  max-height: calc(90vh - 100px);
+}
+
+.h-90vh {
+  height: 90vh;
+}
+
+.max-50-vh {
+  max-height: 50vh;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.language-typescript {
+  color: #9cdcfe;
+}
+
+#sentry-feedback {
+  z-index: 10;
+}
+
+/* This code is added to override the default yellow background color applied by browsers on autofilled input fields. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+@font-face {
+  font-family: Menlo;
+  src: url('/font/Menlo.ttf');
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+/* This code is added to override the default styles of JsonEditor component */
+.jer-value-main-row {
+  align-items: flex-start !important;
+}
+
+.jer-value-string {
+  line-height: 1.1em !important;
+}
+
+.assistant-message-content {
+  overflow-x: auto !important;
+}
+
+/* Shared animated gradient border for upgrade buttons and pro badges */
+.animated-gradient-border {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.animated-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 0;
+  background: linear-gradient(120deg, #ffb347, #ff5e62, #ffb347, #ffcc33, rgb(255, 129, 94), #ffb347);
+  background-size: 200% 200%;
+  animation: gradient-border-move 3s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes gradient-border-move {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* Pro Badge Shimmer Effect */
+.pro-shimmer-badge {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-glint {
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.32) 50%, rgba(255, 255, 255, 0.18) 55%, rgba(255, 255, 255, 0) 100%);
+  animation: shimmer-glint 2.2s infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes shimmer-glint {
+  0% {
+    left: -75%;
+  }
+
+  60% {
+    left: 120%;
+  }
+
+  100% {
+    left: 120%;
+  }
+}
+
+/* Rainbow gradient for rocket icon */
+.rainbow-gradient {
+  background: linear-gradient(90deg, #ff5e62, #ffcc33, #4bc498, #5e72eb, #e65a7e, #ff5e62);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  animation: rainbow-move 2s linear infinite;
+}
+
+@keyframes rainbow-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Rocket move animation */
+.rocket-move {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group:hover .rocket-move {
+  transform: translate(8px, -8px) scale(1.1);
+}
+
+.rainbow-rocket svg {
+  stroke: url(#rainbow-gradient) !important;
+}
+
+.rocket-rainbow {
+  stroke: url(#rainbow-gradient) !important;
+}

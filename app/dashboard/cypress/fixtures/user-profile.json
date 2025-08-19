@@ -1,0 +1,45 @@
+{
+    "id": "user-test-xxxx-yyyy-zzzz",
+    "aud": "authenticated",
+    "role": "authenticated",
+    "email": "testuser@example.com",
+    "email_confirmed_at": "2023-01-01T12:00:00Z",
+    "phone": "",
+    "confirmed_at": "2023-01-01T12:00:00Z",
+    "last_sign_in_at": "2023-01-10T12:00:00Z",
+    "app_metadata": {
+        "provider": "email",
+        "providers": [
+            "email"
+        ]
+    },
+    "user_metadata": {
+        "avatar_url": "https://example.com/avatar.png",
+        "email": "testuser@example.com",
+        "email_verified": true,
+        "full_name": "Test User Cypress",
+        "iss": "https://example.com",
+        "name": "Test User Cypress",
+        "picture": "https://example.com/avatar.png",
+        "provider_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        "sub": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    },
+    "identities": [
+        {
+            "identity_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+            "id": "user-test-xxxx-yyyy-zzzz",
+            "user_id": "user-test-xxxx-yyyy-zzzz",
+            "identity_data": {
+                "email": "testuser@example.com",
+                "email_verified": true,
+                "sub": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            },
+            "provider": "email",
+            "last_sign_in_at": "2023-01-01T12:00:00Z",
+            "created_at": "2023-01-01T12:00:00Z",
+            "updated_at": "2023-01-01T12:00:00Z"
+        }
+    ],
+    "created_at": "2023-01-01T12:00:00Z",
+    "updated_at": "2023-01-01T12:00:00Z"
+}

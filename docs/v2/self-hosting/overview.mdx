@@ -1,0 +1,302 @@
+---
+title: "Self-Hosting Overview"
+description: "Complete guide to self-hosting AgentOps backend services and infrastructure"
+---
+
+# Self-Hosting AgentOps
+
+Welcome to the AgentOps self-hosting documentation. This section provides comprehensive guides for running AgentOps backend services and infrastructure on your own infrastructure.
+
+## What is Self-Hosting?
+
+Self-hosting AgentOps means running the entire AgentOps platform on your own servers or cloud infrastructure, giving you complete control over:
+
+- **Data sovereignty** - Your data stays on your infrastructure
+- **Customization** - Modify the platform to fit your needs
+- **Security** - Implement your own security policies
+- **Compliance** - Meet specific regulatory requirements
+- **Cost control** - Manage infrastructure costs directly
+
+## Architecture Overview
+
+The AgentOps platform consists of several key components:
+
+### Core Services
+- **API Server** - FastAPI backend handling authentication, data processing, and business logic
+- **Dashboard** - Next.js frontend providing the user interface and visualization
+- **Database Layer** - Supabase (PostgreSQL) for primary data and ClickHouse for analytics
+
+### Supporting Infrastructure
+- **OpenTelemetry Collector** - Trace and metrics collection
+- **Authentication** - Supabase Auth for user management
+- **File Storage** - Supabase Storage for file handling
+- **Monitoring** - Optional Sentry, PostHog integration
+
+### External Dependencies
+- **Supabase** - Database and authentication services
+- **ClickHouse** - Analytics database for traces and metrics
+- **Stripe** (optional) - Payment processing for billing features
+
+## Deployment Options
+
+### 1. Development Setup
+Perfect for local development and testing:
+- **Native Development** - Run services directly on your machine
+- **Docker Development** - Use Docker Compose for isolated environment
+- **Hybrid Approach** - Mix native and containerized services
+
+### 2. Production Deployment
+For production workloads:
+- **Docker Compose** - Simple single-server deployment
+- **Kubernetes** - Scalable container orchestration
+- **Cloud Platforms** - Deploy to AWS, GCP, Azure
+- **Serverless** - Use cloud functions and managed services
+
+## Quick Start Guide
+
+### Prerequisites
+Before you begin, ensure you have:
+- Modern operating system (Linux, macOS, or Windows with WSL)
+- Docker and Docker Compose
+- Node.js 18+ and Python 3.12+
+- Access to external services (Supabase, ClickHouse)
+
+### 5-Minute Setup
+```bash
+# 1. Clone the repository
+git clone https://github.com/AgentOps-AI/AgentOps.Next.git
+cd AgentOps.Next/app
+
+# 2. Copy environment files
+cp .env.example .env
+cp api/.env.example api/.env
+cp dashboard/.env.example dashboard/.env.local
+
+# 3. Configure external services (see guides below)
+# Edit .env files with your service credentials
+
+# 4. Start with Docker
+docker-compose up -d
+
+# Or start natively for development
+just api-native    # Terminal 1
+just fe-run        # Terminal 2
+```
+
+Visit http://localhost:3000 to access the dashboard!
+
+## Documentation Sections
+
+### [Backend Setup Guide](/v2/self-hosting/backend-setup)
+Complete guide for setting up the AgentOps backend services, including:
+- Prerequisites and system requirements
+- Environment configuration
+- External service setup
+- Service verification and troubleshooting
+
+### [Docker Guide](/v2/self-hosting/docker-guide)
+Comprehensive Docker and Docker Compose documentation:
+- Docker configuration and setup
+- Container management commands
+- Production Docker configurations
+- Performance optimization and monitoring
+
+### [Native Development Guide](/v2/self-hosting/native-development)
+Guide for running services natively without Docker:
+- Fastest development setup
+- IDE configuration and debugging
+- Performance optimization
+- Advanced development workflows
+
+### [Just Commands Reference](/v2/self-hosting/just-commands)
+Complete reference for all available Just commands:
+- Setup and installation commands
+- Development workflow commands
+- Testing and quality assurance
+- Docker management utilities
+
+## Choosing Your Setup
+
+### For Active Development
+**Recommended: Native Development**
+- Fastest iteration cycles
+- Direct debugging capabilities
+- Lower resource usage
+- Immediate file system access
+
+```bash
+just api-native    # Start API natively
+just fe-run        # Start dashboard
+```
+
+### For Team Development
+**Recommended: Docker Development**
+- Consistent environment across team
+- Isolated service dependencies
+- Easy environment reset
+- Production-like testing
+
+```bash
+just up            # Start all services
+just logs          # Monitor services
+```
+
+### For Production
+**Recommended: Docker with External Services**
+- Scalable and maintainable
+- Health checks and restart policies
+- Resource limits and monitoring
+- Easy backup and recovery
+
+## External Services Setup
+
+### Required Services
+
+#### Supabase (Database & Auth)
+- **Purpose**: Primary PostgreSQL database and user authentication
+- **Setup**: Create project at [supabase.com](https://supabase.com)
+- **Cost**: Free tier available, pay-as-you-scale
+- **Alternatives**: Self-hosted PostgreSQL + custom auth
+
+#### ClickHouse (Analytics)
+- **Purpose**: High-performance analytics database for traces and metrics
+- **Setup**: ClickHouse Cloud or self-hosted
+- **Cost**: Pay-per-usage or fixed instances
+- **Alternatives**: PostgreSQL (with performance trade-offs)
+
+### Optional Services
+
+#### Stripe (Billing)
+- **Purpose**: Payment processing and subscription management
+- **Setup**: Create account at [stripe.com](https://stripe.com)
+- **Required for**: Billing features
+- **Alternatives**: Remove billing features or custom payment solution
+
+#### Monitoring & Analytics
+- **Sentry**: Error tracking and performance monitoring
+- **PostHog**: Product analytics and feature flags
+- **Setup**: Optional but recommended for production
+
+## Security Considerations
+
+### Authentication & Authorization
+- JWT tokens for API authentication
+- Supabase Auth for user management
+- Row-level security in PostgreSQL
+- API key management for SDK access
+
+### Data Protection
+- HTTPS/TLS encryption in transit
+- Database encryption at rest
+- Environment variable security
+- Secret management best practices
+
+### Network Security
+- Firewall configuration
+- VPN or private networks
+- API rate limiting
+- CORS configuration
+
+## Monitoring & Observability
+
+### Application Monitoring
+- Health check endpoints
+- Application metrics and logs
+- Error tracking with Sentry
+- Performance monitoring
+
+### Infrastructure Monitoring
+- Container resource usage
+- Database performance
+- Network connectivity
+- Storage utilization
+
+### Alerting
+- Service availability alerts
+- Error rate monitoring
+- Resource usage thresholds
+- Custom business metrics
+
+## Scaling Considerations
+
+### Horizontal Scaling
+- Multiple API server instances
+- Load balancer configuration
+- Database connection pooling
+- Shared session storage
+
+### Vertical Scaling
+- Resource allocation optimization
+- Database performance tuning
+- Caching strategies
+- CDN for static assets
+
+### Database Scaling
+- Read replicas for PostgreSQL
+- ClickHouse cluster setup
+- Connection pool management
+- Query optimization
+
+## Backup & Recovery
+
+### Database Backups
+- Automated Supabase backups
+- ClickHouse data exports
+- Point-in-time recovery
+- Cross-region replication
+
+### Application Backups
+- Configuration files
+- Environment variables
+- Custom modifications
+- SSL certificates
+
+### Disaster Recovery
+- Recovery time objectives (RTO)
+- Recovery point objectives (RPO)
+- Failover procedures
+- Data integrity verification
+
+## Cost Optimization
+
+### Infrastructure Costs
+- Right-size compute resources
+- Use spot instances where appropriate
+- Implement auto-scaling
+- Monitor and optimize usage
+
+### Service Costs
+- Optimize database queries
+- Implement caching strategies
+- Use appropriate service tiers
+- Monitor third-party service usage
+
+## Getting Help
+
+### Documentation
+- Follow the step-by-step guides
+- Check troubleshooting sections
+- Review configuration examples
+- Understand architecture decisions
+
+### Community Support
+- GitHub Issues for bug reports
+- GitHub Discussions for questions
+- Discord community for real-time help
+- Stack Overflow for technical questions
+
+### Professional Support
+- Enterprise support options
+- Consulting services available
+- Custom deployment assistance
+- Training and onboarding
+
+## Next Steps
+
+1. **Start with the [Backend Setup Guide](/v2/self-hosting/backend-setup)** - Get your environment running
+2. **Choose your deployment method** - Docker or native development
+3. **Configure external services** - Set up Supabase and ClickHouse
+4. **Customize for your needs** - Modify configuration and features
+5. **Plan for production** - Implement monitoring, backups, and scaling
+
+Ready to begin? Start with our [Backend Setup Guide](/v2/self-hosting/backend-setup)!

@@ -1,0 +1,16 @@
+# Simple Redis container for testing
+FROM redis:8-alpine
+
+# Expose Redis port
+EXPOSE 6379
+
+# Use a simple configuration optimized for testing
+RUN echo "bind 0.0.0.0" > /etc/redis.conf && \
+    echo "port 6379" >> /etc/redis.conf && \
+    echo "timeout 0" >> /etc/redis.conf && \
+    echo "tcp-keepalive 300" >> /etc/redis.conf && \
+    echo "save \"\"" >> /etc/redis.conf && \
+    echo "appendonly no" >> /etc/redis.conf
+
+# Start Redis with custom config
+CMD ["redis-server", "/etc/redis.conf"]

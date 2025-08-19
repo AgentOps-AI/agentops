@@ -1,0 +1,15 @@
+# Default recipe to run when just is called without arguments
+default:
+    @just --list
+
+# Run the API server locally using uvicorn
+run:
+    uv run -m dotenv -f .env.dev run -- uvicorn agentops.api.app:app --host 0.0.0.0 --port 8000
+
+# Run the API server with uvicorn's development server
+dev:
+    uv run -m dotenv -f .env.dev run -- uvicorn agentops.api.app:app --host 0.0.0.0 --port 8000 --reload
+
+# Generate a development JWT token for testing
+dev-token project_id:
+    @uv run python -c "from agentops.api.auth import generate_dev_token; print(generate_dev_token('{{project_id}}'))"

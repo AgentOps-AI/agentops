@@ -1,0 +1,74 @@
+FROM {{ base_image | default('python:3.12-slim-bookworm') }}
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    gcc \
+    build-essential \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python package managers
+RUN pip install --no-cache-dir uv psutil
+
+# Clone the repository inside the container
+{% if repository_url %}
+RUN git clone --depth 1 {{ repository_url }}
+{% endif %}
+
+# Copy the entire repository to preserve structure and allow relative imports
+RUN cp -r {{ repository_name }}/* .
+
+# Copy dependency file from cloned repo to current directory
+{% if watch_path %}
+RUN if [ -f {{ repository_name }}/{{ watch_path }}/pyproject.toml ]; then \
+        cp {{ repository_name }}/{{ watch_path }}/pyproject.toml .; \
+    elif [ -f {{ repository_name }}/{{ watch_path }}/requirements.txt ]; then \
+        cp {{ repository_name }}/{{ watch_path }}/requirements.txt .; \
+    else \
+        echo "No dependency file found in {{ repository_name }}/{{ watch_path }}"; exit 1; \
+    fi
+{% else %}
+RUN if [ -f {{ repository_name }}/pyproject.toml ]; then \
+        cp {{ repository_name }}/pyproject.toml .; \
+    elif [ -f {{ repository_name }}/requirements.txt ]; then \
+        cp {{ repository_name }}/requirements.txt .; \
+    else \
+        echo "No dependency file found in {{ repository_name }}"; exit 1; \
+    fi
+{% endif %}
+
+# Create virtual environment and install dependencies
+RUN uv venv
+RUN . .venv/bin/activate && \
+    if [ -f pyproject.toml ]; then \
+        uv sync; \
+    elif [ -f requirements.txt ]; then \
+        uv pip install -r requirements.txt; \
+    fi
+
+# Copy the application code from cloned repo
+{% if watch_path %}
+RUN cp -r {{ repository_name }}/{{ watch_path }}/* . 2>/dev/null || echo "No files in {{ repository_name }}/{{ watch_path }}"
+{% else %}
+RUN cp -r {{ repository_name }}/* . 2>/dev/null || echo "No files in {{ repository_name }}"
+{% endif %}
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Files are already copied to /app, so we stay in /app working directory
+
+# Health check for Kubernetes
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:{{ port | default(8080) }}/health || exit 1
+
+# Expose application port
+EXPOSE {{ port | default(8080) }}
+
+# Run the entrypoint command
+CMD ["sh", "-c", "{{ entrypoint }}"]

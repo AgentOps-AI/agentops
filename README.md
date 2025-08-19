@@ -77,9 +77,8 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 | ------------------------------------- | ------------------------------------------------------------- |
 | 📊 **Replay Analytics and Debugging** | Step-by-step agent execution graphs                           |
 | 💸 **LLM Cost Management**            | Track spend with LLM foundation model providers               |
-| 🧪 **Agent Benchmarking**             | Test your agents against 1,000+ evals                         |
-| 🔐 **Compliance and Security**        | Detect common prompt injection and data exfiltration exploits |
-| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AG2 (AutoGen), Camel AI, & LangChain         |
+| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AG2 (AutoGen), Agno, LangGraph, & more         |
+| ⚒️ **Self-Host**                      | Want to run AgentOps on your own cloud? You're covered        |
 
 ## Quick Start ⌨️
 
@@ -108,6 +107,13 @@ agentops.end_session('Success')
 
 All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
 <br/>
+
+## Self-Hosting
+
+Looking to run the full AgentOps app (Dashboard + API backend) on your machine? Follow the setup guide in `app/README.md`:
+
+- [Run the App and Backend (Dashboard + API)](app/README.md)
+
 
 <details>
   <summary>Agent Debugging</summary>

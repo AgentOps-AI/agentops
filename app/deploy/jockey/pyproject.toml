@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jockey"
+version = "0.1.0"
+description = "Standalone Kubernetes deployment package for AgentOps"
+readme = "README.md"
+authors = [
+    {name = "AgentOps", email = "support@agentops.ai"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "kubernetes>=28.0.0",
+    "pyyaml>=6.0",
+    "click>=8.0.0",
+    "python-dotenv>=1.0.0",
+    "docker>=6.0.0",
+    "jinja2>=3.0.0",
+    "redis>=5.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "gitpython>=3.1.0",
+    "boto3>=1.39.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "docker>=6.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "httpx>=0.24.0",
+]
+
+[tool.setuptools.packages.find]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')"
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+exclude = [
+    "tests/",
+    "test_*.py"
+]

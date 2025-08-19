@@ -1,0 +1,151 @@
+name: Update otel-collector tokencost dependency
+
+on:
+  schedule:
+    # Run every night at 1 AM UTC
+    - cron: '0 1 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  check-tokencost-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: |
+          cd opentelemetry-collector/builder
+          uv venv
+
+      - name: Get current tokencost version
+        id: current-version
+        run: |
+          cd opentelemetry-collector/builder
+          CURRENT=$(grep -E "tokencost>=" pyproject.toml | sed 's/.*tokencost>=\([^"]*\).*/\1/')
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current tokencost version: $CURRENT"
+
+      - name: Get latest tokencost version from PyPI
+        id: latest-version
+        run: |
+          LATEST=$(curl -s https://pypi.org/pypi/tokencost/json | python3 -c "import sys, json; print(json.load(sys.stdin)['info']['version'])")
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          echo "Latest tokencost version: $LATEST"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          if [ "${{ steps.current-version.outputs.current }}" != "${{ steps.latest-version.outputs.latest }}" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "Version update needed: ${{ steps.current-version.outputs.current }} -> ${{ steps.latest-version.outputs.latest }}"
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+            echo "No update needed. Current version is latest."
+          fi
+
+      - name: Create branch for update
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b update-tokencost-${{ steps.latest-version.outputs.latest }}
+
+      - name: Update tokencost version in pyproject.toml
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          cd opentelemetry-collector/builder
+          sed -i 's/tokencost>=[^"]*/tokencost>=${{ steps.latest-version.outputs.latest }}/' pyproject.toml
+          echo "Updated pyproject.toml with tokencost>=${{ steps.latest-version.outputs.latest }}"
+
+      - name: Update UV lock file
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          cd opentelemetry-collector/builder
+          uv lock --upgrade-package tokencost
+          echo "Updated uv.lock file"
+
+      - name: Verify installation works
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          cd opentelemetry-collector/builder
+          source .venv/bin/activate
+          uv pip install -e ".[dev]"
+          python -c "import importlib.metadata; print(f'tokencost version: {importlib.metadata.version(\"tokencost\")}')"
+
+      - name: Run tests to ensure compatibility
+        if: steps.compare.outputs.needs_update == 'true'
+        timeout-minutes: 10
+        run: |
+          cd opentelemetry-collector/builder
+          source .venv/bin/activate
+          python -m pytest tests/test_model_cost.py -v
+          echo "Unit tests passed successfully"
+
+      - name: Commit changes
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git add opentelemetry-collector/builder/pyproject.toml opentelemetry-collector/builder/uv.lock
+          git commit -m "chore: update tokencost to ${{ steps.latest-version.outputs.latest }}
+
+          - Updates tokencost dependency from ${{ steps.current-version.outputs.current }} to ${{ steps.latest-version.outputs.latest }}
+          - Refreshes uv.lock with latest package versions
+          - Verified compatibility with existing unit tests"
+
+      - name: Push branch
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git push origin update-tokencost-${{ steps.latest-version.outputs.latest }}
+
+      - name: Create Pull Request
+        if: steps.compare.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "chore: update tokencost to ${{ steps.latest-version.outputs.latest }}" \
+            --body "$(cat <<'EOF'
+          ## Summary
+          - Updates tokencost dependency from ${{ steps.current-version.outputs.current }} to ${{ steps.latest-version.outputs.latest }}
+          - Automatically detected and applied the latest version available on PyPI
+
+          ## Changes
+          - Updated `opentelemetry-collector/builder/pyproject.toml` with new tokencost version
+          - Refreshed `opentelemetry-collector/builder/uv.lock` with updated dependencies
+          - Verified compatibility by running unit tests
+
+          ## Testing
+          - ✅ Unit tests pass with new tokencost version
+          - ✅ Package installation verified
+          - ✅ No breaking changes detected
+
+          ## Additional Notes
+          This PR was automatically created by the tokencost update workflow. The changes have been tested for basic compatibility but please review for any potential impacts on model cost calculations.
+          EOF
+          )" \
+            --head update-tokencost-${{ steps.latest-version.outputs.latest }} \
+            --base main
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.compare.outputs.needs_update }}" == "true" ]; then
+            echo "✅ Successfully created PR to update tokencost from ${{ steps.current-version.outputs.current }} to ${{ steps.latest-version.outputs.latest }}"
+          else
+            echo "ℹ️ No update needed. tokencost is already at the latest version (${{ steps.current-version.outputs.current }})"
+          fi

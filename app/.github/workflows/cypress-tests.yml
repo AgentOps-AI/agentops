@@ -1,0 +1,200 @@
+name: E2E Tests
+
+# Temporarily disabled while working out bugs
+on:
+  workflow_dispatch: {}
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
+  #   branches:
+  #     - main
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-testing:
+    name: Cypress E2E Testing
+    runs-on: ubuntu-latest
+    env:
+      # Supabase Application Environment Variables
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      # Cypress Environment Variables
+      CYPRESS_USER: ${{ secrets.CYPRESS_USER }}
+      CYPRESS_PASSWORD: ${{ secrets.CYPRESS_PASSWORD }}
+
+      # Bun Cache Configuration
+      BUN_INSTALL_CACHE_DIR: "~/.bun/install/cache"
+
+      # Supabase CLI Environment Variables
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_BUCKET_NAME: ${{ secrets.SUPABASE_BUCKET_NAME }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: bun install
+        working-directory: ./dashboard
+
+      # Cypress only works with NPM but we want to test with the bun dependency resolutions
+      - name: Convert bun.lock to package-lock.json for Cypress
+        run: |
+          cd dashboard
+    
+          if [ ! -f bun.lock ]; then
+          echo "Error: bun.lock file not found"
+          exit 1
+          fi
+          
+          bun install
+          
+          # create package-lock.json using Bun's built-in compatibility feature
+          # this guarantees using Bun's exact dependency resolution
+          bun run --bun npm install --package-lock-only
+          
+          if ! jq empty package-lock.json 2>/dev/null; then
+          echo "Error: Generated package-lock.json is not valid JSON"
+          exit 1
+          fi
+          
+          if [ -f package-lock.json ]; then
+          echo "Successfully converted bun.lock to package-lock.json"
+          ls -lh package-lock.json
+          else
+          echo "Error: Failed to create package-lock.json"
+          exit 1
+          fi
+
+      - name: Upload package-lock.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock-json
+          path: dashboard/package-lock.json
+
+      - name: Cache Next.js build
+        id: next-cache # Optional: Give the cache step an ID
+        uses: actions/cache@v4
+        with:
+          # Cache the Next.js build directory within the dashboard workspace
+          path: ./dashboard/.next/cache
+          # Generate a new cache whenever the lockfile or source files change.
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/bun.lockb') }}-${{ hashFiles('dashboard/**.[jt]s', 'dashboard/**.[jt]sx') }}
+          # Fallback restore keys
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/bun.lockb') }}-
+
+      - name: Build Application
+        run: bun next telemetry disable && bun run build
+        working-directory: ./dashboard
+
+      - name: Run Cypress Tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ./dashboard
+          start: bun start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 60
+
+      - name: Set Dynamic Artifact Paths
+        if: always()
+        id: set_paths
+        run: |
+          PR_OR_RUN_ID="${{ github.event.pull_request.number || github.run_id }}"
+          COMMIT_SHA="${{ github.sha }}"
+          # Base path example for artifacts: pr-123/commit-abc123
+          ARTIFACT_BASE_PATH="pr-${PR_OR_RUN_ID}/commit-${COMMIT_SHA}"
+
+          # Set the artifact base path as an environment variable
+          echo "ARTIFACT_BASE_PATH=${ARTIFACT_BASE_PATH}" >> $GITHUB_ENV
+          echo "Base Path in Bucket: ${ARTIFACT_BASE_PATH}"
+
+      - name: Setup Supabase CLI
+        if: always()
+        uses: supabase/setup-cli@v1
+
+      # This step is critical to the working of Supabase CLI
+      # It does not require the same project id as the application so it can be used to debug easily  
+      - name: Link Supabase Project
+        if: always()
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref ${{ env.SUPABASE_PROJECT_REF }}
+
+      - name: Upload Mochawesome Report to Supabase
+        if: always()
+        run: |
+          REPORT_PATH="./dashboard/cypress/reports/html/index.html"
+          DESTINATION="ss://${{ env.SUPABASE_PROJECT_REF }}/${{ env.SUPABASE_BUCKET_NAME }}/${{ env.ARTIFACT_BASE_PATH }}/report.html"
+
+          if [ -f "$REPORT_PATH" ]; then
+            echo "Uploading Mochawesome report from $REPORT_PATH to $DESTINATION..."
+            supabase storage cp --experimental "$REPORT_PATH" "$DESTINATION"
+            if [ $? -ne 0 ]; then echo "::error::Failed to upload Mochawesome report."; exit 1; fi
+          else
+            echo "::warning::Mochawesome report not found at $REPORT_PATH. Skipping upload."
+          fi
+
+      - name: Upload Coverage Report to Supabase
+        if: always()
+        run: |
+          COVERAGE_DIR="./dashboard/coverage/"
+          DESTINATION="ss://${{ env.SUPABASE_PROJECT_REF }}/${{ env.SUPABASE_BUCKET_NAME }}/${{ env.ARTIFACT_BASE_PATH }}/coverage-report/"
+
+          if [ -d "$COVERAGE_DIR" ]; then
+            echo "Uploading Coverage report from $COVERAGE_DIR to $DESTINATION..."
+            supabase storage cp --experimental --recursive "$COVERAGE_DIR" "$DESTINATION"
+            if [ $? -ne 0 ]; then echo "::error::Failed to upload Coverage report."; exit 1; fi
+          else
+            echo "::warning::Coverage report directory not found at $COVERAGE_DIR. Skipping upload."
+          fi
+
+      - name: Upload Screenshots to Supabase
+        if: always()
+        run: |
+          SCREENSHOT_DIR="./dashboard/cypress/screenshots"
+          DESTINATION="ss://${{ env.SUPABASE_PROJECT_REF }}/${{ env.SUPABASE_BUCKET_NAME }}/${{ env.ARTIFACT_BASE_PATH }}/screenshots/"
+
+          if [ -d "$SCREENSHOT_DIR" ]; then
+            echo "Uploading screenshots from $SCREENSHOT_DIR to $DESTINATION..."
+            supabase storage cp --experimental --recursive "$SCREENSHOT_DIR" "$DESTINATION"
+            if [ $? -ne 0 ]; then echo "::error::Failed to upload screenshots."; exit 1; fi
+          else
+            echo "Screenshots directory not found at $SCREENSHOT_DIR. Skipping upload."
+          fi
+
+      - name: Upload Videos to Supabase
+        if: always()
+        run: |
+          VIDEO_DIR="./dashboard/cypress/reports/html/videos"
+          DESTINATION="ss://${{ env.SUPABASE_PROJECT_REF }}/${{ env.SUPABASE_BUCKET_NAME }}/${{ env.ARTIFACT_BASE_PATH }}/videos/"
+
+          if [ -d "$VIDEO_DIR" ]; then
+            echo "Uploading videos from $VIDEO_DIR to $DESTINATION..."
+            supabase storage cp --experimental --recursive "$VIDEO_DIR" "$DESTINATION"
+            if [ $? -ne 0 ]; then echo "::error::Failed to upload videos."; exit 1; fi
+          else
+            echo "Videos directory not found at $VIDEO_DIR. Skipping upload."
+          fi
+
+      - name: Echo Artifact URLs
+        if: always()
+        run: |
+          # Constructs the public URLs for the uploaded artifacts to show in the logs
+          SUPABASE_PUBLIC_URL_BASE="https://${{ env.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/object/public/${{ env.SUPABASE_BUCKET_NAME }}"
+          BUCKET_BASE_PATH="${{ env.ARTIFACT_BASE_PATH }}"
+
+          echo ""
+          echo "-------------------- Supabase Artifact URLs --------------------"
+          echo "Test Report URL: ${SUPABASE_PUBLIC_URL_BASE}/${BUCKET_BASE_PATH}/test-report.html"
+          echo "Coverage Report URL: ${SUPABASE_PUBLIC_URL_BASE}/${BUCKET_BASE_PATH}/coverage-report/index.html"
+          echo "Screenshots Directory URL: ${SUPABASE_PUBLIC_URL_BASE}/${BUCKET_BASE_PATH}/screenshots/"
+          echo "Videos Directory URL: ${SUPABASE_PUBLIC_URL_BASE}/${BUCKET_BASE_PATH}/videos/"
+          echo "------------------------------------------------------------------"

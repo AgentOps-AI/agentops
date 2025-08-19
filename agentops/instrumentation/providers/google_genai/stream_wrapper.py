@@ -92,7 +92,9 @@ def generate_content_stream_wrapper(tracer, wrapped, instance, args, kwargs):
 
                     # Track token count (approximate by word count if metadata not available)
                     if hasattr(chunk, "text"):
-                        full_text += chunk.text
+                        text_value = getattr(chunk, "text", None)
+                        if text_value:
+                            full_text += text_value
 
                     yield chunk
 
@@ -195,7 +197,9 @@ async def generate_content_stream_async_wrapper(tracer, wrapped, instance, args,
                         last_chunk_with_metadata = chunk
 
                     if hasattr(chunk, "text"):
-                        full_text += chunk.text
+                        text_value = getattr(chunk, "text", None)
+                        if text_value:
+                            full_text += text_value
 
                     yield chunk
 

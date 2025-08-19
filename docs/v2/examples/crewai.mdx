@@ -1,230 +1,402 @@
 ---
 title: 'CrewAI Example'
-description: 'Using CrewAI with AgentOps to create a job posting'
+description: 'Build a job posting generator with CrewAI agents and AgentOps tracking'
 ---
 {/*  SOURCE_FILE: examples/crewai/job_posting.ipynb  */}
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/crewai/job_posting.ipynb'} target={'_blank'}>Github</a>_
 
-# CrewAI Job Posting Example
+# CrewAI Job Posting Generator with AgentOps
 
-This notebook demonstrates how to use CrewAI with AgentOps to automate the creation of a job posting.
+This example shows you how to build a complete job posting generator using CrewAI's official project structure with comprehensive tracking via AgentOps.
 
-First let's install the required packages.
+## What We're Building
 
-## Installation
+A **3-agent system** that collaborates to create job postings:
+- 🔍 **Research Agent**: Analyzes company culture and industry trends
+- ✍️ **Writer Agent**: Drafts compelling job descriptions
+- 📝 **Editor Agent**: Reviews and polishes the final posting
+
+**With AgentOps**, you'll get complete visibility into agent conversations, tool usage, costs, and performance.
+
+## Step-by-Step Implementation
+
+### Step 1: Install Dependencies
+
+Install CrewAI with tools support and AgentOps for tracking:
+
 <CodeGroup>
   ```bash pip
-  pip install -U 'crewai[tools]' agentops python-dotenv
+  pip install -U 'crewai[tools]' agentops
   ```
   ```bash poetry
-  poetry add crewai agentops python-dotenv
-  # For tools, you might need to add them or specific extras:
-  # poetry add crewai --extras tools 
-  # or poetry add crewai[tools] depending on your poetry version
+  poetry add 'crewai[tools]' agentops
   ```
   ```bash uv
-  uv add 'crewai[tools]' agentops python-dotenv
+  uv pip install 'crewai[tools]' agentops
   ```
 </CodeGroup>
 
-## Setup
-Then import them.
+**What AgentOps adds:**
+- 🔍 **Automatic tracking** of all LLM calls and agent interactions
+- 💰 **Cost monitoring** with token usage breakdown
+- 🛠️ **Tool usage analytics** for web searches and file operations
+- 📊 **Performance metrics** and execution timelines
+- 🐛 **Session replay** for debugging and optimization
+
+### Step 2: Create CrewAI Project
+
+Use CrewAI's CLI to create the proper project structure:
+
+```bash
+crewai create crew job_posting_agent
+```
+
+**Select your provider and model:**
+- Choose **1. openai** 
+- Choose **1. gpt-4** (or your preferred model)
+- Enter your OpenAI API key when prompted
+
+**This creates the complete project structure:**
+```
+job_posting_agent/
+├── .env                           # API keys
+├── .gitignore
+├── pyproject.toml                 # Dependencies
+├── README.md
+├── knowledge/
+│   └── user_preference.txt
+└── src/job_posting_agent/
+    ├── __init__.py
+    ├── main.py                    # Main execution
+    ├── crew.py                    # Crew definition
+    ├── config/
+    │   ├── agents.yaml           # Agent configurations
+    │   └── tasks.yaml            # Task definitions
+    └── tools/
+        ├── __init__.py
+        └── custom_tool.py        # Custom tools
+```
+
+### Step 3: Add Additional API Keys
+
+Edit the generated `.env` file to add AgentOps and Serper keys:
+
+```bash
+# .env (already has OPENAI_API_KEY from crewai create)
+OPENAI_API_KEY=your_openai_key_here
+AGENTOPS_API_KEY=your_agentops_key_here
+SERPER_API_KEY=your_serper_key_here
+```
+
+**Get your additional API keys:**
+- **AgentOps**: [Get one here](https://agentops.ai/settings/projects)
+- **Serper**: [Serper Dev](https://serper.dev/api-key) (for web search)
+
+### Step 4: Configure Agents
+
+Edit `src/job_posting_agent/config/agents.yaml` to define your 3 agents:
+
+```yaml
+researcher:
+  role: "Research Analyst"
+  goal: "Analyze the company website and provided description to extract insights on culture, values, and specific needs."
+  backstory: "Expert in analyzing company cultures and identifying key values and needs from various sources, including websites and brief descriptions."
+  verbose: true
+
+writer:
+  role: "Job Description Writer"
+  goal: "Use insights from the Research Analyst to create a detailed, engaging, and enticing job posting."
+  backstory: "Skilled in crafting compelling job descriptions that resonate with the company's values and attract the right candidates."
+  verbose: true
+
+editor:
+  role: "Review and Editing Specialist"
+  goal: "Review the job posting for clarity, engagement, grammatical accuracy, and alignment with company values and refine it to ensure perfection."
+  backstory: "A meticulous editor with an eye for detail, ensuring every piece of content is clear, engaging, and grammatically perfect."
+  verbose: true
+```
+
+### Step 5: Configure Tasks
+
+Edit `src/job_posting_agent/config/tasks.yaml` to define the workflow:
+
+```yaml
+research_company_culture:
+  description: >
+    Analyze the provided company website and description: "{company_description}" 
+    at domain {company_domain}. Focus on understanding the company's culture, 
+    values, and mission. Identify unique selling points and specific projects 
+    or achievements highlighted on the site. Compile a report summarizing these 
+    insights, specifically how they can be leveraged in a job posting to attract 
+    the right candidates.
+  expected_output: >
+    A comprehensive report detailing the company's culture, values, and mission, 
+    along with specific selling points relevant to the job role. Suggestions on 
+    incorporating these insights into the job posting should be included.
+  agent: researcher
+
+research_role_requirements:
+  description: >
+    Based on the hiring manager's needs: "{hiring_needs}", identify the key skills, 
+    experiences, and qualities the ideal candidate should possess for the role. 
+    Consider the company's current projects, its competitive landscape, and industry 
+    trends. Prepare a list of recommended job requirements and qualifications that 
+    align with the company's needs and values.
+  expected_output: >
+    A list of recommended skills, experiences, and qualities for the ideal candidate, 
+    aligned with the company's culture, ongoing projects, and the specific role's requirements.
+  agent: researcher
+
+draft_job_posting:
+  description: >
+    Draft a job posting for the role described by the hiring manager: "{hiring_needs}". 
+    Use the insights on "{company_description}" to start with a compelling introduction, 
+    followed by a detailed role description, responsibilities, and required skills and 
+    qualifications. Ensure the tone aligns with the company's culture and incorporate 
+    any unique benefits or opportunities offered by the company. 
+    Specific benefits: "{specific_benefits}"
+  expected_output: >
+    A detailed, engaging job posting that includes an introduction, role description, 
+    responsibilities, requirements, and unique company benefits. The tone should 
+    resonate with the company's culture and values, aimed at attracting the right candidates.
+  agent: writer
+  context:
+    - research_company_culture
+    - research_role_requirements
+
+review_and_edit_job_posting:
+  description: >
+    Review the draft job posting for the role: "{hiring_needs}". Check for clarity, 
+    engagement, grammatical accuracy, and alignment with the company's culture and 
+    values. Edit and refine the content, ensuring it speaks directly to the desired 
+    candidates and accurately reflects the role's unique benefits and opportunities. 
+    Provide feedback for any necessary revisions.
+  expected_output: >
+    A polished, error-free job posting that is clear, engaging, and perfectly 
+    aligned with the company's culture and values. Feedback on potential improvements 
+    and final approval for publishing. Formatted in markdown.
+  agent: editor
+  context:
+    - draft_job_posting
+  output_file: "job_posting.md"
+```
+
+### Step 6: Update the Crew Definition
+
+Edit `src/job_posting_agent/crew.py` to add tools and AgentOps:
+
 ```python
-from crewai import Crew, Agent, Task
-from crewai_tools.tools import WebsiteSearchTool, SerperDevTool, FileReadTool # Corrected import in previous MDX version
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool, WebsiteSearchTool
 import agentops
-import os
-from dotenv import load_dotenv
-from textwrap import dedent # Added import
-```
 
-Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+# Initialize AgentOps
+agentops.init()
 
-[Get an AgentOps API key](https://agentops.ai/settings/projects)
+@CrewBase
+class JobPostingAgentCrew():
+    """JobPostingAgent crew"""
+    
+    def __init__(self) -> None:
+        # Initialize tools
+        self.serper_tool = SerperDevTool()
+        self.website_tool = WebsiteSearchTool()
 
-1. Create an environment variable in a `.env` file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
-
-2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
-
-```python
-load_dotenv()
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
-os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY", "your_serper_api_key_here")
-```
-
-```python
-# Initialize AgentOps client
-agentops.init(auto_start_session=False)
-```
-
-## Define Agents and Tasks
-
-```python
-web_search_tool = WebsiteSearchTool()
-serper_dev_tool = SerperDevTool()
-file_read_tool = FileReadTool(
-    file_path="job_description_example.md", # Ensure this file exists or handle appropriately
-    description="A tool to read the job description example file.",
-)
-
-
-class Agents:
-    def research_agent(self):
+    @agent
+    def researcher(self) -> Agent:
         return Agent(
-            role="Research Analyst",
-            goal="Analyze the company website and provided description to extract insights on culture, values, and specific needs.",
-            tools=[web_search_tool, serper_dev_tool],
-            backstory="Expert in analyzing company cultures and identifying key values and needs from various sources, including websites and brief descriptions.",
-            verbose=True,
+            config=self.agents_config['researcher'],
+            tools=[self.serper_tool, self.website_tool]
         )
 
-    def writer_agent(self):
+    @agent
+    def writer(self) -> Agent:
         return Agent(
-            role="Job Description Writer",
-            goal="Use insights from the Research Analyst to create a detailed, engaging, and enticing job posting.",
-            tools=[web_search_tool, serper_dev_tool, file_read_tool],
-            backstory="Skilled in crafting compelling job descriptions that resonate with the company's values and attract the right candidates.",
-            verbose=True,
+            config=self.agents_config['writer'],
+            tools=[self.serper_tool, self.website_tool]
         )
 
-    def review_agent(self):
+    @agent
+    def editor(self) -> Agent:
         return Agent(
-            role="Review and Editing Specialist",
-            goal="Review the job posting for clarity, engagement, grammatical accuracy, and alignment with company values and refine it to ensure perfection.",
-            tools=[web_search_tool, serper_dev_tool, file_read_tool],
-            backstory="A meticulous editor with an eye for detail, ensuring every piece of content is clear, engaging, and grammatically perfect.",
-            verbose=True,
+            config=self.agents_config['editor']
+        )
+
+    @task
+    def research_company_culture(self) -> Task:
+        return Task(
+            config=self.tasks_config['research_company_culture']
+        )
+
+    @task
+    def research_role_requirements(self) -> Task:
+        return Task(
+            config=self.tasks_config['research_role_requirements']
+        )
+
+    @task
+    def draft_job_posting(self) -> Task:
+        return Task(
+            config=self.tasks_config['draft_job_posting']
+        )
+
+    @task
+    def review_and_edit_job_posting(self) -> Task:
+        return Task(
+            config=self.tasks_config['review_and_edit_job_posting']
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        """Creates the JobPostingAgent crew"""
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True
         )
 ```
+
+### Step 7: Update the Main Execution File
+
+Edit `src/job_posting_agent/main.py` to add AgentOps session management:
 
 ```python
-class Tasks:
-    def research_company_culture_task(self, agent, company_description, company_domain):
-        return Task(
-            description=dedent(
-                f\"\"\"\\
-								Analyze the provided company website and the hiring manager's company's domain {company_domain}, description: "{company_description}". Focus on understanding the company's culture, values, and mission. Identify unique selling points and specific projects or achievements highlighted on the site.
-								Compile a report summarizing these insights, specifically how they can be leveraged in a job posting to attract the right candidates.\"\"\"
-            ),
-            expected_output=dedent(
-                \"\"\"\\
-								A comprehensive report detailing the company's culture, values, and mission, along with specific selling points relevant to the job role. Suggestions on incorporating these insights into the job posting should be included.\"\"\"
-            ),
-            agent=agent,
-        )
+#!/usr/bin/env python
+import sys
+import warnings
+from job_posting_agent.crew import JobPostingAgentCrew
+import agentops
 
-    def research_role_requirements_task(self, agent, hiring_needs):
-        return Task(
-            description=dedent(
-                f\"\"\"\\
-								Based on the hiring manager's needs: "{hiring_needs}", identify the key skills, experiences, and qualities the ideal candidate should possess for the role. Consider the company's current projects, its competitive landscape, and industry trends. Prepare a list of recommended job requirements and qualifications that align with the company's needs and values.\"\"\"
-            ),
-            expected_output=dedent(
-                \"\"\"\\
-								A list of recommended skills, experiences, and qualities for the ideal candidate, aligned with the company's culture, ongoing projects, and the specific role's requirements.\"\"\"
-            ),
-            agent=agent,
-        )
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
-    def draft_job_posting_task(self, agent, company_description, hiring_needs, specific_benefits):
-        return Task(
-            description=dedent(
-                f\"\"\"\\
-								Draft a job posting for the role described by the hiring manager: "{hiring_needs}". Use the insights on "{company_description}" to start with a compelling introduction, followed by a detailed role description, responsibilities, and required skills and qualifications. Ensure the tone aligns with the company's culture and incorporate any unique benefits or opportunities offered by the company.
-								Specific benefits: "{specific_benefits}"\"\"\"
-            ),
-            expected_output=dedent(
-                \"\"\"\\
-								A detailed, engaging job posting that includes an introduction, role description, responsibilities, requirements, and unique company benefits. The tone should resonate with the company's culture and values, aimed at attracting the right candidates.\"\"\"
-            ),
-            agent=agent,
-        )
+def run():
+    """
+    Run the crew with AgentOps tracking.
+    """
+    # Start AgentOps session
+    session = agentops.start_session(tags=["crewai", "job-posting"])
+    
+    try:
+        # Define the inputs for the crew
+        inputs = {
+            'company_description': 'A fast-paced tech startup focused on AI-driven solutions for e-commerce.',
+            'company_domain': 'https://agentops.ai',
+            'hiring_needs': 'Senior Software Engineer with experience in Python, AI, and cloud platforms.',
+            'specific_benefits': 'Competitive salary, stock options, remote work flexibility, and great team culture.'
+        }
+        
+        # Initialize and run the crew
+        crew = JobPostingAgentCrew().crew()
+        result = crew.kickoff(inputs=inputs)
+        
+        print("\n" + "="*50)
+        print("Job Posting Creation Completed!")
+        print("Result:")
+        print(result)
+        print("\nCheck 'job_posting.md' for the generated job posting.")
+        
+        # End session successfully
+        agentops.end_session("Success")
+        return result
+        
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        agentops.end_session("Failed", end_state_reason=str(e))
+        raise
 
-    def review_and_edit_job_posting_task(self, agent, hiring_needs):
-        return Task(
-            description=dedent(
-                f\"\"\"\\
-								Review the draft job posting for the role: "{hiring_needs}". Check for clarity, engagement, grammatical accuracy, and alignment with the company's culture and values. Edit and refine the content, ensuring it speaks directly to the desired candidates and accurately reflects the role's unique benefits and opportunities. Provide feedback for any necessary revisions.\"\"\"
-            ),
-            expected_output=dedent(
-                \"\"\"\\
-								A polished, error-free job posting that is clear, engaging, and perfectly aligned with the company's culture and values. Feedback on potential improvements and final approval for publishing. Formated in markdown.\"\"\"
-            ),
-            agent=agent,
-            output_file="job_posting.md",
-        )
+def train():
+    """
+    Train the crew for a given number of iterations.
+    """
+    inputs = {
+        'company_description': 'A fast-paced tech startup focused on AI-driven solutions for e-commerce.',
+        'company_domain': 'https://agentops.ai', 
+        'hiring_needs': 'Senior Software Engineer with experience in Python, AI, and cloud platforms.',
+        'specific_benefits': 'Competitive salary, stock options, remote work flexibility, and great team culture.'
+    }
+    try:
+        JobPostingAgentCrew().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
+    except Exception as e:
+        raise Exception(f"An error occurred while training the crew: {e}")
 
-    def industry_analysis_task(self, agent, company_domain, company_description):
-        return Task(
-            description=dedent(
-                f\"\"\"\\
-								Conduct an in-depth analysis of the industry related to the company's domain: "{company_domain}". Investigate current trends, challenges, and opportunities within the industry, utilizing market reports, recent developments, and expert opinions. Assess how these factors could impact the role being hired for and the overall attractiveness of the position to potential candidates.
-								Consider how the company's position within this industry and its response to these trends could be leveraged to attract top talent. Include in your report how the role contributes to addressing industry challenges or seizing opportunities.\"\"\"
-            ),
-            expected_output=dedent(
-                \"\"\"\\
-								A detailed analysis report that identifies major industry trends, challenges, and opportunities relevant to the company's domain and the specific job role. This report should provide strategic insights on positioning the job role and the company as an attractive choice for potential candidates.\"\"\"
-            ),
-            agent=agent,
-        )
+def replay():
+    """
+    Replay the crew execution from a specific task.
+    """
+    try:
+        JobPostingAgentCrew().crew().replay(task_id=sys.argv[1])
+    except Exception as e:
+        raise Exception(f"An error occurred while replaying the crew: {e}")
+
+def test():
+    """
+    Test the crew execution and returns the results.
+    """
+    inputs = {
+        'company_description': 'A fast-paced tech startup focused on AI-driven solutions for e-commerce.',
+        'company_domain': 'https://agentops.ai',
+        'hiring_needs': 'Senior Software Engineer with experience in Python, AI, and cloud platforms.',
+        'specific_benefits': 'Competitive salary, stock options, remote work flexibility, and great team culture.'
+    }
+    try:
+        JobPostingAgentCrew().crew().test(n_iterations=int(sys.argv[1]), openai_model_name=sys.argv[2], inputs=inputs)
+    except Exception as e:
+        raise Exception(f"An error occurred while testing the crew: {e}")
 ```
 
-## Run the Crew
+### Step 8: Run Your Job Posting Generator
 
-```python
-tracer = agentops.start_trace(trace_name="CrewAI Job Posting", tags=["crew-job-posting-example", "agentops-example"])
+Navigate to your project and run:
 
-tasks = Tasks()
-agents = Agents()
-
-# Note: In a real scenario, you'd get these inputs dynamically.
-# For this MDX example, we'll use placeholders.
-company_description = "A fast-paced tech startup focused on AI-driven solutions for e-commerce."
-company_domain = "agentops.ai" # Example domain
-hiring_needs = "Senior Software Engineer with experience in Python, AI, and cloud platforms."
-specific_benefits = "Competitive salary, stock options, remote work flexibility, and a great team culture."
-
-# Create Agents
-researcher_agent = agents.research_agent()
-writer_agent = agents.writer_agent()
-review_agent = agents.review_agent()
-
-# Define Tasks for each agent
-research_company_culture_task = tasks.research_company_culture_task(
-    researcher_agent, company_description, company_domain
-)
-industry_analysis_task = tasks.industry_analysis_task(researcher_agent, company_domain, company_description)
-research_role_requirements_task = tasks.research_role_requirements_task(researcher_agent, hiring_needs)
-draft_job_posting_task = tasks.draft_job_posting_task(
-    writer_agent, company_description, hiring_needs, specific_benefits
-)
-review_and_edit_job_posting_task = tasks.review_and_edit_job_posting_task(review_agent, hiring_needs)
-
-# Instantiate the crew with a sequential process
-crew = Crew(
-    agents=[researcher_agent, writer_agent, review_agent],
-    tasks=[
-        research_company_culture_task,
-        industry_analysis_task,
-        research_role_requirements_task,
-        draft_job_posting_task,
-        review_and_edit_job_posting_task,
-    ],
-)
-
-
-result = crew.kickoff()
-print("Job Posting Creation Process Completed.")
-print("Final Job Posting:")
-print(result) # This will print the path to the output file job_posting.md
-
-agentops.end_trace(tracer, end_state="Success")
+```bash
+cd job_posting_agent
+crewai run
 ```
-The `job_posting.md` file will be created in the same directory where this script/notebook is run.
 
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+**What happens:**
+1. AgentOps session starts automatically
+2. Research agent analyzes the company and industry trends
+3. Writer agent drafts the job posting using research insights
+4. Editor agent reviews and polishes the final version
+5. A `job_posting.md` file is created with the result
+6. AgentOps captures all agent interactions, tool usage, and costs
+7. Session ends with success/failure status
+
+## View Results in AgentOps Dashboard
+
+After running your job posting generator, visit your [AgentOps Dashboard](https://app.agentops.ai) to see:
+
+1. **Session Overview**: Complete timeline of the 3-agent workflow
+2. **Agent Conversations**: Every LLM call with prompts and responses
+3. **Tool Execution**: Web searches and their results
+4. **Cost Breakdown**: Token usage and costs per agent and task
+5. **Performance Analytics**: Execution times and success rates
+6. **Session Replay**: Step-by-step playback for debugging
+
+## Key Files Modified
+
+**Configuration files you edited:**
+- `config/agents.yaml` - Agent definitions with roles and backstories
+- `config/tasks.yaml` - Task workflow with context dependencies
+- `crew.py` - Added tools and AgentOps initialization
+- `main.py` - Added session management
+- `.env` - Added AgentOps and Serper API keys
+
+**Generated output:**
+- `job_posting.md` - Final job posting created by the crew
+
+**AgentOps Integration Points:**
+- `agentops.init()` in `crew.py` - Enables automatic instrumentation
+- `agentops.start_session()` in `main.py` - Begins tracking
+- `agentops.end_session()` in `main.py` - Completes the session
+
+## Next Steps
+
+- Customize the input parameters in `main.py`
+- Modify agent configurations in `agents.yaml`
+- Add more tasks or change the workflow in `tasks.yaml`
+- Add custom tools in the `tools/` directory
+- Use AgentOps analytics to optimize agent performance

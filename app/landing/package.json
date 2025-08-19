@@ -1,0 +1,32 @@
+{
+  "name": "agentops-landing",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbo",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "lucide-react": "^0.379.0",
+    "next": "14.2.26",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-syntax-highlighter": "^15.5.0"
+  },
+  "devDependencies": {
+    "@cypress/code-coverage": "^3.14.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.3",
+    "postcss": "^8",
+    "prettier": "^3.2.5",
+    "prettier-plugin-tailwindcss": "^0.5.14",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

@@ -177,7 +177,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
                 self._last_auth_failure = time.time()
 
             logger.warning(
-                f"JWT token expired during span export: {e}. " f"Will retry in {self._auth_failure_threshold} seconds."
+                f"JWT token expired during span export: {e}. Will retry in {self._auth_failure_threshold} seconds."
             )
             return SpanExportResult.FAILURE
 

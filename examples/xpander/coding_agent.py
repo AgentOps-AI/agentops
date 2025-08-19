@@ -129,7 +129,7 @@ async def on_execution_request(execution_task: AgentExecution) -> AgentExecution
         email = getattr(user, "email", "")
         user_info = f"👤 From user: {name}\n📧 Email: {email}"
 
-    IncomingEvent = f"\n📨 Incoming message: {execution_task.input.text}\n" f"{user_info}"
+    IncomingEvent = f"\n📨 Incoming message: {execution_task.input.text}\n{user_info}"
 
     logger.info(f"[on_execution_request] IncomingEvent: {IncomingEvent}")
     logger.info(f"[on_execution_request] Calling agent_backend.init_task with execution={execution_task.model_dump()}")

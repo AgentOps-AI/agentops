@@ -1,0 +1,92 @@
+name: OpenTelemetry Collector Tests
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/test-otel-collector.yml'
+      - 'opentelemetry-collector/**/*.py'
+      - 'opentelemetry-collector/**/pyproject.toml'
+      - 'opentelemetry-collector/**/uv.lock'
+      - 'opentelemetry-collector/compose.yaml'
+      - 'opentelemetry-collector/Dockerfile'
+      - 'opentelemetry-collector/config/**'
+  pull_request:
+    paths:
+      - '.github/workflows/test-otel-collector.yml'
+      - 'opentelemetry-collector/**/*.py'
+      - 'opentelemetry-collector/**/pyproject.toml'
+      - 'opentelemetry-collector/**/uv.lock'
+      - 'opentelemetry-collector/compose.yaml'
+      - 'opentelemetry-collector/Dockerfile'
+      - 'opentelemetry-collector/config/**'
+
+jobs:
+  collector-tests:
+    name: OpenTelemetry Collector Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./opentelemetry-collector
+
+    env:
+      PYTHONUNBUFFERED: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+          enable-cache: true
+          cache-suffix: otel-collector
+          cache-dependency-glob: '**/pyproject.toml'
+
+      - name: Install dependencies
+        run: |
+          cd builder && uv pip install -e ".[dev]"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Build collector image
+        run: |
+          docker build -t otel-collector:test .
+
+      - name: Run all tests with coverage
+        timeout-minutes: 15
+        run: |
+          cd builder
+          source $VIRTUAL_ENV/bin/activate
+          python -m pytest tests/ -v -s --cov=. --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./opentelemetry-collector/builder/coverage.xml
+          flags: otel-collector
+          name: otel-collector-tests
+
+      - name: Show docker logs on failure
+        if: failure()
+        run: |
+          echo "=== Docker Compose Logs ==="
+          docker-compose logs || true
+          echo "=== All Running Containers ==="
+          docker ps -a || true
+
+      - name: Clean up Docker resources
+        if: always()
+        run: |
+          docker-compose down --volumes --remove-orphans || true
+          docker system prune -f || true

@@ -1,0 +1,50 @@
+# To login with a GitHub PAT.
+# Create a new Classic token with `read:packages` permission at: https://github.com/settings/tokens
+# Login locally: `$ echo $GITHUB_TOKEN | docker login ghcr.io -u <username> --password-stdin`
+
+services:
+  otelcollector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: otel
+    ports:
+      - '4317:4317' # otlp receiver
+      - '4318:4318' # otlp receiver
+      - '1888:1888' # pprof extension
+      - '13133:13133' # health_check extension
+      - '55679:55679' # zpages extension
+      - '24224:24224' # fluentforwarder
+      - '24224:24224/udp' # fluentforwarder
+    environment:
+      - CLICKHOUSE_ENDPOINT=${CLICKHOUSE_ENDPOINT:-http://clickhouse:8123}
+      - CLICKHOUSE_USERNAME=${CLICKHOUSE_USERNAME:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-password}
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE:-otel_2}
+      - LOGS_TABLE_NAME=${LOGS_TABLE_NAME:-otel_logs}
+      - TRACES_TABLE_NAME=${TRACES_TABLE_NAME:-otel_traces}
+      - CLICKHOUSE_TTL=${CLICKHOUSE_TTL:-12h}
+      - CLICKHOUSE_TIMEOUT=${CLICKHOUSE_TIMEOUT:-10s}
+      - JWT_SECRET=${JWT_SECRET:-}
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    ports:
+      - "9000:9000"
+      - "8123:8123"
+    environment:
+      - CLICKHOUSE_DB=${CLICKHOUSE_DATABASE:-otel_2}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USERNAME:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-password}
+  #
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   volumes:
+  #     - ./grafana.ini:/etc/grafana/grafana.ini
+  #     - ./datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+  #   environment:
+  #     GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource
+  #     GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
+  #   ports:
+  #     - "3001:3000"
+  #

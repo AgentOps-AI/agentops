@@ -1,0 +1,70 @@
+name: Deploy Tests
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/test-deploy.yml'
+      - 'deploy/**/*.py'
+      - 'deploy/**/pyproject.toml'
+      - 'deploy/pytest.ini'
+  pull_request:
+    paths:
+      - '.github/workflows/test-deploy.yml'
+      - 'deploy/**/*.py'
+      - 'deploy/**/pyproject.toml'
+      - 'deploy/pytest.ini'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:8.0
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PYTHONUNBUFFERED: '1'
+      REDIS_HOST: 'localhost'
+      REDIS_PORT: '6379'
+      REDIS_DB: '0'
+
+    defaults:
+      run:
+        working-directory: ./deploy/jockey
+
+    strategy:
+      matrix:
+        python-version: ['3.12']
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        continue-on-error: true
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-suffix: deploy-${{ matrix.python-version }}
+          cache-dependency-glob: 'deploy/**/pyproject.toml'
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+
+      - name: Run all deploy tests
+        timeout-minutes: 5
+        run: |
+           uv run -m pytest tests/ -v
+        env:
+          DOCKER_BUILDKIT: 1

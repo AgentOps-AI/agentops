@@ -1,0 +1,64 @@
+FROM --platform=linux/amd64 python:3.12-slim-bookworm
+
+ARG JOB_ID
+
+LABEL framework="crewai"
+LABEL agent.type="crewai"
+
+WORKDIR /app
+
+# Install system dependencies
+# Use --no-install-recommends to reduce package count and improve cache hit rate
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python package managers
+RUN pip install --no-cache-dir uv
+
+# Clone the repository inside the container
+{% if repository_url %}
+RUN git clone --depth 1 {{ repository_url }}
+{% endif %}
+
+# Copy the entire repository to preserve structure and allow relative imports
+RUN cp -r {{ repository_name }}/* .
+
+# Create virtual environment and install dependencies
+RUN uv venv
+RUN . .venv/bin/activate && \
+    if [ -f pyproject.toml ]; then \
+        uv pip install .; \
+    elif [ -f requirements.txt ]; then \
+        uv pip install -r requirements.txt; \
+    fi
+
+# Install CrewAI and required packages for the instance server
+# TODO make these part of the dependencies of the `instance` package.
+RUN . .venv/bin/activate && \
+    uv pip install "crewai[tools]" fastapi uvicorn pydantic
+
+# Copy instance files from ConfigMap mount into the image
+# The ConfigMap contains a base64-encoded tar.gz file with all instance files
+RUN if [ -f "/mnt/build_files/instance-src.tar.gz" ]; then \
+        base64 -d /mnt/build_files/instance-src.tar.gz | tar -xz -C /app; \
+    else \
+        echo "No instance files archive found"; \
+    fi
+
+ENV PYTHONPATH=/app:/app/instance
+ENV PATH="/app/.venv/bin:$PATH"
+ENV APP_PATH="/app{{ watch_path | default('') }}"
+ENV JOB_ID=${JOB_ID}
+
+# Health check for the FastAPI server
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:{{ port | default(8080) }}/docs || exit 1
+
+# Expose application port
+EXPOSE {{ port | default(8080) }}
+
+# `instance.server` comes from the build_files
+CMD ["sh", "-c", ". .venv/bin/activate && python -m instance.server"]

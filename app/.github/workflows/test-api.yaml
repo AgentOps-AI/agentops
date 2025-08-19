@@ -1,0 +1,92 @@
+name: API Python Tests
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/test-api.yaml'
+      - 'api/**/*.py'
+      - 'api/**/*.ipynb'
+      - 'api/pyproject.toml'
+  pull_request:
+    paths:
+      - '.github/workflows/test-api.yaml'
+      - 'api/**/*.py'
+      - 'api/**/*.ipynb'
+      - 'api/pyproject.toml'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: supabase/postgres:15.1.0.103
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      clickhouse:
+        image: clickhouse:24.12
+        env:
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: clickhouse
+          CLICKHOUSE_DB: otel_2
+        ports:
+          - 8123:8123
+          - 9000:9000
+        options: >-
+          --ulimit nofile=262144:262144
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PYTHONUNBUFFERED: '1'
+      SUPABASE_URL: ${{ secrets.__DEV__SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.__DEV__SUPABASE_ANON_KEY }}
+      SUPABASE_PROJECT_ID: ${{ secrets.__DEV__SUPABASE_PROJECT_ID }}
+      SUPABASE_KEY: ${{ secrets.__DEV__SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_S3_BUCKET: "user-uploads"
+      SUPABASE_S3_LOGS_BUCKET: "agentops-logs"
+      JWT_SECRET_KEY: 'test-secret-key'
+      AGENTOPS_API_KEY: ${{ secrets.__DEV__AGENTOPS_API_KEY }}
+      JOCKEY_PATH: "${{ github.workspace }}/api/jockey"
+
+    defaults:
+      run:
+        working-directory: ./api
+    strategy:
+      matrix:
+        python-version: ['3.12']
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        continue-on-error: true
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-suffix: uv-${{ matrix.python-version }}
+          cache-dependency-glob: '**/pyproject.toml'
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+
+      - name: Run unit tests with coverage
+        timeout-minutes: 5
+        run: |
+          uv run -m pytest tests/ -v

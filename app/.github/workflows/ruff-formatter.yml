@@ -1,0 +1,36 @@
+name: Ruff Code Formatter Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'api/**'
+
+jobs:
+  ruff-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'  # Specify the version of Python you need
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff
+
+    - name: Update Ruff Configuration
+      run: |
+        echo "lint.select = ['E', 'F', 'I']" >> ruff.toml
+
+    - name: Run Ruff
+      uses: astral-sh/ruff-action@v3
+      with:
+        args: "check --diff"
+        src: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} 

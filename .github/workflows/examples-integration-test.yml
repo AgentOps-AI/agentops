@@ -77,6 +77,7 @@ jobs:
           
           # Google ADK examples
           - { path: 'examples/google_adk/human_approval.py', name: 'Google ADK Human Approval' }
+          - { path: 'examples/google_adk/sse_function_call_example.py', name: 'Google ADK SSE Function Call' }
           
           # LlamaIndex examples
           # - { path: 'examples/llamaindex/llamaindex_example.py', name: 'LlamaIndex' }

@@ -1,0 +1,36 @@
+name: Prettier Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Root Dependencies
+        run: bun install
+
+      - name: Install Dashboard Dependencies
+        run: bun install
+        working-directory: ./dashboard
+
+      - name: Run Prettier Check on Changed Files
+        run: |
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No files require Prettier checks."
+          else
+            echo "Checking formatting for the following files:"
+            echo "$CHANGED_FILES"
+            echo "$CHANGED_FILES" | xargs npx prettier --check --ignore-unknown || true
+          fi

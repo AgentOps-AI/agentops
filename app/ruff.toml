@@ -1,0 +1,52 @@
+# Select all pycodestyle ("E") and Pyflakes ("F") codes by default.
+select = ["E", "W", "F"]
+
+# Allow unused variables that start with an underscore.
+# Useful for ignoring intentional unused variables (e.g., loop variables).
+# dummy-variable-rgx = "^_"
+
+# Allow line lengths up to 100 characters (matches Prettier setting).
+line-length = 110
+
+# Exclude common directories like virtual environments and caches.
+exclude = [
+    ".git",
+    ".env",
+    ".venv",
+    "venv",
+    "env",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    "agentstack/frameworks/templates/",
+    "examples",
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "node_modules"
+]
+
+target-version = "py312"
+
+[format]
+quote-style = "preserve"
+
+[lint]
+# You can add specific ignores or configurations here if needed later.
+
+[lint.isort]
+# Configuration for import sorting if needed.
+known-first-party = ["agentops"] # Tell isort about your own 'agentops' package in api/

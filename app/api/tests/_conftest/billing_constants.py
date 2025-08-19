@@ -1,0 +1,19 @@
+# Stripe Test IDs
+STRIPE_SUBSCRIPTION_ID_DEFAULT = "sub_test123"
+STRIPE_CUSTOMER_ID_DEFAULT = "cus_test123"
+STRIPE_PRICE_ID_CURRENT = "price_test123"
+STRIPE_PRICE_ID_LEGACY = "price_legacy_old_123"
+STRIPE_ITEM_ID_DEFAULT = "si_test123"
+
+# Pricing (in cents)
+SEAT_PRICE_DEFAULT = 4000  # $40.00
+SEAT_PRICE_PREMIUM = 5000  # $50.00
+TOKEN_COST_SAMPLE = 150  # Sample token cost
+SPAN_COST_SAMPLE = 50  # Sample span cost
+
+# Usage Quantities
+TOKEN_QUANTITY_SAMPLE = 750000
+SPAN_QUANTITY_SAMPLE = 50
+
+# Timestamps (Unix timestamps for consistency)
+FUTURE_TIMESTAMP = 1735689600  # 2025-01-01

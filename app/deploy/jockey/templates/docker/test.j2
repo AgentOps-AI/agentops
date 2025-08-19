@@ -1,0 +1,10 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Create a simple HTTP server using Python
+RUN echo 'import http.server\nimport socketserver\nimport datetime\n\nclass HealthHandler(http.server.SimpleHTTPRequestHandler):\n    def do_GET(self):\n        self.send_response(200)\n        self.send_header("Content-type", "text/plain")\n        self.end_headers()\n        message = f"Hello from test container - {datetime.datetime.now()}\\n"\n        self.wfile.write(message.encode())\n\nPORT = 8080\nwith socketserver.TCPServer(("", PORT), HealthHandler) as httpd:\n    print(f"Starting test HTTP server on port {PORT}...")\n    httpd.serve_forever()' > server.py
+
+EXPOSE 8080
+
+CMD ["python", "server.py"]
