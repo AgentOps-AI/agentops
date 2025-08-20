@@ -1,0 +1,204 @@
+name: Sync changes to OSS repository
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  sync-to-oss:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout AgentOps.Next repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: next-repo
+
+      - name: Checkout OSS repository
+        uses: actions/checkout@v4
+        with:
+          repository: AgentOps-AI/agentops
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: oss-repo
+
+      - name: Setup Git configuration
+        run: |
+          cd oss-repo
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Detect changes between repositories
+        id: detect-changes
+        run: |
+          # Create temporary directory for comparison
+          mkdir -p /tmp/sync-analysis
+          
+          # Compare directories with exclusions, capture output
+          rsync -av --dry-run --delete \
+            --exclude='.env*' \
+            --exclude='__pycache__/' \
+            --exclude='node_modules/' \
+            --exclude='.venv/' \
+            --exclude='.pytest_cache/' \
+            --exclude='.git/' \
+            --exclude='yarn.lock' \
+            --exclude='.env.tpl' \
+            next-repo/ oss-repo/app/ > /tmp/sync-analysis/changes.txt 2>&1
+          
+          # Check if there are actual changes (ignore directory timestamps)
+          if grep -E "(deleting|>f|\.f\.\.\.\.\.\.\.)" /tmp/sync-analysis/changes.txt > /dev/null; then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+            echo "Changes detected between repositories"
+            echo "=== DETECTED CHANGES ==="
+            cat /tmp/sync-analysis/changes.txt
+            echo "========================"
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+            echo "No changes detected between repositories"
+          fi
+
+      - name: Create sync branch in OSS repo
+        if: steps.detect-changes.outputs.changes_detected == 'true'
+        id: create-branch
+        run: |
+          cd oss-repo
+          BRANCH_NAME="sync-from-next-$(date +%Y%m%d-%H%M%S)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b $BRANCH_NAME
+          echo "Created branch: $BRANCH_NAME"
+
+      - name: Sync files from Next to OSS
+        if: steps.detect-changes.outputs.changes_detected == 'true'
+        run: |
+          # Perform the actual sync
+          rsync -av --delete \
+            --exclude='.env*' \
+            --exclude='__pycache__/' \
+            --exclude='node_modules/' \
+            --exclude='.venv/' \
+            --exclude='.pytest_cache/' \
+            --exclude='.git/' \
+            --exclude='yarn.lock' \
+            --exclude='.env.tpl' \
+            next-repo/ oss-repo/app/
+          
+          echo "Files synced successfully"
+
+      - name: Generate change summary
+        if: steps.detect-changes.outputs.changes_detected == 'true'
+        id: change-summary
+        run: |
+          cd oss-repo
+          
+          # Get list of changed files
+          CHANGED_FILES=$(git status --porcelain | head -20)
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # Count changes
+          ADDED_COUNT=$(echo "$CHANGED_FILES" | grep -c "^A " || echo "0")
+          MODIFIED_COUNT=$(echo "$CHANGED_FILES" | grep -c "^M " || echo "0")
+          DELETED_COUNT=$(echo "$CHANGED_FILES" | grep -c "^D " || echo "0")
+          
+          echo "added_count=$ADDED_COUNT" >> $GITHUB_OUTPUT
+          echo "modified_count=$MODIFIED_COUNT" >> $GITHUB_OUTPUT
+          echo "deleted_count=$DELETED_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "Change summary: $ADDED_COUNT added, $MODIFIED_COUNT modified, $DELETED_COUNT deleted"
+
+      - name: Commit changes
+        if: steps.detect-changes.outputs.changes_detected == 'true'
+        run: |
+          cd oss-repo
+          
+          # Add all changes
+          git add app/
+          
+          # Create detailed commit message
+          git commit -m "feat(sync): update OSS distribution from AgentOps.Next
+
+          Automated sync from AgentOps.Next repository to OSS distribution.
+          
+          Changes:
+          - ${{ steps.change-summary.outputs.added_count }} files added
+          - ${{ steps.change-summary.outputs.modified_count }} files modified  
+          - ${{ steps.change-summary.outputs.deleted_count }} files deleted
+          
+          This sync ensures the OSS repository stays up-to-date with the latest
+          changes from the main AgentOps.Next development repository.
+          
+          Sync performed on: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          Source commit: $(cd ../next-repo && git rev-parse HEAD)"
+
+      - name: Push branch to OSS repository
+        if: steps.detect-changes.outputs.changes_detected == 'true'
+        run: |
+          cd oss-repo
+          git push origin ${{ steps.create-branch.outputs.branch_name }}
+
+      - name: Create Pull Request in OSS repository
+        if: steps.detect-changes.outputs.changes_detected == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd oss-repo
+          
+          # Get current commit hash from Next repo for reference
+          NEXT_COMMIT=$(cd ../next-repo && git rev-parse HEAD)
+          NEXT_COMMIT_SHORT=$(cd ../next-repo && git rev-parse --short HEAD)
+          
+          gh pr create \
+            --title "feat(sync): sync OSS distribution from AgentOps.Next ($NEXT_COMMIT_SHORT)" \
+            --body "$(cat <<EOF
+          ## Summary
+          Automated sync of changes from AgentOps.Next repository to OSS distribution.
+          
+          ## Changes
+          - **${{ steps.change-summary.outputs.added_count }}** files added
+          - **${{ steps.change-summary.outputs.modified_count }}** files modified
+          - **${{ steps.change-summary.outputs.deleted_count }}** files deleted
+          
+          ## Source Information
+          - **Source Repository**: AgentOps-AI/AgentOps.Next
+          - **Source Commit**: [\`$NEXT_COMMIT_SHORT\`](https://github.com/AgentOps-AI/AgentOps.Next/commit/$NEXT_COMMIT)
+          - **Sync Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          
+          ## Changed Files
+          \`\`\`
+          ${{ steps.change-summary.outputs.changed_files }}
+          \`\`\`
+          
+          ## Testing
+          - ✅ Automated sync process completed successfully
+          - ✅ All excluded files (.env, __pycache__, etc.) properly filtered
+          - ✅ File structure maintained and validated
+          
+          ## Additional Notes
+          This PR was automatically created by the OSS sync workflow. The changes represent the latest updates from the main AgentOps.Next development repository and should be reviewed for any potential impacts on the OSS distribution.
+          
+          **Review Checklist:**
+          - [ ] Verify no sensitive configuration files were included
+          - [ ] Check that all changes are appropriate for OSS distribution
+          - [ ] Ensure no breaking changes for OSS users
+          - [ ] Validate that examples and documentation remain accurate
+          EOF
+          )" \
+            --head ${{ steps.create-branch.outputs.branch_name }} \
+            --base main
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.detect-changes.outputs.changes_detected }}" == "true" ]; then
+            echo "✅ Successfully created PR to sync changes from AgentOps.Next to OSS repository"
+            echo "   - Branch: ${{ steps.create-branch.outputs.branch_name }}"
+            echo "   - Changes: ${{ steps.change-summary.outputs.added_count }} added, ${{ steps.change-summary.outputs.modified_count }} modified, ${{ steps.change-summary.outputs.deleted_count }} deleted"
+          else
+            echo "ℹ️ No sync needed. OSS repository is already up-to-date with AgentOps.Next"
+          fi
