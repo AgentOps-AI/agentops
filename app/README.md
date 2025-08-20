@@ -42,7 +42,6 @@ Before you begin, ensure you have the following installed:
 
 ```bash
 git clone https://github.com/AgentOps-AI/agentops.git
-cd app
 ```
 
 ### 2. Set Up Environment Variables
@@ -275,8 +274,8 @@ For more information, visit [elastic.co/licensing/elastic-license](https://www.e
 ## 🆘 Support
 
 - **Documentation**: Check our [docs](docs/)
-- **Issues**: [GitHub Issues](https://github.com/AgentOps-AI/AgentOps.Next/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/AgentOps-AI/AgentOps.Next/discussions)
+- **Issues**: [GitHub Issues](https://github.com/AgentOps-AI/agentops/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/AgentOps-AI/agentops/discussions)
 - **Email**: support@agentops.ai
 
 ## 🙏 Acknowledgments

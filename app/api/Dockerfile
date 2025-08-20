@@ -1,4 +1,4 @@
-# To run this Dockerfile, do so from the AgentOps.Next directory
+# To run this Dockerfile, do so from the repository root directory
 # docker build -f api/Dockerfile -t agentops-api .
 
 FROM python:3.12-slim-bookworm

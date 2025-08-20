@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: 💬 GitHub Discussions
-    url: https://github.com/AgentOps-AI/AgentOps.Next/discussions
+    url: https://github.com/AgentOps-AI/agentops/discussions
     about: Ask questions and discuss ideas with the community
   - name: 📚 Documentation
-    url: https://github.com/AgentOps-AI/AgentOps.Next/blob/main/README.md
+    url: https://github.com/AgentOps-AI/agentops/blob/main/README.md
     about: Check our comprehensive setup and usage documentation
   - name: 🔒 Security Vulnerability
-    url: https://github.com/AgentOps-AI/AgentOps.Next/blob/main/SECURITY.md
-    about: Report security vulnerabilities privately 
+    url: https://github.com/AgentOps-AI/agentops/blob/main/SECURITY.md
+    about: Report security vulnerabilities privately   
