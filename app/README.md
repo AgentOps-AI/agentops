@@ -41,8 +41,8 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/AgentOps-AI/AgentOps.Next.git
-cd agentops
+git clone https://github.com/AgentOps-AI/agentops.git
+cd app
 ```
 
 ### 2. Set Up Environment Variables
