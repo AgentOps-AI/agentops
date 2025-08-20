@@ -10,7 +10,7 @@ from termcolor import colored
 from agentops.common.environment import APP_URL
 import agentops.api.event_handlers as event_handlers
 from agentops.api.db.supabase_client import AsyncSupabaseClient
-from agentops.api.exceptions import ExpiredJWTError, InvalidModelError
+from agentops.api.exceptions import ExpiredJWTError, InvalidModelError, InvalidAPIKeyError
 from agentops.api.log_config import logger
 from agentops.api.utils import generate_jwt, update_stats, validate_uuid, verify_jwt
 
@@ -21,6 +21,7 @@ router = APIRouter(prefix="/v2")
 
 jwt_secret = os.environ["JWT_SECRET_KEY"]
 app_url = APP_URL
+
 
 
 @router.post("/sessions")
@@ -82,6 +83,24 @@ async def create_session(request: Request, supabase: AsyncSupabaseClient):
     except ExpiredJWTError:
         logger.warning("Expired JWT")
         return JSONResponse({"path": request.url.path, "message": "Expired Token"}, status_code=401)
+    except InvalidAPIKeyError as e:
+        # This is a user error (invalid API key format), not a system error
+        # Log as warning to avoid Sentry alerts
+        try:
+            data = await request.json()
+            logger.warning(
+                f"{request.url.path}: Invalid API key format for session {data.get('session', {}).get('session_id', 'unknown')}"
+            )
+        except Exception:
+            logger.warning(f"{request.url.path}: Invalid API key format")
+        
+        return JSONResponse(
+            {
+                "path": request.url.path,
+                "message": "Invalid API key format",
+            },
+            status_code=400,
+        )
     except RuntimeError as e:
         try:
             data = await request.json()
@@ -132,6 +151,26 @@ async def v2_reauthorize_jwt(request: Request, supabase: AsyncSupabaseClient):
         token = generate_jwt(data["session_id"], jwt_secret)
         logger.info(colored(f"Completed request for session: {data['session_id']}", "yellow"))
         return JSONResponse({"status": "Success", "jwt": token})
+    
+    except InvalidAPIKeyError as e:
+        # This is a user error (invalid API key format), not a system error
+        # Log as warning to avoid Sentry alerts
+        try:
+            data = await request.json()
+            logger.warning(
+                f"{request.url.path}: Invalid API key format for session {data.get('session', {}).get('session_id', 'unknown')}"
+            )
+        except Exception:
+            logger.warning(f"{request.url.path}: Invalid API key format")
+        
+        return JSONResponse(
+            {
+                "path": request.url.path,
+                "message": "Invalid API key format",
+            },
+            status_code=400,
+        )
+
 
     except RuntimeError as e:
         try:
@@ -213,6 +252,24 @@ async def v2_create_session(request: Request, supabase: AsyncSupabaseClient):
     except ExpiredJWTError:
         logger.warning("Expired JWT")
         return JSONResponse({"path": str(request.url.path), "message": "Expired Token"}, status_code=401)
+    except InvalidAPIKeyError as e:
+        # This is a user error (invalid API key format), not a system error
+        # Log as warning to avoid Sentry alerts
+        try:
+            data = await request.json()
+            logger.warning(
+                f"{request.url.path}: Invalid API key format for session {data.get('session', {}).get('session_id', 'unknown')}"
+            )
+        except Exception:
+            logger.warning(f"{request.url.path}: Invalid API key format")
+        
+        return JSONResponse(
+            {
+                "path": request.url.path,
+                "message": "Invalid API key format",
+            },
+            status_code=400,
+        )
     except RuntimeError as e:
         try:
             data = await request.json()
@@ -727,6 +784,11 @@ async def v2_get_session_stats(session_id: str, request: Request, supabase: Asyn
 
         return JSONResponse(stats)
 
+    except InvalidAPIKeyError as e:
+        # This is a user error (invalid API key format), not a system error
+        # Log as warning to avoid Sentry alerts
+        logger.warning(f"{request.url.path}: Invalid API key format for session {session_id}")
+        return JSONResponse({"path": request.url.path, "message": "Invalid API key format"}, status_code=400)
     except RuntimeError as e:
         logger.error(f"Error getting session stats: {e}")
         return JSONResponse({"path": request.url.path, "message": str(e)}, status_code=400)
@@ -775,6 +837,11 @@ async def v2_export_session(session_id: str, request: Request, supabase: AsyncSu
 
         return JSONResponse(export_data)
 
+    except InvalidAPIKeyError as e:
+        # This is a user error (invalid API key format), not a system error
+        # Log as warning to avoid Sentry alerts
+        logger.warning(f"{request.url.path}: Invalid API key format for session {session_id}")
+        return JSONResponse({"path": request.url.path, "message": "Invalid API key format"}, status_code=400)
     except RuntimeError as e:
         logger.error(f"Error exporting session data: {e}")
         return JSONResponse({"path": request.url.path, "message": str(e)}, status_code=400)

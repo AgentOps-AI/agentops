@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -173,7 +173,7 @@ requires-dist = [
     { name = "pyjwt", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
-    { name = "tokencost", specifier = ">=0.1.24" },
+    { name = "tokencost", specifier = ">=0.1.26" },
 ]
 provides-extras = ["dev"]
 
@@ -1028,16 +1028,16 @@ wheels = [
 
 [[package]]
 name = "tokencost"
-version = "0.1.24"
+version = "0.1.26"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "anthropic" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/b2/a147f78bce4560643240c8d6cae1920b506d4042e6608078a64893849592/tokencost-0.1.24.tar.gz", hash = "sha256:0cde4531f9014c3d7d3b089863c088b3afd191d7dabea5dfc4194796f0c6361e", size = 43615, upload-time = "2025-06-24T22:22:07.788Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/c3/a1a0f81ce095abc7d86542bc20218cb49946625bf360317c27f7f1b18646/tokencost-0.1.26.tar.gz", hash = "sha256:a16592a7a701cc021009c4d6fcb1eb7b2c8d6cd7befd50775ae65e2609a25070", size = 107422, upload-time = "2025-08-13T06:28:39.687Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/65/5e558729b20e714606dc52d511610aa88f004e674f5f47d6f922d6dd055e/tokencost-0.1.24-py3-none-any.whl", hash = "sha256:928d1af30c4dc8e7251571fd374ecff862af0c4814954a4986222140a88fbdab", size = 41663, upload-time = "2025-06-24T22:22:06.609Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/ca/ffd64a090df0660a6546d004f98e3f762057b37cc31b218d97d52128b4c8/tokencost-0.1.26-py3-none-any.whl", hash = "sha256:f84803c4cc1449447d5f85a0d7269e660e10102e92e8c259763398702151d69e", size = 68901, upload-time = "2025-08-13T06:28:37.492Z" },
 ]
 
 [[package]]
