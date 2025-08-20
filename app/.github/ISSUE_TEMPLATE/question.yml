@@ -9,9 +9,9 @@ body:
         Have a question or need help? We're here to assist!
         
         **Before asking:** Please check if your question has already been answered in:
-        - [Documentation](https://github.com/AgentOps-AI/AgentOps.Next/blob/main/README.md)
-        - [Existing Issues](https://github.com/AgentOps-AI/AgentOps.Next/issues)
-        - [Discussions](https://github.com/AgentOps-AI/AgentOps.Next/discussions)
+        - [Documentation](https://github.com/AgentOps-AI/agentops/blob/main/README.md)
+        - [Existing Issues](https://github.com/AgentOps-AI/agentops/issues)
+        - [Discussions](https://github.com/AgentOps-AI/agentops/discussions)
 
   - type: textarea
     id: question
@@ -53,4 +53,4 @@ body:
     attributes:
       label: Additional Information
       description: Any additional information that might help us answer your question.
-      placeholder: Code snippets, error messages, screenshots, etc. 
+      placeholder: Code snippets, error messages, screenshots, etc.  
