@@ -441,7 +441,7 @@ async def auth_otp(request: Request, body: OTPSchema) -> StatusResponse:
                 'options': {
                     # set this to false if you do not want the user to be automatically signed up
                     'should_create_user': False,
-                    'email_redirect_to': f"{API_URL}{reverse_path('auth_callback')}",
+                    'email_redirect_to': f"{APP_URL}/auth/callback",
                 },
             }
         )
