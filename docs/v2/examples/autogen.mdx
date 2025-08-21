@@ -1,52 +1,39 @@
 ---
-title: 'AutoGen'
-description: 'Microsoft Autogen Chat Example'
+title: 'Autogen'
+description: 'Microsoft Autogen Assistant Chat Example'
 ---
 {/*  SOURCE_FILE: examples/autogen/AgentChat.ipynb  */}
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/autogen/AgentChat.ipynb'} target={'_blank'}>Github</a>_
 
-# Microsoft Autogen Chat Example
+# Microsoft Autogen Assistant Chat Example
 
-AgentOps automatically configures itself when it's initialized meaning your agent run data will be tracked and logged to your AgentOps dashboard right away.
+## Overview
+This script demonstrates how to build an interactive AI assistant chat using Microsoft Autogen and AgentOps.
+You will see how to:
 
-First let's install the required packages
+  1. Initialize an assistant agent with OpenAI's GPT-4 model
+  2. Equip the agent with a calculator tool for step-by-step math problem solving
+  3. Track and log all agent interactions automatically with AgentOps
+  4. Simulate a conversation loop where the assistant and user exchange messages until the task is complete
+
+This approach is useful for building conversational AI agents that can reason through complex tasks, show their work, and provide transparent, auditable results.
 
 
-
-## Installation
+## First let's install the required packages
+### Installation
 <CodeGroup>
   ```bash pip
-  pip install "autogen-ext[openai]" -U agentops autogen-agentchat python-dotenv
+  pip install "autogen-ext[openai]" -U "ag2[autogen-agentchat]" agentops python-dotenv nest_asyncio
   ```
   ```bash poetry
-  poetry add "autogen-ext[openai]" -U agentops autogen-agentchat python-dotenv
+  poetry add "autogen-ext[openai]" -U "ag2[autogen-agentchat]" agentops python-dotenv nest_asyncio
   ```
   ```bash uv
-  uv pip install "autogen-ext[openai]" -U agentops autogen-agentchat python-dotenv
+  uv add "autogen-ext[openai]" -U "ag2[autogen-agentchat]" agentops python-dotenv nest_asyncio
   ```
 </CodeGroup>
 
-Then import them
-
-
-```python
-import os
-from dotenv import load_dotenv
-from IPython.core.error import (
-    StdinNotImplementedError,
-)
-import asyncio
-
-import agentops
-
-from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-
-from autogen_agentchat.teams import RoundRobinGroupChat
-from autogen_agentchat.conditions import MaxMessageTermination
-from autogen_agentchat.ui import Console
-```
 
 Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
 
@@ -58,90 +45,114 @@ Next, we'll set our API keys. There are several ways to do this, the code below 
 
 
 ```python
+import os
+import asyncio
+from dotenv import load_dotenv
+from IPython.core.error import (
+    StdinNotImplementedError,
+)
+from typing import Annotated, Literal
+import agentops
+import nest_asyncio
+from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_agentchat.messages import TextMessage
+from autogen_core import CancellationToken
+
 load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
-```
 
-
-```python
-# When initializing AgentOps, you can pass in optional tags to help filter sessions
-agentops.init(auto_start_session=False)
-tracer = agentops.start_trace(
-    trace_name="Microsoft Agent Chat Example", tags=["autogen-chat", "microsoft-autogen", "agentops-example"]
-)
-```
-
-AutoGen will now start automatically tracking
-
-* LLM prompts and completions
-* Token usage and costs
-* Agent names and actions
-* Correspondence between agents
-* Tool usage
-* Errors
-
-# Simple Chat Example
-
-
-```python
-# Define model and API key
-model_name = "gpt-4-turbo"  # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
-api_key = os.getenv("OPENAI_API_KEY")
+# Ensure API key is available
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is required")
 
 # Create the model client
-model_client = OpenAIChatCompletionClient(model=model_name, api_key=api_key)
+model_client = OpenAIChatCompletionClient(model="gpt-4-turbo", api_key=openai_api_key, seed=42, temperature=0)
 
-# Create the agent that uses the LLM.
+# When initializing AgentOps, you can pass in optional tags to help filter sessions
+agentops.init(trace_name="autogen-agent-chat", tags=["autogen-agent-chat", "agentops-example"])
+
+# Define a simple calculator tool the assistant can use
+Operator = Literal["+", "-", "*", "/"]
+def calculator(a: int, b: int, operator: Annotated[Operator, "operator"]) -> int:
+    if operator == "+":
+        return a + b
+    elif operator == "-":
+        return a - b
+    elif operator == "*":
+        return a * b
+    elif operator == "/":
+        return int(a / b)
+    else:
+        raise ValueError("Invalid operator")
+
+# Create the assistant agent with access to the calculator tool
 assistant = AssistantAgent(
-    name="assistant",
-    system_message="You are a helpful assistant.",  # Added system message for clarity
+    name="Assistant",
+    system_message="You are a helpful AI assistant with access to a calculator tool. "
+    "When given a mathematical expression, you must break it down and use the calculator tool "
+    "for ALL arithmetic operations until you reach the final answer. "
+    "Do not stop until you have calculated the complete final result. "
+    "Show your work step by step and provide the final numerical answer. "
+    "Only say 'TERMINATE' after you have completed the entire calculation.",
     model_client=model_client,
+    tools=[calculator],
+    reflect_on_tool_use=True,
 )
 
-user_proxy_initiator = UserProxyAgent("user_initiator")
+# Create a user proxy agent to represent the human user
+user_proxy = UserProxyAgent(
+    name="User",
+    description="A user proxy agent that represents the human user.",
+)
 
-
+# Main async function to run the chat loop
 async def main():
-    termination = MaxMessageTermination(max_messages=2)
+    # The initial question for the assistant to solve
+    initial_message = "What is (1423 - 123) / 3 + (32 + 23) * 5? Please complete the entire calculation step by step and show the final answer."
+    print(f"User: {initial_message}")
 
-    group_chat = RoundRobinGroupChat(
-        [user_proxy_initiator, assistant],  # Corrected: agents as positional argument
-        termination_condition=termination,
-    )
+    # Start the conversation history with the user's question
+    conversation_history = [TextMessage(content=initial_message, source="user")]
 
-    chat_task = "How can I help you today?"
-    print(f"User Initiator: {chat_task}")
+    max_turns = 10  # Prevent infinite loops
+    turn = 0
 
-    try:
-        stream = group_chat.run_stream(task=chat_task)
-        await Console().run(stream)
-        agentops.end_trace(tracer, end_state="Success")
+    # Conversation loop: user and assistant take turns
+    while turn < max_turns:
+        turn += 1
+        print(f"\n--- Turn {turn} ---")
 
-    except StdinNotImplementedError:
-        print("StdinNotImplementedError: This typically happens in non-interactive environments.")
-        print("Skipping interactive part of chat for automation.")
-        agentops.end_trace(tracer, end_state="Indeterminate")
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        agentops.end_trace(tracer, end_state="Error")
-    finally:
-        await model_client.close()
+        # Send the conversation so far to the assistant and get a response
+        response = await assistant.on_messages(conversation_history, CancellationToken())
 
+        if response.chat_message:
+            assistant_message = response.chat_message
+            print(f"Assistant: {assistant_message.to_text()}")
 
-if __name__ == "__main__":
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
+            # Check if the assistant has finished the calculation
+            message_text = assistant_message.to_text()
+            if "TERMINATE" in message_text or "final answer" in message_text.lower():
+                print("Calculation completed!")
+                break
 
-    if loop and loop.is_running():
-        import nest_asyncio
+            # Add assistant's message to the conversation for the next turn
+            conversation_history.append(TextMessage(content=message_text, source="assistant"))
 
-        nest_asyncio.apply()
-        asyncio.run(main())
-    else:
-        asyncio.run(main())
+            # If not done, prompt the assistant to continue
+            if turn < max_turns - 1: 
+                continue_prompt = "Please continue with the remaining calculations to get the final answer."
+                conversation_history.append(TextMessage(content=continue_prompt, source="user"))
+                print(f"User: {continue_prompt}")
+
+        else:
+            print("Assistant did not provide a response.")
+            break
+
+nest_asyncio.apply()
+asyncio.run(main())
 ```
 
 You can view data on this run at [app.agentops.ai](https://app.agentops.ai).
