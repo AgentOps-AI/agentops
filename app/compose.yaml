@@ -3,14 +3,18 @@ include:
 services:
   api:
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: api/Dockerfile
     ports:
       - '8000:8000'
     environment:
       SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       SUPABASE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       APP_URL: ${APP_URL}
+      PROTOCOL: ${PROTOCOL}
+      API_DOMAIN: ${API_DOMAIN}
+      APP_DOMAIN: ${APP_DOMAIN}
+
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT}
       LOGGING_LEVEL: ${LOGGING_LEVEL}
