@@ -116,19 +116,17 @@ print(f"Chat Response:\n{chat_response['results'][0]['generated_text']}")
 
 ## Clean Up
 
-Finally, let's close the persistent connection with the models if they were established and end the AgentOps session.
+Finally, let's close the persistent connection with the models if they were established. The AgentOps trace will be closed automatically when the context ends.
 ```python
 # Close connections if persistent connections were used.
 # This is good practice if the SDK version/usage implies persistent connections.
 try:
-    gen_model.close_persistent_connection()
-    chat_model.close_persistent_connection()
+	gen_model.close_persistent_connection()
+	chat_model.close_persistent_connection()
 except AttributeError:
-    # Handle cases where this method might not exist (e.g. newer SDK versions or stateless calls)
-    print("Note: close_persistent_connection not available or needed for one or more models.")
-    pass
-
-agentops.end_session("Success") # Manually end session
+	# Handle cases where this method might not exist (e.g. newer SDK versions or stateless calls)
+	print("Note: close_persistent_connection not available or needed for one or more models.")
+	pass
 ```
 
 <script type="module" src="/scripts/github_stars.js"></script>
