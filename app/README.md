@@ -56,24 +56,28 @@ Troubleshooting
 Manual Docker (workaround if Compose build fails)
 - Build API from repo root so the Dockerfile can access deploy/jockey:
   cd <repo-root>
-  docker build -f app/api/Dockerfile -t agentops-api .
+  docker build -f app/api/Dockerfile -t agentops-api app
 - Build Dashboard:
   cd app/dashboard
   docker build -t agentops-dashboard .
 - Create an env file for runtime (example placeholders):
   # app/.env (used for both containers via --env-file)
+  # Frontend
   NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
   NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-  SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
-  APP_URL=http://localhost:3000
   NEXT_PUBLIC_API_URL=http://localhost:8000
+  NEXT_PUBLIC_APP_URL=http://localhost:3000
+  NEXT_PUBLIC_PLAYGROUND=true
+  # Backend
+  SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
   JWT_SECRET_KEY=YOUR_RANDOM_JWT_SECRET
+  API_DOMAIN=localhost:8000
+  PROTOCOL=http
   CLICKHOUSE_HOST=your-host.clickhouse.cloud
   CLICKHOUSE_PORT=8443
   CLICKHOUSE_USER=default
   CLICKHOUSE_PASSWORD=your_clickhouse_password
   CLICKHOUSE_DATABASE=otel_2
-  NEXT_PUBLIC_PLAYGROUND=true
 - Run API:
   docker run --rm -p 8000:8000 --env-file app/.env agentops-api
 - In another terminal, run Dashboard:
