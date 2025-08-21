@@ -36,7 +36,205 @@ Before you begin, ensure you have the following installed:
 - **Bun** (recommended) or npm ([Install Bun](https://bun.sh/))
 - **uv** (recommended for Python) ([Install uv](https://github.com/astral-sh/uv))
 
+## 🐳 Quickstart (Docker Compose) — Recommended
+
+Run the full stack with Docker. This is the easiest, most reliable path for local setup.
+
+1) Prerequisites
+- Docker and Docker Compose installed
+
+2) Create env file
+Create app/.env with the variables referenced by compose.yaml. Minimal required values:
+
+- Supabase
+  - NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  - SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+  - SUPABASE_PROJECT_ID=YOUR_PROJECT_ID
+- URLs
+  - APP_URL=http://localhost:3000
+  - NEXT_PUBLIC_SITE_URL=http://localhost:3000
+- Auth
+  - JWT_SECRET_KEY=replace-with-long-random-secret
+- ClickHouse
+  - CLICKHOUSE_HOST=your-clickhouse-host
+  - CLICKHOUSE_PORT=8443
+  - CLICKHOUSE_USER=default
+  - CLICKHOUSE_PASSWORD=your-clickhouse-password
+  - CLICKHOUSE_DATABASE=otel_2
+  - CLICKHOUSE_SECURE=true
+- Optional
+  - NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+  - NEXT_PUBLIC_PLAYGROUND=true
+  - NEXT_PUBLIC_POSTHOG_KEY=
+  - NEXT_PUBLIC_SENTRY_DSN=
+  - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+  - NEXT_STRIPE_SECRET_KEY=
+  - NEXT_STRIPE_WEBHOOK_SECRET=
+
+Tip: Use app/.env.example as a starting point:
+cp app/.env.example app/.env
+
+3) Run with compose
+From app/:
+- docker compose up -d
+- docker compose ps
+- View logs: docker compose logs -f api and docker compose logs -f dashboard
+
+4) Verify
+- API docs: http://localhost:8000/docs
+- Dashboard: http://localhost:3000
+
+5) Troubleshooting (Compose)
+- CORS: APP_URL must be http://localhost:3000 so API allows dashboard origin.
+- Supabase: API requires service role key; anon is only for dashboard.
+- ClickHouse: Use port 8443 with CLICKHOUSE_SECURE=true; ensure your IP is allowlisted in ClickHouse Cloud.
+- Stripe: Optional unless testing billing. If testing webhooks, set NEXT_STRIPE_WEBHOOK_SECRET and run stripe listen.
+- Ports busy: Stop any native servers using ports 3000/8000 before compose.
+- Logs: Check docker compose logs -f api and docker compose logs -f dashboard for errors.
+
+## How to get credentials
+
+Supabase
+- Create a project at https://supabase.com
+- Project URL (for NEXT_PUBLIC_SUPABASE_URL): Settings → API → Project URL
+- Anon key (for NEXT_PUBLIC_SUPABASE_ANON_KEY): Settings → API → anon public
+- Service role key (for SUPABASE_SERVICE_ROLE_KEY and SUPABASE_KEY on API): Settings → API → service_role secret
+- Project ID (for SUPABASE_PROJECT_ID): It’s the subdomain in your Project URL, or Settings → General → Reference ID
+- Database connection for API:
+  - SUPABASE_HOST, SUPABASE_PORT, SUPABASE_DATABASE, SUPABASE_USER, SUPABASE_PASSWORD
+  - Find in Settings → Database → Connection info (use the pooled/primary host and 5432; user is usually postgres.&lt;project_id&gt;)
+
+ClickHouse Cloud
+- Create a service at https://clickhouse.com/cloud
+- Host and port:
+  - CLICKHOUSE_HOST: your-service-name.region.clickhouse.cloud
+  - CLICKHOUSE_PORT: 8443
+  - CLICKHOUSE_SECURE: true
+- Auth:
+  - CLICKHOUSE_USER: default (or a user you create)
+  - CLICKHOUSE_PASSWORD: from the service connection string
+- Database:
+  - CLICKHOUSE_DATABASE: otel_2 (default in this repo; adjust if needed)
+- Network access:
+  - Add your machine IP to the ClickHouse Cloud IP allowlist
+
+Notes
+- API docs are enabled in Docker when PROTOCOL=http, API_DOMAIN=localhost:8000, and APP_DOMAIN=localhost:3000 are passed via compose (already configured).
+- Keep APP_URL=http://localhost:3000 to avoid CORS issues between dashboard and API.
+## 🧩 Beginner Quickstart (Local Dev)
+
+This section is a step-by-step guide to get the API and Dashboard running locally using your own Supabase and ClickHouse credentials. It focuses on the minimum setup for development.
+
+1) Install prerequisites
+- Node.js 18+ and Bun
+- Python 3.12+ and uv
+- Docker (optional, for compose)
+- Redis (optional; only needed for rate-limiting/session cache)
+
+2) Prepare environment files
+Create and fill these files with your own values (see minimal env lists below).
+
+- API: app/api/.env
+- Dashboard: app/dashboard/.env.local
+- Optional (for Docker Compose): app/.env
+
+Minimal env for API (app/api/.env):
+- Core URLs
+  - PROTOCOL=http
+  - API_DOMAIN=localhost:8000
+  - APP_DOMAIN=localhost:3000
+- Auth
+  - JWT_SECRET_KEY=your-long-random-secret
+- Supabase connection
+  - SUPABASE_URL=https://your-project-id.supabase.co
+  - SUPABASE_KEY=your-service-role-key
+  - SUPABASE_HOST=your-supabase-pg-host
+  - SUPABASE_PORT=5432
+  - SUPABASE_DATABASE=postgres
+  - SUPABASE_USER=postgres.your-project-id
+  - SUPABASE_PASSWORD=your-supabase-db-password
+- ClickHouse connection
+  - CLICKHOUSE_HOST=your-clickhouse-host
+  - CLICKHOUSE_PORT=8443
+  - CLICKHOUSE_USER=default
+  - CLICKHOUSE_PASSWORD=your-clickhouse-password
+  - CLICKHOUSE_DATABASE=otel_2
+- Optional
+  - SQLALCHEMY_LOG_LEVEL=WARNING
+  - REDIS_HOST=localhost
+  - REDIS_PORT=6379
+  - STRIPE_SECRET_KEY=sk_test_...
+  - STRIPE_SUBSCRIPTION_PRICE_ID=price_...
+  - STRIPE_TOKEN_PRICE_ID=price_...
+  - STRIPE_SPAN_PRICE_ID=price_...
+
+Notes:
+- The API expects a Supabase service role key for backend operations. An anon key is not sufficient.
+- Ensure APP_DOMAIN/API_DOMAIN/PROTOCOL resolve to http://localhost:3000 and http://localhost:8000 for CORS.
+
+Minimal env for Dashboard (app/dashboard/.env.local):
+- Supabase
+  - NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  - SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+  - SUPABASE_PROJECT_ID=your-project-id
+- URLs
+  - NEXT_PUBLIC_API_URL=http://localhost:8000
+  - NEXT_PUBLIC_APP_URL=http://localhost:3000
+  - NEXT_PUBLIC_SITE_URL=http://localhost:3000
+- Optional
+  - NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+  - NEXT_PUBLIC_PLAYGROUND=true
+  - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+  - NEXT_PUBLIC_POSTHOG_KEY=
+  - NEXT_PUBLIC_SENTRY_DSN=
+
+3) Install dependencies
+From the repository root (app/):
+- bun install
+- uv pip install -r requirements-dev.txt
+
+API:
+- cd api && uv pip install -e . && cd ..
+
+Dashboard:
+- cd dashboard && bun install && cd ..
+
+4) Run locally (native)
+Terminal A (API):
+- cd app/api
+- uv run python run.py
+- Verify API docs at http://localhost:8000/redoc
+
+Terminal B (Dashboard):
+- cd app/dashboard
+- bun run dev
+- Open http://localhost:3000
+
+5) Alternative: Docker Compose
+If you prefer containers or need a consistent env:
+- Create app/.env using the variables referenced in compose.yaml (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_PROJECT_ID, APP_URL, JWT_SECRET_KEY, CLICKHOUSE_* vars, etc.)
+- From app/: docker compose up -d
+- Verify: http://localhost:3000 and http://localhost:8000/redoc
+
+6) Verification checklist
+- API: http://localhost:8000/redoc loads without 5xx errors
+- Dashboard: http://localhost:3000 loads and can reach the API (open browser console; no CORS/network errors)
+- If billing flows are needed, configure Stripe and run stripe listen --forward-to http://localhost:8000/v4/stripe-webhook and set STRIPE_WEBHOOK_SECRET in app/api/.env
+
+7) Troubleshooting
+- CORS errors: Ensure APP_URL in API resolves to http://localhost:3000. This is derived from PROTOCOL and APP_DOMAIN in app/api/.env.
+- 401/403 on API endpoints: The API validates Supabase JWTs. Log in via the dashboard (Supabase project must be configured) so requests include Authorization: Bearer <token>.
+- Supabase errors: API requires a service role key (SUPABASE_KEY) and correct Postgres parameters (host/user/password). Check your Supabase project settings.
+- ClickHouse connection refused/timeout: Use port 8443, set correct user/password/database, ensure your IP is allowlisted in ClickHouse Cloud.
+- Stripe errors: Only required for billing features. For local, use test keys and stripe listen to populate STRIPE_WEBHOOK_SECRET.
+- Redis not found: Optional for development. Install and start Redis if enabling rate limiting or session cache, or leave REDIS_* unset to skip those features.
+- Ports busy: Ensure nothing else is running on 3000 or 8000, or adjust the mapped ports and corresponding env URLs.
+
+
 ## 🛠️ Quick Start
+
 
 ### 1. Clone the Repository
 
