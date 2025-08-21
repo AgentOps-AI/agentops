@@ -36,6 +36,92 @@ Before you begin, ensure you have the following installed:
 - **Bun** (recommended) or npm ([Install Bun](https://bun.sh/))
 - **uv** (recommended for Python) ([Install uv](https://github.com/astral-sh/uv))
 
+## 🐳 Quickstart (Docker Compose) — Recommended
+
+Run the full stack with Docker. This is the easiest, most reliable path for local setup.
+
+1) Prerequisites
+- Docker and Docker Compose installed
+
+2) Create env file
+Create app/.env with the variables referenced by compose.yaml. Minimal required values:
+
+- Supabase
+  - NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  - SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+  - SUPABASE_PROJECT_ID=YOUR_PROJECT_ID
+- URLs
+  - APP_URL=http://localhost:3000
+  - NEXT_PUBLIC_SITE_URL=http://localhost:3000
+- Auth
+  - JWT_SECRET_KEY=replace-with-long-random-secret
+- ClickHouse
+  - CLICKHOUSE_HOST=your-clickhouse-host
+  - CLICKHOUSE_PORT=8443
+  - CLICKHOUSE_USER=default
+  - CLICKHOUSE_PASSWORD=your-clickhouse-password
+  - CLICKHOUSE_DATABASE=otel_2
+  - CLICKHOUSE_SECURE=true
+- Optional
+  - NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+  - NEXT_PUBLIC_PLAYGROUND=true
+  - NEXT_PUBLIC_POSTHOG_KEY=
+  - NEXT_PUBLIC_SENTRY_DSN=
+  - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+  - NEXT_STRIPE_SECRET_KEY=
+  - NEXT_STRIPE_WEBHOOK_SECRET=
+
+Tip: Use app/.env.example as a starting point:
+cp app/.env.example app/.env
+
+3) Run with compose
+From app/:
+- docker compose up -d
+- docker compose ps
+- View logs: docker compose logs -f api and docker compose logs -f dashboard
+
+4) Verify
+- API docs: http://localhost:8000/docs
+- Dashboard: http://localhost:3000
+
+5) Troubleshooting (Compose)
+- CORS: APP_URL must be http://localhost:3000 so API allows dashboard origin.
+- Supabase: API requires service role key; anon is only for dashboard.
+- ClickHouse: Use port 8443 with CLICKHOUSE_SECURE=true; ensure your IP is allowlisted in ClickHouse Cloud.
+- Stripe: Optional unless testing billing. If testing webhooks, set NEXT_STRIPE_WEBHOOK_SECRET and run stripe listen.
+- Ports busy: Stop any native servers using ports 3000/8000 before compose.
+- Logs: Check docker compose logs -f api and docker compose logs -f dashboard for errors.
+
+## How to get credentials
+
+Supabase
+- Create a project at https://supabase.com
+- Project URL (for NEXT_PUBLIC_SUPABASE_URL): Settings → API → Project URL
+- Anon key (for NEXT_PUBLIC_SUPABASE_ANON_KEY): Settings → API → anon public
+- Service role key (for SUPABASE_SERVICE_ROLE_KEY and SUPABASE_KEY on API): Settings → API → service_role secret
+- Project ID (for SUPABASE_PROJECT_ID): It’s the subdomain in your Project URL, or Settings → General → Reference ID
+- Database connection for API:
+  - SUPABASE_HOST, SUPABASE_PORT, SUPABASE_DATABASE, SUPABASE_USER, SUPABASE_PASSWORD
+  - Find in Settings → Database → Connection info (use the pooled/primary host and 5432; user is usually postgres.&lt;project_id&gt;)
+
+ClickHouse Cloud
+- Create a service at https://clickhouse.com/cloud
+- Host and port:
+  - CLICKHOUSE_HOST: your-service-name.region.clickhouse.cloud
+  - CLICKHOUSE_PORT: 8443
+  - CLICKHOUSE_SECURE: true
+- Auth:
+  - CLICKHOUSE_USER: default (or a user you create)
+  - CLICKHOUSE_PASSWORD: from the service connection string
+- Database:
+  - CLICKHOUSE_DATABASE: otel_2 (default in this repo; adjust if needed)
+- Network access:
+  - Add your machine IP to the ClickHouse Cloud IP allowlist
+
+Notes
+- API docs are enabled in Docker when PROTOCOL=http, API_DOMAIN=localhost:8000, and APP_DOMAIN=localhost:3000 are passed via compose (already configured).
+- Keep APP_URL=http://localhost:3000 to avoid CORS issues between dashboard and API.
 ## 🧩 Beginner Quickstart (Local Dev)
 
 This section is a step-by-step guide to get the API and Dashboard running locally using your own Supabase and ClickHouse credentials. It focuses on the minimum setup for development.
