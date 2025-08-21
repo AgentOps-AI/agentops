@@ -46,11 +46,12 @@ Prerequisites
 Notes
 - ClickHouse typically requires TLS on port 8443.
 - Auth flows require a Supabase service role key; without it, some pages may be limited.
+- API docs: ensure API_DOMAIN includes "localhost" (e.g., API_DOMAIN=localhost:8000). Compose does not pass this by default; either add it to services.api.environment in compose.yaml or use the Manual Docker path below where we pass it via --env-file.
 
 Troubleshooting
 - If docker compose build fails with an error like:
   failed to calculate checksum of ... "/deploy/jockey": not found
-  This happens because the API Dockerfile expects the repository root as the build context, while compose uses app/api. Use the Manual Docker path below.
+  This happens because the API Dockerfile expects the app directory as the build context (so it can COPY deploy/jockey), while compose uses app/api. Use the Manual Docker path below (build with context app) or update compose.yaml to set build.context: ./ (repo app dir).
 
 # 5‑Minute Quickstart (Local)
 Manual Docker (workaround if Compose build fails)
