@@ -1,3 +1,174 @@
+# 5‑Minute Quickstart (Docker) — Recommended
+
+Get the stack (API + Dashboard) up quickly using Docker Compose.
+
+Prerequisites
+- Docker
+- Docker Compose
+
+1) Copy env files
+- From app/:
+  - cp .env.example .env           # if present
+  - cp api/.env.example api/.env   # if present
+  - cp dashboard/.env.example dashboard/.env.local
+
+2) Fill minimal env values
+- API (api/.env)
+  SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  SUPABASE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  JWT_SECRET_KEY=YOUR_RANDOM_JWT_SECRET
+  CLICKHOUSE_HOST=your-host.clickhouse.cloud
+  CLICKHOUSE_PORT=8443
+  CLICKHOUSE_USER=default
+  CLICKHOUSE_PASSWORD=your_clickhouse_password
+  CLICKHOUSE_DATABASE=otel_2
+  # Optional for billing/webhooks:
+  # STRIPE_SECRET_KEY=...
+  # STRIPE_SUBSCRIPTION_PRICE_ID=...
+  # STRIPE_TOKEN_PRICE_ID=...
+  # STRIPE_SPAN_PRICE_ID=...
+
+- Dashboard (dashboard/.env.local)
+  NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  NEXT_PUBLIC_API_URL=http://localhost:8000
+  NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+3) Start the stack
+- cd app
+- docker compose up -d
+- docker compose --profile dashboard up -d   # start the Dashboard service profile
+
+4) Verify
+- API docs: http://localhost:8000/redoc
+- Dashboard: http://localhost:3000
+
+Notes
+- ClickHouse typically requires TLS on port 8443.
+- Auth flows require a Supabase service role key; without it, some pages may be limited.
+- API docs: ensure API_DOMAIN includes "localhost" (e.g., API_DOMAIN=localhost:8000). Compose now passes this by default via services.api.environment.
+
+Troubleshooting
+- If you customized compose and see build errors related to copying deploy/jockey, ensure the API service uses build.context: ./ and dockerfile: api/Dockerfile (the default compose in this repo already does this).
+
+# 5‑Minute Quickstart (Local)
+Manual Docker (workaround if Compose build fails)
+- Build API from repo root so the Dockerfile can access deploy/jockey:
+  cd <repo-root>
+  docker build -f app/api/Dockerfile -t agentops-api app
+- Build Dashboard:
+  cd app/dashboard
+  docker build -t agentops-dashboard .
+- Create an env file for runtime (example placeholders):
+  # app/.env (used for both containers via --env-file)
+  # Frontend
+  NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  NEXT_PUBLIC_API_URL=http://localhost:8000
+  NEXT_PUBLIC_APP_URL=http://localhost:3000
+  NEXT_PUBLIC_PLAYGROUND=true
+  # Backend
+  SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  JWT_SECRET_KEY=YOUR_RANDOM_JWT_SECRET
+  API_DOMAIN=localhost:8000
+  PROTOCOL=http
+  CLICKHOUSE_HOST=your-host.clickhouse.cloud
+  CLICKHOUSE_PORT=8443
+  CLICKHOUSE_USER=default
+  CLICKHOUSE_PASSWORD=your_clickhouse_password
+  CLICKHOUSE_DATABASE=otel_2
+- Run API:
+  docker run --rm -p 8000:8000 --env-file app/.env agentops-api
+- In another terminal, run Dashboard:
+  docker run --rm -p 3000:3000 --env-file app/.env agentops-dashboard
+- Verify:
+  API docs: http://localhost:8000/redoc
+  Dashboard: http://localhost:3000
+
+
+The fastest way to run the full stack (API + Dashboard) locally without Docker.
+
+Prerequisites
+- Python 3.12+
+- Node.js 18+
+- Bun
+- uv
+- just
+
+1) Clone and enter the app folder
+- cd app
+
+2) Create env files from examples
+- If present:
+  - cp app/.env.example app/.env
+- API:
+  - cp app/api/.env.example app/api/.env
+- Dashboard:
+  - cp app/dashboard/.env.example app/dashboard/.env.local
+
+3) Fill minimal env variables
+- API: edit app/api/.env
+  SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  SUPABASE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  JWT_SECRET_KEY=YOUR_RANDOM_JWT_SECRET
+  CLICKHOUSE_HOST=your-host.clickhouse.cloud
+  CLICKHOUSE_PORT=8443
+  CLICKHOUSE_USER=default
+  CLICKHOUSE_PASSWORD=your_clickhouse_password
+  CLICKHOUSE_DATABASE=otel_2
+  # Optional later: STRIPE_SECRET_KEY=..., STRIPE_*_PRICE_ID=...
+
+- Dashboard: edit app/dashboard/.env.local
+  NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  NEXT_PUBLIC_API_URL=http://localhost:8000
+  NEXT_PUBLIC_APP_URL=http://localhost:3000
+  # Optional:
+  NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+  NEXT_PUBLIC_PLAYGROUND=true
+
+Notes
+- Supabase service role key is required for authenticated API flows; you can still start the servers without it, but some pages will be limited. Get it in Supabase → Settings → API.
+- ClickHouse is used for spans/sessions; use your cloud host on port 8443 (TLS). If you don’t have ClickHouse yet, you can still boot the servers; data views may be empty.
+
+4) Install dependencies
+- From the app folder:
+  just install
+
+- If "just" is not installed, run the manual equivalents:
+  bun install
+  uv pip install -r requirements-dev.txt
+  cd api && uv pip install -e . && cd ..
+  cd dashboard && bun install && cd ..
+
+5) Start servers (two terminals)
+- Terminal A (API):
+  cd app
+  just api-native
+  # If "just" is not installed: cd api && uv run python run.py
+- Terminal B (Dashboard):
+  cd app
+  just fe-run
+  # If "just" is not installed: cd dashboard && bun run dev
+
+6) Verify
+- API docs: http://localhost:8000/redoc loads
+- Dashboard: http://localhost:3000 loads
+
+Common pitfalls
+- API env file name: The API’s dev command uses .env.dev. Beginners should prefer just api-native (uses your .env). If you want hot reload from app/api, copy .env to .env.dev and run: just dev
+- Missing Supabase keys: You can boot, but auth/data views may be limited until you add real keys.
+- ClickHouse SSL/auth errors: Re‑check host/password; most cloud setups require 8443 over TLS.
+
+Optional: Docker Compose
+- If you prefer Docker later:
+  cd app
+  docker compose up -d
+- Ensure your env files are set; see app/compose.yaml for mappings.
+
+
 # AgentOps
 
 [![License: ELv2](https://img.shields.io/badge/License-ELv2-blue.svg)](https://www.elastic.co/licensing/elastic-license)
