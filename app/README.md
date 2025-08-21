@@ -38,6 +38,7 @@ Prerequisites
 3) Start the stack
 - cd app
 - docker compose up -d
+- docker compose --profile dashboard up -d   # start the Dashboard service profile
 
 4) Verify
 - API docs: http://localhost:8000/redoc
