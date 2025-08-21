@@ -47,7 +47,41 @@ Notes
 - ClickHouse typically requires TLS on port 8443.
 - Auth flows require a Supabase service role key; without it, some pages may be limited.
 
+Troubleshooting
+- If docker compose build fails with an error like:
+  failed to calculate checksum of ... "/deploy/jockey": not found
+  This happens because the API Dockerfile expects the repository root as the build context, while compose uses app/api. Use the Manual Docker path below.
+
 # 5‑Minute Quickstart (Local)
+Manual Docker (workaround if Compose build fails)
+- Build API from repo root so the Dockerfile can access deploy/jockey:
+  cd <repo-root>
+  docker build -f app/api/Dockerfile -t agentops-api .
+- Build Dashboard:
+  cd app/dashboard
+  docker build -t agentops-dashboard .
+- Create an env file for runtime (example placeholders):
+  # app/.env (used for both containers via --env-file)
+  NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  APP_URL=http://localhost:3000
+  NEXT_PUBLIC_API_URL=http://localhost:8000
+  JWT_SECRET_KEY=YOUR_RANDOM_JWT_SECRET
+  CLICKHOUSE_HOST=your-host.clickhouse.cloud
+  CLICKHOUSE_PORT=8443
+  CLICKHOUSE_USER=default
+  CLICKHOUSE_PASSWORD=your_clickhouse_password
+  CLICKHOUSE_DATABASE=otel_2
+  NEXT_PUBLIC_PLAYGROUND=true
+- Run API:
+  docker run --rm -p 8000:8000 --env-file app/.env agentops-api
+- In another terminal, run Dashboard:
+  docker run --rm -p 3000:3000 --env-file app/.env agentops-dashboard
+- Verify:
+  API docs: http://localhost:8000/redoc
+  Dashboard: http://localhost:3000
+
 
 The fastest way to run the full stack (API + Dashboard) locally without Docker.
 
