@@ -3,8 +3,8 @@ include:
 services:
   api:
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: api/Dockerfile
     ports:
       - '8000:8000'
     environment:
@@ -15,6 +15,7 @@ services:
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT}
       LOGGING_LEVEL: ${LOGGING_LEVEL}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      API_DOMAIN: ${API_DOMAIN}
       # Clickhouse Configuration
       CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
       CLICKHOUSE_PORT: ${CLICKHOUSE_PORT}
