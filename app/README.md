@@ -36,6 +36,117 @@ Before you begin, ensure you have the following installed:
 - **Bun** (recommended) or npm ([Install Bun](https://bun.sh/))
 - **uv** (recommended for Python) ([Install uv](https://github.com/astral-sh/uv))
 
+## 🧩 Beginner Quickstart (Local Dev)
+
+This section is a step-by-step guide to get the API and Dashboard running locally using your own Supabase and ClickHouse credentials. It focuses on the minimum setup for development.
+
+1) Install prerequisites
+- Node.js 18+ and Bun
+- Python 3.12+ and uv
+- Docker (optional, for compose)
+- Redis (optional; only needed for rate-limiting/session cache)
+
+2) Prepare environment files
+Create and fill these files with your own values (see minimal env lists below).
+
+- API: app/api/.env
+- Dashboard: app/dashboard/.env.local
+- Optional (for Docker Compose): app/.env
+
+Minimal env for API (app/api/.env):
+- Core URLs
+  - PROTOCOL=http
+  - API_DOMAIN=localhost:8000
+  - APP_DOMAIN=localhost:3000
+- Auth
+  - JWT_SECRET_KEY=your-long-random-secret
+- Supabase connection
+  - SUPABASE_URL=https://your-project-id.supabase.co
+  - SUPABASE_KEY=your-service-role-key
+  - SUPABASE_HOST=your-supabase-pg-host
+  - SUPABASE_PORT=5432
+  - SUPABASE_DATABASE=postgres
+  - SUPABASE_USER=postgres.your-project-id
+  - SUPABASE_PASSWORD=your-supabase-db-password
+- ClickHouse connection
+  - CLICKHOUSE_HOST=your-clickhouse-host
+  - CLICKHOUSE_PORT=8443
+  - CLICKHOUSE_USER=default
+  - CLICKHOUSE_PASSWORD=your-clickhouse-password
+  - CLICKHOUSE_DATABASE=otel_2
+- Optional
+  - SQLALCHEMY_LOG_LEVEL=WARNING
+  - REDIS_HOST=localhost
+  - REDIS_PORT=6379
+  - STRIPE_SECRET_KEY=sk_test_...
+  - STRIPE_SUBSCRIPTION_PRICE_ID=price_...
+  - STRIPE_TOKEN_PRICE_ID=price_...
+  - STRIPE_SPAN_PRICE_ID=price_...
+
+Notes:
+- The API expects a Supabase service role key for backend operations. An anon key is not sufficient.
+- Ensure APP_DOMAIN/API_DOMAIN/PROTOCOL resolve to http://localhost:3000 and http://localhost:8000 for CORS.
+
+Minimal env for Dashboard (app/dashboard/.env.local):
+- Supabase
+  - NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  - SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+  - SUPABASE_PROJECT_ID=your-project-id
+- URLs
+  - NEXT_PUBLIC_API_URL=http://localhost:8000
+  - NEXT_PUBLIC_APP_URL=http://localhost:3000
+  - NEXT_PUBLIC_SITE_URL=http://localhost:3000
+- Optional
+  - NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+  - NEXT_PUBLIC_PLAYGROUND=true
+  - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+  - NEXT_PUBLIC_POSTHOG_KEY=
+  - NEXT_PUBLIC_SENTRY_DSN=
+
+3) Install dependencies
+From the repository root (app/):
+- bun install
+- uv pip install -r requirements-dev.txt
+
+API:
+- cd api && uv pip install -e . && cd ..
+
+Dashboard:
+- cd dashboard && bun install && cd ..
+
+4) Run locally (native)
+Terminal A (API):
+- cd app/api
+- uv run python run.py
+- Verify API docs at http://localhost:8000/redoc
+
+Terminal B (Dashboard):
+- cd app/dashboard
+- bun run dev
+- Open http://localhost:3000
+
+5) Alternative: Docker Compose
+If you prefer containers or need a consistent env:
+- Create app/.env using the variables referenced in compose.yaml (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_PROJECT_ID, APP_URL, JWT_SECRET_KEY, CLICKHOUSE_* vars, etc.)
+- From app/: docker compose up -d
+- Verify: http://localhost:3000 and http://localhost:8000/redoc
+
+6) Verification checklist
+- API: http://localhost:8000/redoc loads without 5xx errors
+- Dashboard: http://localhost:3000 loads and can reach the API (open browser console; no CORS/network errors)
+- If billing flows are needed, configure Stripe and run stripe listen --forward-to http://localhost:8000/v4/stripe-webhook and set STRIPE_WEBHOOK_SECRET in app/api/.env
+
+7) Troubleshooting
+- CORS errors: Ensure APP_URL in API resolves to http://localhost:3000. This is derived from PROTOCOL and APP_DOMAIN in app/api/.env.
+- 401/403 on API endpoints: The API validates Supabase JWTs. Log in via the dashboard (Supabase project must be configured) so requests include Authorization: Bearer <token>.
+- Supabase errors: API requires a service role key (SUPABASE_KEY) and correct Postgres parameters (host/user/password). Check your Supabase project settings.
+- ClickHouse connection refused/timeout: Use port 8443, set correct user/password/database, ensure your IP is allowlisted in ClickHouse Cloud.
+- Stripe errors: Only required for billing features. For local, use test keys and stripe listen to populate STRIPE_WEBHOOK_SECRET.
+- Redis not found: Optional for development. Install and start Redis if enabling rate limiting or session cache, or leave REDIS_* unset to skip those features.
+- Ports busy: Ensure nothing else is running on 3000 or 8000, or adjust the mapped ports and corresponding env URLs.
+
+
 ## 🛠️ Quick Start
 
 ### 1. Clone the Repository
