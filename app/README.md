@@ -149,6 +149,64 @@ If you prefer containers or need a consistent env:
 
 ## 🛠️ Quick Start
 
+## 🐳 Beginner Quickstart (Docker Compose)
+
+This option runs API and Dashboard in containers using compose. Good for a consistent environment.
+
+1) Prerequisites
+- Docker and Docker Compose installed
+
+2) Create env file
+Create app/.env with the variables referenced by compose.yaml. Minimal required values:
+
+- Supabase
+  - NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  - SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+  - SUPABASE_PROJECT_ID=YOUR_PROJECT_ID
+- URLs
+  - APP_URL=http://localhost:3000
+  - NEXT_PUBLIC_SITE_URL=http://localhost:3000
+- Auth
+  - JWT_SECRET_KEY=replace-with-long-random-secret
+- ClickHouse
+  - CLICKHOUSE_HOST=your-clickhouse-host
+  - CLICKHOUSE_PORT=8443
+  - CLICKHOUSE_USER=default
+  - CLICKHOUSE_PASSWORD=your-clickhouse-password
+  - CLICKHOUSE_DATABASE=otel_2
+  - CLICKHOUSE_SECURE=true
+- Optional
+  - NEXT_PUBLIC_ENVIRONMENT_TYPE=development
+  - NEXT_PUBLIC_PLAYGROUND=true
+  - NEXT_PUBLIC_POSTHOG_KEY=
+  - NEXT_PUBLIC_SENTRY_DSN=
+  - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+  - NEXT_STRIPE_SECRET_KEY=
+  - NEXT_STRIPE_WEBHOOK_SECRET=
+
+Tip: Use app/.env.example as a starting point:
+cp app/.env.example app/.env
+
+3) Run with compose
+From app/:
+- docker compose up -d
+- docker compose ps
+- View logs: docker compose logs -f api and docker compose logs -f dashboard
+
+4) Verify
+- API docs: http://localhost:8000/docs
+- Dashboard: http://localhost:3000
+
+5) Troubleshooting (Compose)
+- CORS: APP_URL must be http://localhost:3000 so API allows dashboard origin.
+- Supabase: API requires service role key; anon is only for dashboard.
+- ClickHouse: Use port 8443 with CLICKHOUSE_SECURE=true; ensure your IP is allowlisted in ClickHouse Cloud.
+- Stripe: Optional unless testing billing. If testing webhooks, set NEXT_STRIPE_WEBHOOK_SECRET and run stripe listen.
+- Ports busy: Stop any native servers using ports 3000/8000 before compose.
+- Logs: Check docker compose logs -f api and docker compose logs -f dashboard for errors.
+
+
 ### 1. Clone the Repository
 
 ```bash
