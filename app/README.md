@@ -1,3 +1,52 @@
+# 5‑Minute Quickstart (Docker) — Recommended
+
+Get the stack (API + Dashboard) up quickly using Docker Compose.
+
+Prerequisites
+- Docker
+- Docker Compose
+
+1) Copy env files
+- From app/:
+  - cp .env.example .env           # if present
+  - cp api/.env.example api/.env   # if present
+  - cp dashboard/.env.example dashboard/.env.local
+
+2) Fill minimal env values
+- API (api/.env)
+  SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  SUPABASE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  JWT_SECRET_KEY=YOUR_RANDOM_JWT_SECRET
+  CLICKHOUSE_HOST=your-host.clickhouse.cloud
+  CLICKHOUSE_PORT=8443
+  CLICKHOUSE_USER=default
+  CLICKHOUSE_PASSWORD=your_clickhouse_password
+  CLICKHOUSE_DATABASE=otel_2
+  # Optional for billing/webhooks:
+  # STRIPE_SECRET_KEY=...
+  # STRIPE_SUBSCRIPTION_PRICE_ID=...
+  # STRIPE_TOKEN_PRICE_ID=...
+  # STRIPE_SPAN_PRICE_ID=...
+
+- Dashboard (dashboard/.env.local)
+  NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+  SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+  NEXT_PUBLIC_API_URL=http://localhost:8000
+  NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+3) Start the stack
+- cd app
+- docker compose up -d
+
+4) Verify
+- API docs: http://localhost:8000/redoc
+- Dashboard: http://localhost:3000
+
+Notes
+- ClickHouse typically requires TLS on port 8443.
+- Auth flows require a Supabase service role key; without it, some pages may be limited.
+
 # 5‑Minute Quickstart (Local)
 
 The fastest way to run the full stack (API + Dashboard) locally without Docker.
