@@ -175,7 +175,8 @@
         "v2/usage/trace-decorator",
         "v2/usage/track-endpoint-decorator",
         "v2/usage/manual-trace-control",
-        "v2/usage/public-api"
+        "v2/usage/public-api",
+        "v2/usage/self-host-backend"
       ],
       "version": "v2"
     },
