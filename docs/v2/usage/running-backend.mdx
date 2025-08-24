@@ -1,0 +1,130 @@
+---
+title: Run the Backend & Services
+---
+
+This guide explains how to run the backend API, dashboard, and supporting services from the `app/` directory. Use this when you want to run the full app (not just the SDK).
+
+### Prerequisites
+
+- Node.js 20+
+- Python 3.12+
+- Docker (and Docker Compose)
+- Bun
+- uv (recommended)
+- Optional: just (command runner)
+
+### Environment files
+
+From `app/`:
+
+```bash
+# Root env for compose
+cp .env.example .env
+
+# API env
+cp api/.env.example api/.env
+
+# Dashboard env
+cp dashboard/.env.example dashboard/.env.local
+```
+
+Fill in values for Supabase, ClickHouse, Stripe (optional), Sentry (optional), etc. See `app/README.md` and `app/api/README.md` for details.
+
+### Option A: Run with Docker Compose (recommended)
+
+From `app/`:
+
+```bash
+# Start API, OTEL Collector, and ClickHouse
+docker compose -f compose.yaml up -d
+
+# Also start the Dashboard (it's behind a profile)
+docker compose --profile dashboard -f compose.yaml up -d
+
+# View logs
+docker compose -f compose.yaml logs -f
+
+# Stop
+docker compose -f compose.yaml down
+```
+
+Notes:
+- The compose file includes `opentelemetry-collector/compose.yaml`, which starts the OTEL collector and ClickHouse.
+- The `dashboard` service uses the `dashboard` profile; include `--profile dashboard` to run it.
+- Ports: API 8000, Dashboard 3000, ClickHouse 8123/9000, OTEL 4317/4318.
+
+Visit:
+- Dashboard: http://localhost:3000
+- API docs: http://localhost:8000/redoc
+
+### Option B: Run API natively, dashboard locally
+
+Run API (from `app/api/`):
+
+```bash
+# Install deps (once)
+uv pip install -e .
+
+# Run
+uv run python run.py
+```
+
+Run Dashboard (from `app/`):
+
+```bash
+# Installs and runs dev server
+just fe-run
+# or
+cd dashboard && bun install && bun run dev
+```
+
+If you prefer running the API in Docker:
+
+```bash
+# From app/
+just api-build
+# Without Stripe integration
+just api-run
+# With Stripe integration (see below)
+just api-run -s
+```
+
+Tip: `just up`, `just down`, and `just logs` mirror the compose commands.
+
+### Stripe integration (optional)
+
+- Required env in `api/.env`: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `APP_URL`, and any price IDs you use
+- Install Stripe CLI and jq if using the `-s/--with-stripe` flag
+
+```bash
+# Pre-flight checks for Stripe/jq and build image
+just api-build -s
+
+# Run API in Docker and auto-wire webhooks if possible
+just api-run -s
+```
+
+To forward webhooks in local native mode:
+
+```bash
+stripe listen --forward-to http://localhost:8000/v4/stripe-webhook
+```
+
+### OpenTelemetry collector and ClickHouse
+
+When using Option A (Compose), the OTEL collector and ClickHouse start automatically:
+- OTEL Collector: receives OTLP at 4317/4318
+- ClickHouse: available at 8123 (HTTP) and 9000 (native)
+
+Set `CLICKHOUSE_*` variables in `.env`/`api/.env` to point the API and collector to your instance (local or cloud). See `app/opentelemetry-collector/compose.yaml` and `app/clickhouse/`.
+
+### Supabase
+
+Use a hosted Supabase project and set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`. For local workflows, see `app/supabase/readme.md` for CLI commands.
+
+### Common issues
+
+- Ports in use: stop previous containers (`docker compose down`) or change ports
+- Missing env: ensure `app/.env`, `app/api/.env`, and `app/dashboard/.env.local` are populated
+- `just api-run` uses `api/.env.dev` by default: override with `API_ENV_FILE=api/.env just api-run` if you only have `api/.env`
+- Docker vs docker-compose: the project supports `docker compose`; some helper scripts use `docker-compose` which may require the plugin or alias
