@@ -137,6 +137,7 @@ class HttpClient:
         try:
             session = await cls.get_async_session()
             if not session:
+                logger.error("Failed to create async session")
                 return None
 
             logger.debug(f"Making async {method} request to {url}")
@@ -153,6 +154,7 @@ class HttpClient:
 
                 # Check if response is successful
                 if response.status >= 400:
+                    logger.error(f"HTTP {response.status} error for {url}: {await response.text()}")
                     return None
 
                 # Parse JSON response
@@ -162,8 +164,16 @@ class HttpClient:
                         f"Async request successful, response keys: {list(response_data.keys()) if response_data else 'None'}"
                     )
                     return response_data
-                except Exception:
+                except Exception as e:
+                    logger.error(f"Failed to parse JSON response from {url}: {e}")
                     return None
 
-        except Exception:
+        except aiohttp.ClientError as e:
+            logger.error(f"Network error during async request to {url}: {e}")
+            return None
+        except asyncio.TimeoutError as e:
+            logger.error(f"Timeout error during async request to {url}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error during async request to {url}: {e}")
             return None
