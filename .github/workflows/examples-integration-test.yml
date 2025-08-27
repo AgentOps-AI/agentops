@@ -108,6 +108,7 @@ jobs:
 
           # Haystack examples
           - { path: 'examples/haystack/haystack_example.py', name: 'Haystack OpenAI' }
+          - { path: 'examples/haystack/azure_haystack_example.py', name: 'Haystack Azure Chat' }
           # Add more examples as needed
 
 
@@ -192,4 +193,4 @@ jobs:
           echo "✅ All examples passed!" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Some examples failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
-        fi  
+        fi            
