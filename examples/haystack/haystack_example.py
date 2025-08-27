@@ -19,7 +19,7 @@ def main():
     print("Haystack reply:", replies[0] if replies else "<no reply>")
 
     print("\n" + "=" * 50)
-    print("Now let's verify that our LLM calls were tracked properly...")
+    print("Now let's verify that our LLM calls were tracked properly with AgentOps...")
     try:
         validation_result = agentops.validate_trace_spans(trace_context=tracer)
         agentops.print_validation_summary(validation_result)
