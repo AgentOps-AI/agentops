@@ -8,7 +8,7 @@ def main():
     agentops.init(os.getenv("AGENTOPS_API_KEY"))
 
     if not os.getenv("AZURE_OPENAI_API_KEY") or not os.getenv("AZURE_OPENAI_ENDPOINT"):
-        print("Skipping Azure example: missing AZURE_OPENAI_API_KEY or AZURE_OPENAI_ENDPOINT")
+        print("Skipping Azure example: missing AZURE_OPENAI_API_KEY or AZURE_OPENAI_ENDPOINT (CI-safe skip)")
         return
 
     tracer = agentops.start_trace(
