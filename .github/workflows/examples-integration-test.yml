@@ -105,6 +105,9 @@ jobs:
           
           # DSPy examples
           - { path: 'examples/dspy/dspy_calculator.py', name: 'DSPy ReAct Agent' }
+
+          # Haystack examples
+          - { path: 'examples/haystack/haystack_example.py', name: 'Haystack OpenAI' }
           # Add more examples as needed
 
 
@@ -189,4 +192,4 @@ jobs:
           echo "✅ All examples passed!" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Some examples failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
-        fi 
+        fi  
