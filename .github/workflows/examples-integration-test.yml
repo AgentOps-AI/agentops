@@ -193,4 +193,4 @@ jobs:
           echo "✅ All examples passed!" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Some examples failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
-        fi    
+        fi            
