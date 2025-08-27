@@ -7,6 +7,10 @@ from haystack.components.generators.openai import OpenAIGenerator
 def main():
     agentops.init(os.getenv("AGENTOPS_API_KEY"))
 
+    if not os.getenv("OPENAI_API_KEY"):
+        print("Skipping OpenAI example: missing OPENAI_API_KEY")
+        return
+
     tracer = agentops.start_trace(
         trace_name="Haystack OpenAI Example",
         tags=["haystack", "openai", "agentops-example"],
