@@ -13,6 +13,14 @@ def main():
     replies = result.get("replies") or []
     print("Haystack reply:", replies[0] if replies else "<no reply>")
 
+    print("\n" + "=" * 50)
+    print("Now let's verify that our LLM calls were tracked properly...")
+    try:
+        validation_result = agentops.validate_trace_spans(trace_context=None)
+        agentops.print_validation_summary(validation_result)
+    except agentops.ValidationError as e:
+        print(f"\n❌ Error validating spans: {e}")
+
     agentops.end_session("Success")
 
 
