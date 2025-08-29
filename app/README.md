@@ -296,6 +296,24 @@ AgentOps requires several external services. Here's how to set them up:
 
 ### Supabase (Required)
 
+**Option A: Local Development (Recommended)**
+
+1. Install Supabase CLI: `brew install supabase/tap/supabase` (or see [docs](https://supabase.com/docs/guides/cli))
+2. Initialize and start Supabase locally:
+   ```bash
+   cd app  # Make sure you're in the app directory
+   supabase init
+   supabase start
+   ```
+3. The local Supabase will provide connection details. Update your `.env` files with:
+   ```
+   SUPABASE_URL=http://127.0.0.1:54321
+   SUPABASE_KEY=<anon-key-from-supabase-start-output>
+   ```
+4. Run migrations: `supabase db push`
+
+**Option B: Cloud Supabase**
+
 1. Create a new project at [supabase.com](https://supabase.com)
 2. Go to Settings → API to get your keys
 3. Update your `.env` files with:
@@ -319,7 +337,25 @@ AgentOps requires several external services. Here's how to set them up:
 ### PostgreSQL (Required)
 
 Configure direct PostgreSQL connection:
-1. Use your Supabase PostgreSQL connection details
+
+**For Local Supabase:**
+```
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=54322  # Note: Different port than Supabase API
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DATABASE=postgres
+
+# Also add these for SQLAlchemy connections:
+SUPABASE_HOST=127.0.0.1
+SUPABASE_PORT=54322
+SUPABASE_USER=postgres
+SUPABASE_PASSWORD=postgres
+SUPABASE_DATABASE=postgres
+```
+
+**For Cloud Supabase:**
+1. Use your Supabase PostgreSQL connection details from Settings → Database
 2. Update your `.env` files with:
    ```
    POSTGRES_HOST=your-supabase-host
@@ -390,6 +426,51 @@ bun run lint
 # Run formatting
 bun run format
 ```
+
+## 🔍 Troubleshooting
+
+### Authentication Issues
+
+**Problem: Login succeeds but immediately redirects back to login page**
+
+This is usually caused by cookie configuration issues between the frontend and backend.
+
+**Solutions:**
+
+1. **Check your environment URLs**: Ensure `NEXT_PUBLIC_API_URL` in dashboard points to your API server:
+   ```bash
+   # dashboard/.env.local
+   NEXT_PUBLIC_API_URL=http://localhost:8000  # For local development
+   ```
+
+2. **Verify JWT secret**: Make sure `JWT_SECRET_KEY` is set in your API `.env`:
+   ```bash
+   # api/.env
+   JWT_SECRET_KEY=your-secret-key-at-least-32-chars
+   ```
+
+3. **For local development with different ports**: The API automatically adjusts cookie settings for localhost. No manual configuration needed.
+
+4. **For production or custom domains**: Ensure your API and dashboard share the same root domain for cookies to work.
+
+### Database Connection Issues
+
+**Problem: SQLAlchemy connection errors**
+
+Ensure all Supabase database variables are set in `api/.env`:
+```bash
+SUPABASE_HOST=127.0.0.1      # For local Supabase
+SUPABASE_PORT=54322          # Note: Different from API port
+SUPABASE_USER=postgres
+SUPABASE_PASSWORD=postgres
+SUPABASE_DATABASE=postgres
+```
+
+### Supabase Seed Data Issues
+
+**Problem: Duplicate key or missing table errors during `supabase start`**
+
+The seed.sql file may have issues. You can temporarily comment out problematic inserts or check if migrations are missing.
 
 ## 📦 Production Deployment
 
