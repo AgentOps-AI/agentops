@@ -9,6 +9,7 @@ domain-specific middleware for each sub-app.
 """
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import sentry_sdk
 
 from agentops.api.log_config import logger
@@ -40,6 +41,17 @@ app = FastAPI(
 )
 logger.info("⚡️FastAPI app initialized")
 logger.info(f"Docs available at: {app.docs_url}" if app.docs_url else "Docs disabled")
+
+# Add CORS middleware for local development
+if "localhost" in API_DOMAIN or "127.0.0.1" in API_DOMAIN:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.info("CORS middleware enabled for local development")
 
 # Configure the mounted apps
 # TODO this is redundant, but it's just for docs
