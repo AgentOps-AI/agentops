@@ -1,0 +1,83 @@
+---
+title: Haystack
+description: "Monitor your Haystack agents with AgentOps"
+---
+
+[Haystack](https://docs.haystack.deepset.ai/docs/installation) is a flexible framework for building production-ready AI agents. AgentOps makes monitoring your Haystack agents seamless.
+
+## Installation
+
+<CodeGroup>
+```bash pip
+pip install agentops haystack-ai python-dotenv
+```
+```bash poetry
+poetry add agentops haystack-ai python-dotenv
+```
+```bash uv
+uv pip install agentops haystack-ai python-dotenv
+```
+</CodeGroup>
+
+<Warning>
+We currently only support Haystack 2.x.
+</Warning>
+
+## Setting Up API Keys
+
+You'll need API keys for AgentOps and whatever model provider you use with Haystack (e.g. OpenAI):
+
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys) *(if using OpenAI models)*
+
+Set these as environment variables or in a `.env` file.
+
+<CodeGroup>
+```bash Export to CLI
+export AGENTOPS_API_KEY="your_agentops_api_key_here"
+export OPENAI_API_KEY="your_openai_api_key_here"
+```
+```txt Set in .env file
+AGENTOPS_API_KEY="your_agentops_api_key_here"
+OPENAI_API_KEY="your_openai_api_key_here"
+```
+</CodeGroup>
+
+Then load them in your Python code:
+
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
+
+## Usage
+
+Integrating AgentOps with Haystack only takes a few lines:
+
+```python
+import agentops
+from haystack.components.generators.openai import OpenAIGenerator
+
+agentops.init(AGENTOPS_API_KEY)
+
+generator = OpenAIGenerator(model="gpt-4o-mini", api_key=OPENAI_API_KEY)
+result = generator.run(prompt="In one sentence, what is AgentOps?")
+print(result["replies"][0])
+```
+
+Run your script and visit the [AgentOps Dashboard](https://app.agentops.ai/drilldown) to monitor the trace.
+
+## Examples
+
+- [Simple Haystack example (OpenAI)](https://github.com/AgentOps-AI/agentops/blob/main/examples/haystack/haystack_example.py)
+- [Haystack Azure OpenAI Chat example](https://github.com/AgentOps-AI/agentops/blob/main/examples/haystack/azure_haystack_example.py)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+
