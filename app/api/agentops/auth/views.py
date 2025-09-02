@@ -24,7 +24,7 @@
 # JWTs can be set to expire after a certain amount of time, but not extendable,
 # not invalidatable from a central location
 # can be used across domains, which is useful but also XSS risk
-from typing import Union, Callable
+from typing import Union, Callable, Optional
 import os
 from functools import wraps
 import inspect
@@ -112,7 +112,7 @@ class SupabaseUserData(pydantic.BaseModel):
 
     model_config = {'extra': 'ignore'}
 
-    iss: str  # Issuer: The URL of your Supabase project
+    iss: Optional[str] = None  # Issuer: The URL of your Supabase project (optional for local dev)
     sub: str  # Subject: The user's UUID
     iat: int  # Issued At: When the token was created
     exp: int  # Expiration Time: When the token expires
