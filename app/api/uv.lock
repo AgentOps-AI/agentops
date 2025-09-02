@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = "==3.12.*"
 resolution-markers = [
     "platform_python_implementation != 'PyPy'",
@@ -16,6 +16,7 @@ dependencies = [
     { name = "clickhouse-driver" },
     { name = "dotenv" },
     { name = "fastapi" },
+    { name = "gotrue" },
     { name = "greenlet" },
     { name = "httpcore" },
     { name = "httpx" },
@@ -66,6 +67,7 @@ requires-dist = [
     { name = "clickhouse-driver", specifier = ">=0.2.9" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "fastapi", specifier = ">=0.110.0" },
+    { name = "gotrue", specifier = ">=2.12.4" },
     { name = "greenlet", specifier = ">=3.1.1" },
     { name = "httpcore", specifier = ">=1.0.5" },
     { name = "httpx", specifier = ">=0.27.0" },
@@ -545,15 +547,16 @@ wheels = [
 
 [[package]]
 name = "gotrue"
-version = "2.11.4"
+version = "2.12.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "pydantic" },
+    { name = "pyjwt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/19/9c/62c3241731b59c1c403377abef17b5e3782f6385b0317f6d7083271db501/gotrue-2.11.4.tar.gz", hash = "sha256:a9ced242b16c6d6bedc43bca21bbefea1ba5fb35fcdaad7d529342099d3b1767", size = 35353, upload-time = "2025-02-20T09:02:37.346Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/6c/fe920e91959bd211325860332be5898b6b53d6ccd873c053fc5cc829020c/gotrue-2.12.4.tar.gz", hash = "sha256:35d2e58e066486321f4dff0033b30a53d057c7f436c15287122fa0cb833029b1", size = 34817, upload-time = "2025-08-08T15:55:49.393Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/3a/1a7cac16438f4e5319a0c879416d5e5032c98c3db2874e6e5300b3b475e6/gotrue-2.11.4-py3-none-any.whl", hash = "sha256:712e5018acc00d93cfc6d7bfddc3114eb3c420ab03b945757a8ba38c5fc3caa8", size = 41106, upload-time = "2025-02-20T09:02:34.653Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/2f/0e68d566d9339b8d320399d755704e17a94a123cf22f124b4ab2f686bcc3/gotrue-2.12.4-py3-none-any.whl", hash = "sha256:cf36dfcebc1da63b8d1e7b93eb1a35dfee3dcb1e1376833c256464010eb5fcd6", size = 42783, upload-time = "2025-08-08T15:55:48.289Z" },
 ]
 
 [[package]]

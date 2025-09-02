@@ -5,18 +5,13 @@ name: Examples Integration Test
 # integrated validation functionality.
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'examples/**/*.py'
-      - 'agentops/**'
-      - '.github/workflows/examples-integration-test.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'examples/**/*.py'
       - 'agentops/**'
       - '.github/workflows/examples-integration-test.yml'
+    types: [opened, reopened, ready_for_review]
   workflow_dispatch:
 
 env:
@@ -105,6 +100,10 @@ jobs:
           
           # DSPy examples
           - { path: 'examples/dspy/dspy_calculator.py', name: 'DSPy ReAct Agent' }
+
+          # Haystack examples
+          - { path: 'examples/haystack/haystack_example.py', name: 'Haystack OpenAI' }
+          - { path: 'examples/haystack/azure_haystack_example.py', name: 'Haystack Azure Chat' }
           # Add more examples as needed
 
 
@@ -189,4 +188,4 @@ jobs:
           echo "✅ All examples passed!" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Some examples failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
-        fi 
+        fi            

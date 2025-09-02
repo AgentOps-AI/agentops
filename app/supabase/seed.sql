@@ -112,14 +112,15 @@ INSERT INTO public.user_orgs (
   'owner'
 );
 
-INSERT INTO public.user_orgs (
-  user_id, org_id, user_email, role
-) VALUES (
-  'e043e8e0-504d-4e80-83ee-c42c47c63d8b',
-  'c0000000-0000-0000-0000-000000000000',
-  'test@agentops.ai',
-  'business_user'
-);
+-- Commented out duplicate key constraint
+-- INSERT INTO public.user_orgs (
+--   user_id, org_id, user_email, role
+-- ) VALUES (
+--   'e043e8e0-504d-4e80-83ee-c42c47c63d8b',
+--   'c0000000-0000-0000-0000-000000000000',
+--   'test@agentops.ai',
+--   'business_user'
+-- );
 
 INSERT INTO public.projects (
   id, 
@@ -232,17 +233,18 @@ INSERT INTO public.errors (
   '2024-03-06 11:15:13.761+00'
 );
 
-INSERT INTO public.deployments (
-  id, project_id, created_at, shutdown_time, image_id, is_active, build_log
-) VALUES (
-  'd1e1f9df-8980-4afc-9041-2e116dc7ad0e',
-  '0e2bf9df-8980-4afc-9041-2e116dc7ad0e',
-  '2024-03-05T21:16:00Z',
-  NULL,
-  'img-123',
-  TRUE,
-  NULL
-);
+-- Temporarily disabled: deployments table
+-- INSERT INTO public.deployments (
+--   id, project_id, created_at, shutdown_time, image_id, is_active, build_log
+-- ) VALUES (
+--   'd1e1f9df-8980-4afc-9041-2e116dc7ad0e',
+--   '0e2bf9df-8980-4afc-9041-2e116dc7ad0e',
+--   '2024-03-05T21:16:00Z',
+--   NULL,
+--   'img-123',
+--   TRUE,
+--   NULL
+-- );
 
 INSERT INTO public.spans (
   id, session_id, agent_id, trace_id, span_id, parent_span_id, name, kind, start_time, end_time, attributes, span_type

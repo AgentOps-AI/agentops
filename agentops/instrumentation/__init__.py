@@ -118,6 +118,12 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "min_version": "1.0.0",
         "package_name": "xpander-sdk",
     },
+    "haystack": {
+        "module_name": "agentops.instrumentation.agentic.haystack",
+        "class_name": "HaystackInstrumentor",
+        "min_version": "2.0.0",
+        "package_name": "haystack-ai",
+    },
 }
 
 # Combine all target packages for monitoring

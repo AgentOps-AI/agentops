@@ -305,7 +305,10 @@ def _create_session_for_response(response: Response, access_token: str) -> Respo
     cookie_value = _encode_session_cookie(session)
 
     cookie_domain = _get_api_domain()
+    # Use secure cookies only with HTTPS
     cookie_secure = 'https' in API_URL
+    # Use 'lax' for HTTP (development) to allow cross-origin requests, 'strict' for HTTPS (production)
+    cookie_samesite = "lax" if not cookie_secure else "strict"
 
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
@@ -314,7 +317,7 @@ def _create_session_for_response(response: Response, access_token: str) -> Respo
         secure=cookie_secure,  # only send over https in production
         domain=cookie_domain,  # set cookie for the api domain
         max_age=AUTH_COOKIE_EXPIRY,
-        samesite="strict",
+        samesite=cookie_samesite,
         path="/",  # valid across all paths
     )
 
