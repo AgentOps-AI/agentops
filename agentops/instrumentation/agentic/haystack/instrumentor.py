@@ -32,7 +32,9 @@ class HaystackInstrumentor(CommonInstrumentor):
     def _initialize(self, **kwargs):
         application_name = kwargs.get("application_name", "default_application")
         environment = kwargs.get("environment", "default_environment")
-        self._attribute_manager = SpanAttributeManager(service_name=application_name, deployment_environment=environment)
+        self._attribute_manager = SpanAttributeManager(
+            service_name=application_name, deployment_environment=environment
+        )
 
     def _create_metrics(self, meter) -> Dict[str, Any]:
         return StandardMetrics.create_standard_metrics(meter)
@@ -123,7 +125,11 @@ def _wrap_haystack_run_impl(tracer, metrics, attr_manager, wrapped, instance, ar
         tracer,
         "haystack.generator.run",
         kind=SpanKind.CLIENT,
-        attributes={SpanAttributes.LLM_SYSTEM: "haystack", "gen_ai.model": model, SpanAttributes.LLM_REQUEST_STREAMING: False},
+        attributes={
+            SpanAttributes.LLM_SYSTEM: "haystack",
+            "gen_ai.model": model,
+            SpanAttributes.LLM_REQUEST_STREAMING: False,
+        },
         attribute_manager=attr_manager,
     ) as span:
         prompt = _extract_prompt(args, kwargs)
@@ -153,7 +159,11 @@ def _wrap_haystack_stream_impl(tracer, metrics, attr_manager, wrapped, instance,
         tracer,
         "haystack.generator.stream",
         kind=SpanKind.CLIENT,
-        attributes={SpanAttributes.LLM_SYSTEM: "haystack", "gen_ai.model": model, SpanAttributes.LLM_REQUEST_STREAMING: True},
+        attributes={
+            SpanAttributes.LLM_SYSTEM: "haystack",
+            "gen_ai.model": model,
+            SpanAttributes.LLM_REQUEST_STREAMING: True,
+        },
         attribute_manager=attr_manager,
     ) as span:
         prompt = _extract_prompt(args, kwargs)
