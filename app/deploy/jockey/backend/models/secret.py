@@ -41,7 +41,7 @@ class SecretRef:
     def safe_name(self) -> str:
         """Transform key to lowercase with dashes for Kubernetes secret name."""
         return _safe_name(self.key)
-    
+
     @property
     def env_name(self) -> str:
         """Get the environment variable name (uppercase with underscores)."""

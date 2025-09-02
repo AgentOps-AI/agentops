@@ -44,7 +44,7 @@ class TestRedisIntegration:
         """Test storing and retrieving events end-to-end."""
         from jockey.worker.queue import queue_task
         from jockey.config import DeploymentConfig, TaskType
-        
+
         # Create a job first
         config = DeploymentConfig(
             project_id="test-project-id",
@@ -84,7 +84,7 @@ class TestRedisIntegration:
         """Test timestamp-based event filtering."""
         from jockey.worker.queue import queue_task
         from jockey.config import DeploymentConfig, TaskType
-        
+
         # Create a job first
         config = DeploymentConfig(
             project_id="test-project-id",
@@ -122,7 +122,7 @@ class TestRedisIntegration:
         """Test that all events are kept (current implementation has no cleanup)."""
         from jockey.worker.queue import queue_task
         from jockey.config import DeploymentConfig, TaskType
-        
+
         # Create a job first
         config = DeploymentConfig(
             project_id="test-project-id",
@@ -147,7 +147,7 @@ class TestRedisIntegration:
         """Test with actual event types from the system."""
         from jockey.worker.queue import queue_task
         from jockey.config import DeploymentConfig, TaskType
-        
+
         # Create a job first
         config = DeploymentConfig(
             project_id="test-project-id",

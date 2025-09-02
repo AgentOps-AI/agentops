@@ -35,7 +35,7 @@ class TestModelCost:
         assert model_cost.model == "gpt-3.5-turbo"
         assert model_cost.provider is None
         assert model_cost.input == Decimal("0")
-        assert model_cost.output == Decimal("0") 
+        assert model_cost.output == Decimal("0")
         assert model_cost.cached is None
         assert model_cost.reasoning is None
 
@@ -72,14 +72,14 @@ class TestModelCost:
         )
 
         dumped = model_cost.model_dump()
-        
+
         assert dumped["model"] == "gpt-4"
         assert dumped["provider"] == "openai"
         assert dumped["input"] == "0.00001"
         assert dumped["output"] == "0.00003"
         assert dumped["cached"] == "0.000005"
         assert dumped["reasoning"] == "0.000015"
-        
+
         # Check that trailing zeros are removed
         model_cost = ModelCost(
             model="test",
@@ -162,60 +162,60 @@ class TestTokenCostFunctions:
         # Test that zero values are converted to None
         assert ModelCost.convert_to_decimal(0) is None
         assert ModelCost.convert_to_decimal(0.0) is None
-        
+
         # Test that None remains None
         assert ModelCost.convert_to_decimal(None) is None
-        
+
         # Test that non-zero values are converted to Decimal correctly
         assert ModelCost.convert_to_decimal(0.00003) == Decimal("0.00003")
-        
+
         # Test decimal formatting in model_dump
         model = ModelCost(model="test", input=Decimal("0.001000"))
         dumped = model.model_dump()
         assert dumped["input"] == "0.001"
-        
+
     def test_get_tokencost_path_integration(self):
         """Integration test for get_tokencost_path with the real package."""
         path = get_tokencost_path()
-        
+
         # The function should return a path
         assert path is not None
         assert isinstance(path, Path)
-        
+
         # The path should point to a directory that exists
         assert path.exists()
-        
+
         # The directory should contain model_prices.json
         assert (path / "model_prices.json").exists()
-        
+
     def test_load_model_costs_integration(self):
         """Integration test for load_model_costs with the real package."""
         # Load real model costs from the tokencost package
         costs = load_model_costs()
-        
+
         # We should get a non-empty list of ModelCost objects
         assert costs is not None
         assert isinstance(costs, list)
         assert len(costs) > 0
-        
+
         # Check that every item is a ModelCost object
         for cost in costs:
             assert isinstance(cost, ModelCost)
             assert cost.model is not None
             assert isinstance(cost.model, str)
-            
+
             # Either input or output should have a valid cost
             has_valid_cost = (
                 (cost.input is not None and cost.input > 0) or
                 (cost.output is not None and cost.output > 0)
             )
             assert has_valid_cost, f"Model {cost.model} has no valid costs"
-            
+
         # Let's also check for some common models that should be present
         # This might need to be adjusted if the package changes significantly
         model_names = [cost.model for cost in costs]
         common_models = ['gpt-3.5-turbo', 'gpt-4', 'claude-3-opus']
-        
+
         # At least one of these common models should be present
         assert any(model in model_names for model in common_models), \
             f"None of the common models {common_models} found in {model_names[:5]}..."
