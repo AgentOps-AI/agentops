@@ -10,6 +10,7 @@ from .environment import (
     SUPABASE_PASSWORD,
     SUPABASE_MIN_POOL_SIZE,
     SUPABASE_MAX_POOL_SIZE,
+    SUPABASE_SSLMODE,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class ConnectionConfig:
     @classmethod
     def to_connection_string(cls, protocol: str = "postgresql") -> str:
         """Format config as a URL connection string."""
-        return f"{protocol}://{cls.user}:{cls.password}@{cls.host}:{cls.port}/{cls.database}"
+        return f"{protocol}://{cls.user}:{cls.password}@{cls.host}:{cls.port}/{cls.database}?sslmode={SUPABASE_SSLMODE}"
 
 
 def _cleanup_handler(signum=None, frame=None):

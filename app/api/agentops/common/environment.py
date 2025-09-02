@@ -33,6 +33,7 @@ SUPABASE_PORT = os.getenv('SUPABASE_PORT')
 SUPABASE_DATABASE = os.getenv('SUPABASE_DATABASE')
 SUPABASE_USER = os.getenv('SUPABASE_USER')
 SUPABASE_PASSWORD = os.getenv('SUPABASE_PASSWORD')
+SUPABASE_SSLMODE = os.getenv('SUPABASE_SSLMODE', 'prefer')
 
 # Supabase allows up to 20 pool connections and 1000 max connections.
 # Since we share connections with other instances (dev, staging) these defaults
