@@ -5,7 +5,10 @@
     },
     {
       "path": "../.."
+    },
+    {
+      "path": "../../../agentops-ts"
     }
   ],
-  "settings": {}
+  "settings": {},
 }
