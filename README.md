@@ -18,9 +18,6 @@
   <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity">
   </a>
   <img src="https://img.shields.io/pypi/v/agentops?&color=3670A0" alt="PyPI - Version">
-  <a href="https://github.com/AgentOps-AI/agentops-ts">
-    <img src="https://img.shields.io/badge/TypeScript%20SDK-Available-blue?&color=3670A0" alt="TypeScript SDK">
-  </a>
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg?&color=3670A0" alt="License: MIT">
   </a>
@@ -54,6 +51,10 @@
 <br/>
 
 AgentOps helps developers build, evaluate, and monitor AI agents. From prototype to production.
+
+## Open Source
+
+The AgentOps app is open source under the MIT license. Explore the code in our [app directory](https://github.com/AgentOps-AI/agentops/tree/main/app).
 
 ## Key Integrations 🔌
 
