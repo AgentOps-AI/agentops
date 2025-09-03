@@ -4,7 +4,7 @@ import agentops
 import os
 import time
 
-os.environ['AGENTOPS_API_KEY'] = '6b7a1469-bdcb-4d47-85ba-c4824bc8486e'
+os.environ['AGENTOPS_API_KEY'] = 'local-dev-api-key-placeholder'
 os.environ['AGENTOPS_API_ENDPOINT'] = 'http://localhost:8000'
 os.environ['AGENTOPS_APP_URL'] = 'http://localhost:3000'
 os.environ['AGENTOPS_EXPORTER_ENDPOINT'] = 'http://localhost:4318/v1/traces'
