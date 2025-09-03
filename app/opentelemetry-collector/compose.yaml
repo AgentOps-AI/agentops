@@ -25,7 +25,7 @@ services:
       - TRACES_TABLE_NAME=${TRACES_TABLE_NAME:-otel_traces}
       - CLICKHOUSE_TTL=${CLICKHOUSE_TTL:-12h}
       - CLICKHOUSE_TIMEOUT=${CLICKHOUSE_TIMEOUT:-10s}
-      - JWT_SECRET=${JWT_SECRET:-}
+      - JWT_SECRET=${JWT_SECRET_KEY:-super-secret-jwt-token-with-at-least-32-characters-long}
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.12
