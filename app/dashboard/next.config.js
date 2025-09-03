@@ -84,6 +84,14 @@ const nextConfig = {
         destination: 'https://qjkcnuesiiqjpohzdjjm.supabase.co/functions/v1/:path*',
       },
       {
+        source: '/auth/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/:path*`,
+      },
+      {
+        source: '/opsboard/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/opsboard/:path*`,
+      },
+      {
         source: '/logs/:path*',
         destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.agentops.ai'}/v3/logs/:path*`,
       },
