@@ -5,7 +5,7 @@
 services:
   otelcollector:
     build:
-      context: .
+      context: ./opentelemetry-collector
       dockerfile: Dockerfile
     container_name: otel
     ports:
