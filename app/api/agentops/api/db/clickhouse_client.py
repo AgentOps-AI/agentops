@@ -13,6 +13,7 @@ from agentops.api.environment import (
     CLICKHOUSE_PASSWORD,
     CLICKHOUSE_PORT,
     CLICKHOUSE_USER,
+    CLICKHOUSE_SECURE,
 )
 
 # Global variables to store client instances
@@ -37,7 +38,7 @@ class ConnectionConfig:
     database: str = CLICKHOUSE_DATABASE
     username: str = CLICKHOUSE_USER
     password: str = CLICKHOUSE_PASSWORD
-    secure: bool = True
+    secure: bool = CLICKHOUSE_SECURE
 
     def __init__(self) -> None:
         """Non-instantiable class has a lower chance of being printed."""

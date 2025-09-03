@@ -1,3 +1,61 @@
+Restart local stack and verify
+
+- Restart services:
+  docker compose -f compose.yaml -f opentelemetry-collector/compose.yaml down --remove-orphans
+  docker compose -f compose.yaml -f opentelemetry-collector/compose.yaml up -d
+
+- Check logs:
+  docker compose -f compose.yaml -f opentelemetry-collector/compose.yaml logs --since=90s api
+  docker compose -f compose.yaml -f opentelemetry-collector/compose.yaml logs --since=90s dashboard
+  docker compose -f compose.yaml -f opentelemetry-collector/compose.yaml logs --since=90s otelcollector
+  docker compose -f compose.yaml -f opentelemetry-collector/compose.yaml logs --since=90s clickhouse
+
+- Open dashboard:
+  http://localhost:3000/signin
+
+- Generate a trace (example):
+  AGENTOPS_API_KEY=&lt;key&gt; \
+  AGENTOPS_API_ENDPOINT=http://localhost:8000 \
+  AGENTOPS_APP_URL=http://localhost:3000 \
+  AGENTOPS_EXPORTER_ENDPOINT=http://localhost:4318/v1/traces \
+  OPENAI_API_KEY=&lt;openai_key&gt; \
+  python examples/openai/openai_example_sync.py
+
+- Verify ClickHouse and dashboard:
+  curl -s -u default:password "http://localhost:8123/?query=SELECT%20count()%20FROM%20otel_2.otel_traces%20WHERE%20TraceId%20=%20'&lt;TRACE_ID&gt;'"
+
+  http://localhost:3000/traces?trace_id=&lt;TRACE_ID&gt;
+
+
+Local ClickHouse (self-hosted)
+- Set in .env:
+  CLICKHOUSE_HOST=127.0.0.1
+  CLICKHOUSE_PORT=8123
+  CLICKHOUSE_USER=default
+  CLICKHOUSE_PASSWORD=password
+  CLICKHOUSE_DATABASE=otel_2
+  CLICKHOUSE_SECURE=false
+  CLICKHOUSE_ENDPOINT=http://clickhouse:8123
+  CLICKHOUSE_USERNAME=default
+
+- Start services (includes otelcollector + local ClickHouse):
+  docker compose -f compose.yaml -f opentelemetry-collector/compose.yaml up -d
+
+- Initialize ClickHouse schema:
+  curl -u default:password 'http://localhost:8123/?query=CREATE%20DATABASE%20IF%20NOT%20EXISTS%20otel_2'
+  curl --data-binary @app/clickhouse/migrations/0000_init.sql -u default:password 'http://localhost:8123/?query='
+
+- Run example with local OTLP exporter:
+  AGENTOPS_API_KEY=<your_key> \
+  AGENTOPS_API_ENDPOINT=http://localhost:8000 \
+  AGENTOPS_APP_URL=http://localhost:3000 \
+  AGENTOPS_EXPORTER_ENDPOINT=http://localhost:4318/v1/traces \
+  OPENAI_API_KEY=<openai_key> \
+  python examples/openai/openai_example_sync.py
+
+- Verify:
+  - Dashboard: http://localhost:3000/traces?trace_id=<printed_id>
+  - CH rows: curl -s -u default:password "http://localhost:8123/?query=SELECT%20count()%20FROM%20otel_2.otel_traces%20WHERE%20TraceId%20=%20'<TRACE_ID>'"
 # AgentOps
 
 [![License: ELv2](https://img.shields.io/badge/License-ELv2-blue.svg)](https://www.elastic.co/licensing/elastic-license)
@@ -312,6 +370,7 @@ AgentOps requires several external services. Here's how to set them up:
    ```
 4. Run migrations: `supabase db push`
 
+For Linux environments with CLI install issues, see docs/local_supabase_linux.md for a manual binary install and env mapping steps.
 **Option B: Cloud Supabase**
 
 1. Create a new project at [supabase.com](https://supabase.com)
