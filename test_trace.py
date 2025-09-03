@@ -3,10 +3,11 @@
 import agentops
 import os
 
-os.environ['AGENTOPS_API_KEY'] = 'local-dev-api-key-placeholder'
-os.environ['AGENTOPS_API_ENDPOINT'] = 'http://localhost:8000'
-os.environ['AGENTOPS_APP_URL'] = 'http://localhost:3000'
-os.environ['AGENTOPS_EXPORTER_ENDPOINT'] = 'http://localhost:4318/v1/traces'
+os.environ["AGENTOPS_API_KEY"] = "local-dev-api-key-placeholder"
+os.environ["AGENTOPS_API_ENDPOINT"] = "http://localhost:8000"
+os.environ["AGENTOPS_APP_URL"] = "http://localhost:3000"
+os.environ["AGENTOPS_EXPORTER_ENDPOINT"] = "http://localhost:4318/v1/traces"
+
 
 def test_trace_generation():
     """Test basic trace generation with local AgentOps setup"""
@@ -14,20 +15,21 @@ def test_trace_generation():
         print("Initializing AgentOps...")
         agentops.init()
         print("✓ AgentOps initialized successfully")
-        
+
         print("Starting trace...")
-        trace_context = agentops.start_trace('Test Trace - Local Setup')
+        trace_context = agentops.start_trace("Test Trace - Local Setup")
         print(f"✓ Trace started: {trace_context}")
-        
+
         print("Ending trace...")
-        agentops.end_trace(trace_context, 'Success')
+        agentops.end_trace(trace_context, "Success")
         print("✓ Trace ended successfully")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"✗ Error during trace generation: {e}")
         return False
+
 
 if __name__ == "__main__":
     success = test_trace_generation()
