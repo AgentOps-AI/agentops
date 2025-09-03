@@ -18,6 +18,7 @@ CLICKHOUSE_PORT: int = int(os.getenv("CLICKHOUSE_PORT", 0))
 CLICKHOUSE_USER: str = os.getenv("CLICKHOUSE_USER", "")
 CLICKHOUSE_PASSWORD: str = os.getenv("CLICKHOUSE_PASSWORD", "")
 CLICKHOUSE_DATABASE: str = os.getenv("CLICKHOUSE_DATABASE", "")
+CLICKHOUSE_SECURE: bool = os.getenv("CLICKHOUSE_SECURE", "false").lower() in ("1", "true", "yes")
 
 
 PROFILING_ENABLED: bool = os.environ.get("PROFILING_ENABLED", "false").lower() == "true"
