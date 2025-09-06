@@ -5,8 +5,7 @@ import pydantic
 from fastapi import Request, HTTPException, Depends
 from agentops.common.route_config import BaseView
 from agentops.common.orm import Session, get_orm_session
-from agentops.api.auth import JWTPayload, verify_jwt
-from agentops.opsboard.models import BaseProjectModel, ProjectModel, SparseProjectModel
+from agentops.opsboard.models import ProjectModel
 from agentops.deploy.models import HostingProjectModel
 
 
@@ -35,7 +34,7 @@ class BaseAgentAPIView(BaseView, ABC):
         # we use a constructor to allow us to execute async methods on creation
         instance = await super().create(request=request)
         return instance
-    
+
 
 class AuthenticatedByKeyAgentAPIView(BaseAgentAPIView, ABC):
     """
@@ -59,7 +58,7 @@ class AuthenticatedByKeyAgentAPIView(BaseAgentAPIView, ABC):
         self._validate_api_key(api_key)
         project = ProjectModel.get_by_api_key(orm, api_key)
         return project
-    
+
     async def get_hosted_project(self, orm: Session = Depends(get_orm_session)) -> HostingProjectModel:
         """Get hosted project for authenticated use cases via API key."""
         # For API key auth, hosted project is the same as regular project
