@@ -1,0 +1,125 @@
+---
+title: 'Memori'
+description: 'Track and monitor Memori memory operations with AgentOps'
+---
+
+[Memori](https://github.com/GibsonAI/memori) provides automatic short-term and long-term memory for AI applications and agents, seamlessly recording conversations and adding context to LLM interactions without requiring explicit memory management.
+
+## Why Track Memori with AgentOps?
+
+- **Memory Recording**: Track when conversations are automatically captured and stored
+- **Context Injection**: Monitor how memory is automatically added to LLM context
+- **Conversation Flow**: Understand the complete dialogue history across sessions
+- **Memory Effectiveness**: Analyze how historical context improves response quality
+- **Performance Impact**: Track latency and token usage from memory operations
+- **Error Tracking**: Identify issues with memory recording or context retrieval
+
+AgentOps automatically instruments Memori to provide complete observability of your memory operations.
+
+## Installation
+
+<CodeGroup>
+```bash pip
+pip install agentops memorisdk openai python-dotenv
+```
+
+```bash poetry
+poetry add agentops memorisdk openai python-dotenv
+```
+
+```bash uv
+uv pip install agentops memorisdk openai python-dotenv
+```
+</CodeGroup>
+
+## Environment Configuration
+
+Load environment variables and set up API keys.
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+</CodeGroup>
+
+## Tracking Automatic Memory Operations
+
+<CodeGroup>
+```python Basic Memory Tracking
+import agentops
+from memori import Memori
+from openai import OpenAI
+
+# Start a trace to group related operations
+agentops.start_trace("memori_conversation_flow", tags=["memori_memory_example"])
+
+try:
+    # Initialize OpenAI client
+    openai_client = OpenAI()
+
+    # Initialize Memori with conscious ingestion enabled
+    # AgentOps tracks the memory configuration
+    memori = Memori(
+        database_connect="sqlite:///agentops_example.db",
+        conscious_ingest=True,
+        auto_ingest=True,
+    )
+
+    memori.enable()
+
+    # First conversation - AgentOps tracks LLM call and memory recording
+    response1 = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": "I'm working on a Python FastAPI project"}
+        ],
+    )
+
+    print("Assistant:", response1.choices[0].message.content)
+
+    # Second conversation - AgentOps tracks memory retrieval and context injection
+    response2 = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "Help me add user authentication"}],
+    )
+
+    print("Assistant:", response2.choices[0].message.content)
+    print("💡 Notice: Memori automatically provided FastAPI project context!")
+
+    # End trace - AgentOps aggregates all operations
+    agentops.end_trace(end_state="success")
+
+except Exception as e:
+    agentops.end_trace(end_state="error")
+
+```
+</CodeGroup>
+
+## What You'll See in AgentOps
+
+When using Memori with AgentOps, your dashboard will show:
+
+1. **Conversation Timeline**: Complete flow of all conversations with memory context
+2. **Memory Injection Analytics**: Track when and how much context is automatically added
+3. **Context Relevance**: Monitor the effectiveness of automatic memory retrieval
+4. **Performance Metrics**: Latency impact of memory operations on LLM calls
+5. **Token Usage**: Track additional tokens consumed by memory context
+6. **Memory Growth**: Visualize how conversation history accumulates over time
+7. **Error Tracking**: Failed memory operations with full error context
+
+## Key Benefits of Memori + AgentOps
+
+- **Zero-Effort Memory**: Memori automatically handles conversation recording
+- **Intelligent Context**: Only relevant memory is injected into LLM context
+- **Complete Visibility**: AgentOps tracks all automatic memory operations
+- **Performance Monitoring**: Understand the cost/benefit of automatic memory
+- **Debugging Support**: Full traceability of memory decisions and context injection
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
