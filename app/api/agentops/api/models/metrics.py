@@ -148,12 +148,38 @@ class ProjectMetricsTraceModel(SpanMetricsMixin, BaseTraceModel):
                     SpanAttributes['gen_ai.usage.prompt_cost'] != '',
                     toDecimal64OrZero(SpanAttributes['gen_ai.usage.prompt_cost'], 9),
                     toDecimal64(
-                        calculate_prompt_cost(
-                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')),
-                            coalesce(
-                                nullIf(SpanAttributes['gen_ai.response.model'], ''),
-                                nullIf(SpanAttributes['gen_ai.request.model'], '')
-                            )
+                        multiIf(
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.00003,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4o', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.0000025,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4o-mini', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.00000015,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4-turbo', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.00001,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-3.5-turbo', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.0000005,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-3.5-turbo-0125', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.0000005,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-opus-20240229', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.000015,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-sonnet-20240229', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.000003,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-haiku-20240307', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.00000025,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-5-sonnet-20241022', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.000003,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-5-haiku-20241022', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.000001,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gemini-pro', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.0000005,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gemini-1.5-pro', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.00000125,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gemini-1.5-flash', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.000000075,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) LIKE '%llama%', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.prompt_tokens'], '0')) * 0.0000002,
+                            0.0
                         ),
                         9
                     )
@@ -164,12 +190,38 @@ class ProjectMetricsTraceModel(SpanMetricsMixin, BaseTraceModel):
                     SpanAttributes['gen_ai.usage.completion_cost'] != '',
                     toDecimal64OrZero(SpanAttributes['gen_ai.usage.completion_cost'], 9),
                     toDecimal64(
-                        calculate_completion_cost(
-                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')),
-                            coalesce(
-                                nullIf(SpanAttributes['gen_ai.response.model'], ''),
-                                nullIf(SpanAttributes['gen_ai.request.model'], '')
-                            )
+                        multiIf(
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.00006,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4o', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.00001,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4o-mini', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.0000006,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-4-turbo', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.00003,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-3.5-turbo', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.0000015,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gpt-3.5-turbo-0125', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.0000015,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-opus-20240229', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.000075,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-sonnet-20240229', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.000015,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-haiku-20240307', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.00000125,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-5-sonnet-20241022', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.000015,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'claude-3-5-haiku-20241022', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.000005,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gemini-pro', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.0000015,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gemini-1.5-pro', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.000005,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) = 'gemini-1.5-flash', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.0000003,
+                            coalesce(nullIf(SpanAttributes['gen_ai.response.model'], ''), nullIf(SpanAttributes['gen_ai.request.model'], '')) LIKE '%llama%', 
+                            toUInt64OrZero(ifNull(SpanAttributes['gen_ai.usage.completion_tokens'], '0')) * 0.0000006,
+                            0.0
                         ),
                         9
                     )
