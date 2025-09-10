@@ -1,0 +1,181 @@
+---
+  title: "Self-Hosting the AgentOps Backend"
+  description: "Run the AgentOps API, dashboard, and supporting services with Docker Compose or native commands."
+---
+
+<Note title="Open-source / BYOC">This guide is for users who want to host **the entire AgentOps platform** themselves rather than sending data to <a href="https://app.agentops.ai">AgentOps Cloud</a>.</Note>
+
+## Overview
+
+The AgentOps backend is a **polyglot monorepo** located in the `app/` directory.  It contains:
+
+| Folder | Description |
+| --- | --- |
+| `api/` | FastAPI server that processes trace & metric data, handles authentication, and exposes the public REST API. |
+| `dashboard/` | Next.js web application for visualising traces, metrics, and managing your project. |
+| `opentelemetry-collector/` | OpenTelemetry Collector that funnels spans/logs/metrics into ClickHouse. |
+| `clickhouse/` | Configuration for a local ClickHouse instance (analytics database). |
+| `supabase/` | Database & auth schema migrations for Supabase. |
+| `compose.yaml` | Docker Compose file that wires everything together (includes OTEL collector via `include:` directive). |
+| `justfile` | Convenience commands for local development. |
+
+You can run the full stack **with Docker Compose** (recommended) or **natively** during development.
+
+---
+
+## 1. Prerequisites
+
+Make sure the following tooling is installed on your machine:
+
+1. **Docker Desktop** (or Docker Engine & Compose plugin) – _required for the recommended path_.
+2. **Node.js 18+** – needed if you plan to run the dashboard without Docker.
+3. **Bun** or **npm / pnpm** – package manager for JavaScript projects.
+4. **Python 3.12+** – required for the API if you choose native execution.
+5. **uv** _(optional but faster than pip)_ – Python dependency manager.
+
+```bash
+# macOS (Homebrew examples)
+brew install docker bun uv-python
+```
+
+---
+
+## 2. Clone the Repository
+
+```bash
+git clone https://github.com/AgentOps-AI/AgentOps.Next.git
+cd AgentOps.Next/app
+```
+
+---
+
+## 3. Configure Environment Variables
+
+Each service has its own `.env.example`.  Copy and adjust them:
+
+```bash
+# Root env (used by Docker Compose)
+cp .env.example .env
+
+# API
+cp api/.env.example api/.env
+
+# Dashboard (Next.js expects *.local in dev)
+cp dashboard/.env.example dashboard/.env.local
+```
+
+### Minimum Required Variables
+
+At a minimum you must supply credentials for:
+
+* **Supabase** – `SUPABASE_URL`, `SUPABASE_KEY`
+* **ClickHouse** – `CLICKHOUSE_HOST`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DATABASE`
+* **JWT_SECRET_KEY** – any random string (used to sign auth tokens)
+
+See the `.env.example` files for a full list and descriptions.
+
+---
+
+## 4. Run Everything with Docker Compose (Recommended)
+
+From the `app/` directory run:
+
+```bash
+# build images & start in detached mode
+docker compose up -d
+```
+
+The compose file:
+
+* Builds the **API** & **dashboard** images.
+* Brings up **ClickHouse** & **OTEL Collector**.
+* Exposes the main ports:
+  * Dashboard → <http://localhost:3000>
+  * API (Swagger) → <http://localhost:8000/redoc>
+  * OTLP gRPC/HTTP receivers → `4317` / `4318`
+
+Stop everything with:
+
+```bash
+docker compose down
+```
+
+> **Troubleshooting:** use `docker compose logs -f <service>` to inspect container output.  Make sure your environment variables are reachable inside the containers.
+
+---
+
+## 5. Developing Locally Without Docker
+
+Prefer Docker for a consistent environment, but you can run services directly on your host for faster hot-reloading.
+
+### Install Dependencies
+
+```bash
+# JS/TS tooling (root)
+bun install
+
+# Python dev tools (root)
+uv pip install -r requirements-dev.txt
+
+# API package deps
+cd api && uv pip install -e . && cd ..
+
+# Dashboard deps
+cd dashboard && bun install && cd ..
+```
+
+### Start Services
+
+Open **two terminals**:
+
+```bash
+# Terminal ① – API
+just api-native            # or: (cd api && uv run python run.py)
+
+# Terminal ② – Dashboard
+just fe-run               # or: (cd dashboard && bun dev)
+```
+
+ClickHouse & OTEL Collector still need to run somewhere.  The simplest option is to leave them inside Docker:
+
+```bash
+# Run only infra dependencies
+docker compose up -d clickhouse otelcollector
+```
+
+---
+
+## 6. Convenience Commands (`justfile`)
+
+The repository ships with a [`justfile`](https://github.com/casey/just) that wraps common tasks:
+
+```bash
+just api-docker-build   # Build the backend image
+just api-docker-run     # Run the backend in Docker
+just api-native         # Run API on host
+just fe-run             # Start Next.js dev server
+just fe-test            # Run frontend tests
+```
+
+Run `just --list` to see everything available.
+
+---
+
+## 7. Production Deployment
+
+For a small-scale self-host the **same** `compose.yaml` works:
+
+```bash
+docker compose -f compose.yaml up -d --build
+```
+
+For Kubernetes and cloud-native options, consult the forthcoming deployment guide.
+
+---
+
+## 8. Next Steps
+
+* Instrument your code with `agentops` (see [Quickstart](/v2/quickstart)).
+* Head over to `<YOUR_DOMAIN>/traces` or <http://localhost:3000/traces> to view live data.
+
+<Check>Questions?  Join our <a href="https://discord.gg/UgJyyxx7uc">Discord</a>.</Check>
