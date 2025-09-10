@@ -55,6 +55,31 @@ def get_client() -> Client:
     return _client
 
 
+def check_auth_status() -> dict:
+    """Check the authentication status of the AgentOps client.
+    
+    Returns:
+        dict: Authentication status information including:
+            - authenticated: bool
+            - has_project_id: bool  
+            - project_id: str or None
+            - auth_task_running: bool
+            - initialized: bool
+    """
+    client = get_client()
+    return client.get_auth_status()
+
+
+def is_authenticated() -> bool:
+    """Check if the AgentOps client is properly authenticated.
+    
+    Returns:
+        bool: True if authenticated, False otherwise
+    """
+    client = get_client()
+    return client.is_authenticated()
+
+
 @deprecated("Automatically tracked in v4.")
 def record(event):
     """
