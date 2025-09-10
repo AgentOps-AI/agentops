@@ -11,9 +11,16 @@ import { PostHogProvider as PHProvider } from 'posthog-js/react';
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const environmentType = process.env.NEXT_PUBLIC_ENVIRONMENT_TYPE;
 
-    // Only initialize PostHog if we have a valid key
-    if (posthogKey) {
+    // Only initialize PostHog when a key is present AND not in explicit local/dev mode
+    // This prevents noisy 401/404 console errors in local development when PostHog
+    // assets or keys are not configured.
+    const shouldInitPosthog = Boolean(
+      posthogKey && environmentType !== 'development' && environmentType !== 'local',
+    );
+
+    if (shouldInitPosthog) {
       posthog.init(posthogKey, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
         person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
