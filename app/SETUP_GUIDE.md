@@ -80,6 +80,17 @@ supabase start
 
 ## Step 4: Configure Environment Variables
 
+Start from the example file and update for local development:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# The example file now includes LOCAL settings by default
+# Just verify ClickHouse is set for local (not cloud):
+grep CLICKHOUSE .env
+```
+
 Update `app/.env` with the following configuration.
 
 **IMPORTANT**: If an `app/api/.env` file exists, you must also ensure it contains the `PROTOCOL=http` variable for local development, otherwise authentication cookies will not work properly:
@@ -219,16 +230,21 @@ supabase db dump --data-only --table=users
 
 ## Step 9: Start API Server
 
-**IMPORTANT**: Before starting the API server, ensure the `api/.env` file exists with proper configuration. If it doesn't exist, create it:
+**CRITICAL**: The API requires its own `.env` file at `api/.env` with the CORRECT ClickHouse settings. If this file exists with wrong settings (e.g., pointing to cloud ClickHouse), traces won't appear even if they're stored locally.
+
+**⚠️ Common Issue**: If you pulled this repo and `api/.env` already exists, it may have cloud ClickHouse settings. You MUST update it for local development:
 
 ```bash
 # Check if api/.env exists
 ls api/.env
 
-# If it doesn't exist, create a symlink to the main .env:
+# Option 1: Copy from the example file (RECOMMENDED for new setup)
+cp api/.env.example api/.env
+
+# Option 2: Create a symlink to the main .env:
 ln -s ../.env api/.env
 
-# OR create api/.env with these minimum required variables:
+# Option 3: Create api/.env manually with these minimum required variables:
 cat > api/.env << 'EOF'
 PROTOCOL=http
 APP_DOMAIN=localhost:3000
@@ -416,6 +432,26 @@ except Exception as e:
 ```
 
 ## Troubleshooting
+
+### Traces Not Showing in Dashboard Despite Successful Ingestion
+
+If your test script says traces were sent successfully but they don't appear in the dashboard:
+
+1. **Check the API's ClickHouse configuration**:
+   ```bash
+   grep CLICKHOUSE api/.env
+   ```
+   Should show LOCAL settings (127.0.0.1, port 8123, not cloud URLs)
+
+2. **Verify traces are in ClickHouse**:
+   ```bash
+   docker exec app-clickhouse-1 clickhouse-client --user default --password password \
+     -q "SELECT TraceId, project_id FROM otel_2.otel_traces"
+   ```
+
+3. **Ensure you're viewing the correct project**: The test data goes to "test_project", not "Default Project"
+
+4. **Fix api/.env if needed** (see Step 9 above)
 
 ### Common Issues
 
