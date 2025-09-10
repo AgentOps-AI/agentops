@@ -52,10 +52,12 @@ class Client:
     _project_id: Optional[str] = None
     _auth_lock = threading.Lock()
     _auth_task: Optional[asyncio.Task] = None
+    _auth_completed = threading.Event()  # Add event to signal auth completion
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "Client":
         if cls.__instance is None:
-            cls.__instance = super(Client, cls).__new__(cls)
+            cls.__instance = super().__new__(cls)
+            cls.__instance._initialized = False
             # Initialize instance variables that should only be set once per instance
             cls.__instance._init_trace_context = None
             cls.__instance._legacy_session_for_init_trace = None
@@ -63,6 +65,7 @@ class Client:
             cls.__instance._project_id = None
             cls.__instance._auth_lock = threading.Lock()
             cls.__instance._auth_task = None
+            cls.__instance._auth_completed = threading.Event()
         return cls.__instance
 
     def __init__(self):
@@ -108,11 +111,15 @@ class Client:
                 tracer.update_config(tracing_config)
 
                 logger.debug("Successfully fetched authentication token asynchronously")
+                self._auth_completed.set()  # Signal that auth is complete
                 return response
             else:
                 logger.debug("Authentication failed - will continue without authentication")
+                self._auth_completed.set()  # Signal completion even on failure
                 return None
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Authentication exception: {e}")
+            self._auth_completed.set()  # Signal completion even on exception
             return None
 
     def _start_auth_task(self, api_key: str):
@@ -144,11 +151,31 @@ class Client:
             auth_thread = threading.Thread(target=run_async_auth, daemon=True)
             auth_thread.start()
 
+    def wait_for_auth(self, timeout: float = 5.0) -> bool:
+        """
+        Wait for authentication to complete.
+        
+        Args:
+            timeout: Maximum time to wait in seconds
+            
+        Returns:
+            True if authentication completed within timeout, False otherwise
+        """
+        if not self.config.api_key:
+            # No API key, auth won't happen
+            return True
+            
+        return self._auth_completed.wait(timeout)
+
     def init(self, **kwargs: Any) -> None:  # Return type updated to None
         # Recreate the Config object to parse environment variables at the time of initialization
         # This allows re-init with new env vars if needed, though true singletons usually init once.
         self.config = Config()
         self.configure(**kwargs)
+        
+        # Use config values for wait_for_auth, allowing override from kwargs
+        wait_for_auth_completion = kwargs.get("wait_for_auth", self.config.wait_for_auth)
+        wait_timeout = kwargs.get("auth_timeout", self.config.auth_timeout)
 
         # Only treat as re-initialization if a different non-None API key is explicitly provided
         provided_api_key = kwargs.get("api_key")
@@ -198,8 +225,17 @@ class Client:
         # Start authentication task only if we have an API key
         if self.config.api_key:
             self._start_auth_task(self.config.api_key)
+            
+            # Optionally wait for authentication to complete
+            if wait_for_auth_completion:
+                logger.debug(f"Waiting up to {wait_timeout}s for authentication to complete...")
+                if self.wait_for_auth(wait_timeout):
+                    logger.debug("Authentication completed successfully")
+                else:
+                    logger.warning(f"Authentication did not complete within {wait_timeout}s timeout")
         else:
             logger.debug("No API key available - skipping authentication task")
+            self._auth_completed.set()  # Set immediately since no auth will happen
 
         global _atexit_registered
         if not _atexit_registered:
