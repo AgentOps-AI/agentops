@@ -9,12 +9,16 @@ export function PostHogUserIdentifier() {
   const posthog = usePostHog();
 
   useEffect(() => {
-    if (posthog && user?.id) {
+    // Only interact with PostHog if it's actually loaded
+    // This prevents errors when analytics are disabled in local development
+    if (!posthog || !(posthog as any).__loaded) return;
+
+    if (user?.id) {
       posthog.identify(user.id, {
         email: user.email || undefined,
         name: user.full_name || undefined,
       });
-    } else if (posthog && !user) {
+    } else if (!user) {
       posthog.reset();
     }
   }, [posthog, user]);

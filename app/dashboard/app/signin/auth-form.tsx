@@ -41,6 +41,11 @@ export function AuthForm() {
 
     const checkAuth = async () => {
       try {
+        // Skip probe when no session cookie to avoid expected 401 noise in local/dev
+        if (typeof document !== 'undefined' && !document.cookie?.includes('session_id=')) {
+          setIsCheckingAuth(false);
+          return;
+        }
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/opsboard/users/me`, {
           method: 'GET',
           credentials: 'include',
