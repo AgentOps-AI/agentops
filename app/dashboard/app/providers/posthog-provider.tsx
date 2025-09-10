@@ -9,7 +9,12 @@ import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // Initialise PostHog only in production builds to avoid noisy 401/404 errors
   useEffect(() => {
+    if (!isProd) return;
+
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 
     // Only initialize PostHog if we have a valid key
@@ -20,7 +25,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         capture_pageview: false, // Disable automatic pageview capture, as we capture manually
       });
     }
-  }, []);
+  }, [isProd]);
+
+  // When not in production, skip rendering the PostHogProvider entirely
+  if (!isProd) {
+    return <>{children}</>;
+  }
 
   return (
     <PHProvider client={posthog}>
