@@ -3,7 +3,6 @@
 import pytest
 from jockey.config import (
     DeploymentConfig,
-    DeploymentPack,
     DEPLOYMENT_PACKS,
     _get_instance_build_files,
 )
@@ -16,7 +15,7 @@ class TestDeploymentPacks:
         """Test that DEPLOYMENT_PACKS contains all expected pack types."""
         expected_packs = {"FASTAPI", "CREWAI", "CREWAI_JOB"}
         assert set(DEPLOYMENT_PACKS.keys()) == expected_packs
-        
+
         # Verify they're the correct DeploymentPack instances
         assert DEPLOYMENT_PACKS["FASTAPI"] == DEPLOYMENT_PACKS["FASTAPI"]
         assert DEPLOYMENT_PACKS["CREWAI"] == DEPLOYMENT_PACKS["CREWAI"]
@@ -54,7 +53,7 @@ class TestDeploymentConfigFromPack:
             namespace="test-ns",
             project_id="test-project"
         )
-        
+
         assert config.dockerfile_template == "fastapi-agent"
         assert config.ports == [8000]
         assert config.build_files == {}
@@ -68,7 +67,7 @@ class TestDeploymentConfigFromPack:
             namespace="test-ns",
             project_id="test-project"
         )
-        
+
         assert config.dockerfile_template == "crewai-agent"
         assert config.ports == [8080]
         assert isinstance(config.build_files, dict)
@@ -82,7 +81,7 @@ class TestDeploymentConfigFromPack:
             namespace="test-ns",
             project_id="test-project"
         )
-        
+
         assert config.dockerfile_template == "crewai-job"
         assert config.ports == []
         assert isinstance(config.build_files, dict)
@@ -96,7 +95,7 @@ class TestDeploymentConfigFromPack:
             namespace="test-ns",
             project_id="test-project"
         )
-        
+
         assert config.dockerfile_template == "fastapi-agent"
         assert config.ports == [8000]
         assert config.build_files == {}
@@ -129,7 +128,7 @@ class TestDeploymentConfigFromPack:
             dockerfile_template="custom-template",  # Override default template
             replicas=3
         )
-        
+
         assert config.ports == [9000, 9001]  # Should use provided ports
         assert config.dockerfile_template == "custom-template"  # Should use provided template
         assert config.replicas == 3
@@ -143,7 +142,7 @@ class TestDeploymentConfigFromPack:
             namespace="test-ns",
             project_id="test-project-123"
         )
-        
+
         # Derived fields should be computed in __post_init__
         assert config.tag == "test-project-123"
         assert config.hostname == "test-project-123.deploy.agentops.ai"
@@ -165,12 +164,12 @@ class TestDeploymentConfigFromPack:
             create_ingress=False,
             force_recreate=True
         )
-        
+
         # Pack defaults should be applied
         assert config.dockerfile_template == "crewai-agent"
         assert config.ports == [8080]
         assert isinstance(config.build_files, dict)
-        
+
         # Provided fields should be set
         assert config.repository_url == "https://github.com/test/repo.git"
         assert config.branch == "feature-branch"
@@ -195,9 +194,9 @@ class TestDeploymentConfigSerialization:
             project_id="test-project",
             repository_url="https://github.com/test/repo.git"
         )
-        
+
         serialized = config.serialize()
-        
+
         # Should contain all required fields
         assert serialized["namespace"] == "test-ns"
         assert serialized["project_id"] == "test-project"
@@ -213,10 +212,10 @@ class TestDeploymentConfigSerialization:
             namespace="test-ns",
             project_id="test-project"
         )
-        
+
         serialized = original_config.serialize()
         deserialized_config = DeploymentConfig.from_serialized(serialized)
-        
+
         # Should have same values
         assert deserialized_config.namespace == original_config.namespace
         assert deserialized_config.project_id == original_config.project_id
@@ -236,11 +235,11 @@ class TestDeploymentConfigSerialization:
             secret_names=["secret1"],
             agentops_api_key="test-key"
         )
-        
+
         # Serialize and deserialize
         serialized = original_config.serialize()
         deserialized_config = DeploymentConfig.from_serialized(serialized)
-        
+
         # All fields should be preserved
         assert deserialized_config.namespace == original_config.namespace
         assert deserialized_config.project_id == original_config.project_id
@@ -261,7 +260,7 @@ class TestInstanceBuildFiles:
         """Test that _get_instance_build_files returns a dictionary."""
         build_files = _get_instance_build_files()
         assert isinstance(build_files, dict)
-        
+
         # Should contain Python files from instance directory if they exist
         for key, value in build_files.items():
             assert key.startswith("instance/")
@@ -272,10 +271,10 @@ class TestInstanceBuildFiles:
         """Test that both CREWAI packs have the same build files."""
         crewai_pack = DEPLOYMENT_PACKS["CREWAI"]
         crewai_job_pack = DEPLOYMENT_PACKS["CREWAI_JOB"]
-        
+
         # Both should use the same build files
         assert crewai_pack.build_files == crewai_job_pack.build_files
-        
+
         # FASTAPI should have empty build files
         assert DEPLOYMENT_PACKS["FASTAPI"].build_files == {}
 
@@ -296,7 +295,7 @@ class TestPackValidation:
             assert isinstance(pack.ports, list)
             assert all(isinstance(port, int) for port in pack.ports)
             assert isinstance(pack.build_files, dict)
-            
+
             # All build file keys should be strings, values should be strings
             for key, value in pack.build_files.items():
                 assert isinstance(key, str)

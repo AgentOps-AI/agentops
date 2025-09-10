@@ -9,11 +9,11 @@ async def auth_user(orm_session: Session, test_user: UserModel) -> AuthUserModel
     """Get the auth user corresponding to the test user."""
     # Get the auth user that corresponds to our test user
     auth_user = orm_session.get(AuthUserModel, test_user.id)
-    
+
     if not auth_user:
         # This should not happen with proper test setup since auth users should be seeded
         raise RuntimeError(f"No auth user found for test user ID {test_user.id}. Check seed data.")
-    
+
     return auth_user
 
 
@@ -35,7 +35,7 @@ class TestAuthUserModel:
         """Test that billing_email property returns email from auth.users table."""
         # Refresh the user to ensure the relationship is loaded
         orm_session.refresh(test_user)
-        
+
         # The billing_email should come from auth.users, not public.users
         # Note: The actual auth email will depend on what's seeded for this test user ID
         assert test_user.billing_email is not None  # Should have an auth email
@@ -49,16 +49,16 @@ class TestAuthUserModel:
         # Get the auth user and temporarily modify its email to None for testing
         auth_user = test_user.auth_user
         original_email = auth_user.email
-        
+
         try:
             # Temporarily modify the auth user's email in memory only (not persisted)
             # This simulates the case where auth.users.email is NULL
             object.__setattr__(auth_user, 'email', None)
-            
+
             # billing_email should return None when auth email is null
             assert test_user.billing_email is None
             assert test_user.email == "test@example.com"  # public email remains from fixture
-            
+
         finally:
             # Restore original email
             object.__setattr__(auth_user, 'email', original_email)
@@ -67,7 +67,7 @@ class TestAuthUserModel:
         """Test that the auth_user relationship works with lazy loading."""
         # Get user without explicitly loading auth_user relationship
         user = orm_session.get(UserModel, test_user.id)
-        
+
         # Accessing auth_user should trigger lazy load
         assert user.auth_user is not None
         # The auth email should exist (specific value depends on seed data)
@@ -79,7 +79,7 @@ class TestAuthUserModel:
         assert hasattr(auth_user, 'id')
         assert hasattr(auth_user, 'email')
         assert hasattr(auth_user, 'created_at')
-        
+
         # Verify column types are as expected
         assert isinstance(auth_user.id, uuid.UUID)
         assert isinstance(auth_user.email, str)
@@ -88,7 +88,7 @@ class TestAuthUserModel:
         """Test that AuthUserModel prevents modifications."""
         # Test that we can read the auth user
         assert auth_user.email is not None
-        
+
         # Test that attempting to modify a persistent auth user raises an error
         with pytest.raises(RuntimeError, match="AuthUserModel is read-only"):
             auth_user.email = "modified@example.com"

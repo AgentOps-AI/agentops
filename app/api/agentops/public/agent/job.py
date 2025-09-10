@@ -1,5 +1,5 @@
 import pydantic
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from agentops.common.orm import Session, get_orm_session
 from .base import AuthenticatedByKeyAgentAPIView, BaseResponse
 from jockey.backend.models.job import Job
@@ -21,7 +21,7 @@ class JobResponse(BaseResponse):
     @classmethod
     def validate_uuid(cls, v):
         return str(v)
-    
+
     @pydantic.field_validator("job", mode="before")
     @classmethod
     def to_string(cls, v) -> str:
@@ -37,11 +37,11 @@ class KickoffRunView(AuthenticatedByKeyAgentAPIView):
     async def __call__(self, body: JobRequest, orm: Session = Depends(get_orm_session)) -> JobResponse:
         job = await self.start_run(body=body, orm=orm)
         return JobResponse.model_validate(job)
-    
+
     async def start_run(self, body: JobRequest, orm: Session) -> Job:
         project = await self.get_project(orm=orm)
         run_request = RunJobRequest(inputs=body.inputs, callback_url=body.callback_url)
-        
+
         initiate_run_view = InitiateRunView()
         initiate_run_view.request = self.request
         deployment_response = await initiate_run_view.__call__(
@@ -49,13 +49,13 @@ class KickoffRunView(AuthenticatedByKeyAgentAPIView):
             body=run_request,
             orm=orm
         )
-        
+
         job = Job(
             name=f"agent-job-{deployment_response.job_id}",
             image_url="",
             namespace="",
         )
-        
+
         return JobResponse(
             id=deployment_response.job_id,
             agent_id=project.id,
@@ -73,13 +73,13 @@ class JobStatusView(AuthenticatedByKeyAgentAPIView):
     async def __call__(self, orm: Session = Depends(get_orm_session)) -> JobResponse:
         job = await self.get_job(orm=orm)
         return JobResponse.model_validate(job)
-    
+
     async def get_job(self, orm: Session) -> Job:
         """Get job details - implement based on your requirements."""
         # This is a placeholder implementation
         # You'll need to implement this based on how you want to retrieve job information
         raise NotImplementedError("get_job method not implemented")
-    
+
 
 class JobHistoryView(AuthenticatedByKeyAgentAPIView):
     __name__ = "Get Project"
@@ -92,7 +92,7 @@ class JobHistoryView(AuthenticatedByKeyAgentAPIView):
     async def __call__(self, orm: Session = Depends(get_orm_session)) -> JobResponse:
         project = await self.get_project(orm=orm)
         return JobResponse.model_validate(project)
-    
+
     async def get_project(self, orm: Session) -> Job:
         """Get project details - implement based on your requirements."""
         # This is a placeholder implementation

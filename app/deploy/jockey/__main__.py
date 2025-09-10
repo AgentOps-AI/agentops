@@ -158,13 +158,13 @@ def setup_builder():
     """Setup builder namespace and create AWS credentials secret from local AWS CLI."""
     try:
         from .environment import KUBECONFIG_PATH, AWS_PROFILE
-        
+
         click.echo("🔧 Setting up builder namespace and AWS credentials...")
-        
+
         # Create builder namespace
         cmd = ['kubectl', '--kubeconfig', KUBECONFIG_PATH, 'create', 'namespace', BUILDER_NAMESPACE]
         result = subprocess.run(cmd, capture_output=True, text=True)
-        
+
         if result.returncode == 0:
             click.echo("✅ Builder namespace created")
         elif "already exists" in result.stderr:
@@ -172,40 +172,40 @@ def setup_builder():
         else:
             click.echo(f"❌ Failed to create builder namespace: {result.stderr}")
             raise click.Abort()
-        
+
         # Get AWS credentials from local AWS CLI
         aws_cmd = ['aws', 'configure', 'get', 'aws_access_key_id']
         if AWS_PROFILE:
             aws_cmd.extend(['--profile', AWS_PROFILE])
-        
+
         access_key_result = subprocess.run(aws_cmd, capture_output=True, text=True)
         if access_key_result.returncode != 0:
             click.echo("❌ Failed to get AWS access key from local AWS CLI")
             click.echo("   Please ensure AWS CLI is configured with 'aws configure'")
             raise click.Abort()
-        
+
         aws_cmd = ['aws', 'configure', 'get', 'aws_secret_access_key']
         if AWS_PROFILE:
             aws_cmd.extend(['--profile', AWS_PROFILE])
-        
+
         secret_key_result = subprocess.run(aws_cmd, capture_output=True, text=True)
         if secret_key_result.returncode != 0:
             click.echo("❌ Failed to get AWS secret key from local AWS CLI")
             click.echo("   Please ensure AWS CLI is configured with 'aws configure'")
             raise click.Abort()
-        
+
         access_key = access_key_result.stdout.strip()
         secret_key = secret_key_result.stdout.strip()
-        
+
         if not access_key or not secret_key:
             click.echo("❌ AWS credentials are empty")
             click.echo("   Please ensure AWS CLI is configured with 'aws configure'")
             raise click.Abort()
-        
+
         # Delete existing secret if it exists
         delete_cmd = ['kubectl', '--kubeconfig', KUBECONFIG_PATH, 'delete', 'secret', 'aws-credentials', '-n', BUILDER_NAMESPACE]
         subprocess.run(delete_cmd, capture_output=True, text=True)  # Ignore errors
-        
+
         # Create aws-credentials secret in builder namespace
         secret_cmd = [
             'kubectl', '--kubeconfig', KUBECONFIG_PATH, 'create', 'secret', 'generic', 'aws-credentials',
@@ -213,18 +213,18 @@ def setup_builder():
             f'--from-literal=secret-key={secret_key}',
             '--namespace', BUILDER_NAMESPACE
         ]
-        
+
         result = subprocess.run(secret_cmd, capture_output=True, text=True)
         if result.returncode == 0:
             click.echo("✅ AWS credentials secret created in builder namespace")
         else:
             click.echo(f"❌ Failed to create AWS credentials secret: {result.stderr}")
             raise click.Abort()
-        
+
         click.echo("🎉 Builder namespace setup complete!")
         click.echo("   • Builder namespace created")
         click.echo("   • AWS credentials secret created from local AWS CLI")
-        
+
     except FileNotFoundError:
         click.echo("❌ kubectl or aws CLI not found. Please install them first.")
         raise click.Abort()
@@ -420,40 +420,40 @@ def list_alb_ingresses(namespace):
     """List all ingresses using the shared ALB."""
     try:
         from .backend.models.service import Ingress
-        
+
         click.echo(f"🔍 Searching for ingresses using shared ALB: {ALB_SHARED_GROUP_NAME}")
         click.echo(f"   Namespace: {namespace}")
         click.echo()
-        
+
         ingresses = Ingress.filter(namespace=namespace)
         shared_alb_ingresses = []
-        
+
         for ingress in ingresses:
             annotations = ingress.data.metadata.annotations or {}
             group_name = annotations.get('alb.ingress.kubernetes.io/group.name', '')
             if group_name == ALB_SHARED_GROUP_NAME:
                 shared_alb_ingresses.append(ingress)
-        
+
         if not shared_alb_ingresses:
             click.echo(f"No ingresses found using shared ALB group: {ALB_SHARED_GROUP_NAME}")
             return
-        
+
         click.echo(f"Found {len(shared_alb_ingresses)} ingress(es) using shared ALB:")
         click.echo()
-        
+
         for ingress in shared_alb_ingresses:
             annotations = ingress.data.metadata.annotations or {}
             hostname = ingress.hostname or "N/A"
             alb_hostname = ingress.load_balancer_hostname or "Pending"
             tags = annotations.get('alb.ingress.kubernetes.io/tags', 'N/A')
-            
+
             click.echo(f"📋 {ingress.name}")
             click.echo(f"   Hostname: {hostname}")
             click.echo(f"   ALB Hostname: {alb_hostname}")
             click.echo(f"   Tags: {tags}")
             click.echo(f"   Namespace: {ingress.namespace}")
             click.echo()
-            
+
     except Exception as e:
         click.echo(f"❌ Error listing ALB ingresses: {e}", err=True)
         raise click.Abort()
@@ -464,64 +464,64 @@ def alb_status():
     """Check the status of the shared ALB configuration."""
     try:
         from .backend.models.service import Ingress
-        
+
         click.echo(f"🔍 Checking shared ALB status: {ALB_SHARED_GROUP_NAME}")
         click.echo()
-        
+
         # Get all ingresses across all namespaces
         all_ingresses = []
         namespaces = ['default', 'kube-system', 'agentops-deploy']  # Common namespaces
-        
+
         for namespace in namespaces:
             try:
                 ingresses = Ingress.filter(namespace=namespace)
                 all_ingresses.extend(ingresses)
             except:
                 continue  # Skip if namespace doesn't exist or no access
-        
+
         shared_alb_ingresses = []
         for ingress in all_ingresses:
             annotations = ingress.data.metadata.annotations or {}
             group_name = annotations.get('alb.ingress.kubernetes.io/group.name', '')
             if group_name == ALB_SHARED_GROUP_NAME:
                 shared_alb_ingresses.append(ingress)
-        
+
         if not shared_alb_ingresses:
             click.echo(f"⚠️  No ingresses found using shared ALB group: {ALB_SHARED_GROUP_NAME}")
             click.echo("   This means the shared ALB is not yet provisioned.")
             return
-        
+
         # Check ALB status
         alb_hostnames = set()
         ready_count = 0
-        
+
         for ingress in shared_alb_ingresses:
             alb_hostname = ingress.load_balancer_hostname
             if alb_hostname:
                 alb_hostnames.add(alb_hostname)
                 ready_count += 1
-        
-        click.echo(f"✅ Shared ALB Status:")
+
+        click.echo("✅ Shared ALB Status:")
         click.echo(f"   Group Name: {ALB_SHARED_GROUP_NAME}")
         click.echo(f"   Total Ingresses: {len(shared_alb_ingresses)}")
         click.echo(f"   Ready Ingresses: {ready_count}")
         click.echo(f"   ALB Hostnames: {len(alb_hostnames)}")
-        
+
         if alb_hostnames:
             click.echo("   ALB Endpoints:")
             for hostname in alb_hostnames:
                 click.echo(f"     - {hostname}")
-        
+
         # Show ingresses by namespace
         namespace_counts = {}
         for ingress in shared_alb_ingresses:
             ns = ingress.namespace
             namespace_counts[ns] = namespace_counts.get(ns, 0) + 1
-        
+
         click.echo("   Ingresses by namespace:")
         for ns, count in namespace_counts.items():
             click.echo(f"     - {ns}: {count}")
-            
+
     except Exception as e:
         click.echo(f"❌ Error checking ALB status: {e}", err=True)
         raise click.Abort()
@@ -534,33 +534,33 @@ def validate_alb_routing(namespace, hostname):
     """Validate that ALB routing is configured correctly for a hostname."""
     try:
         from .backend.models.service import Ingress
-        
+
         click.echo(f"🔍 Validating ALB routing for hostname: {hostname}")
         click.echo(f"   Namespace: {namespace}")
         click.echo(f"   Shared ALB Group: {ALB_SHARED_GROUP_NAME}")
         click.echo()
-        
+
         ingresses = Ingress.filter(namespace=namespace)
         matching_ingresses = []
-        
+
         for ingress in ingresses:
             if ingress.hostname == hostname:
                 matching_ingresses.append(ingress)
-        
+
         if not matching_ingresses:
             click.echo(f"❌ No ingresses found for hostname: {hostname}")
             return
-        
+
         ingress = matching_ingresses[0]
         annotations = ingress.data.metadata.annotations or {}
-        
+
         # Check ALB configuration
         group_name = annotations.get('alb.ingress.kubernetes.io/group.name', '')
         scheme = annotations.get('alb.ingress.kubernetes.io/scheme', '')
         target_type = annotations.get('alb.ingress.kubernetes.io/target-type', '')
         tags = annotations.get('alb.ingress.kubernetes.io/tags', '')
-        
-        click.echo(f"✅ Ingress Configuration:")
+
+        click.echo("✅ Ingress Configuration:")
         click.echo(f"   Name: {ingress.name}")
         click.echo(f"   Hostname: {ingress.hostname}")
         click.echo(f"   ALB Group: {group_name}")
@@ -568,7 +568,7 @@ def validate_alb_routing(namespace, hostname):
         click.echo(f"   Target Type: {target_type}")
         click.echo(f"   Tags: {tags}")
         click.echo(f"   ALB Hostname: {ingress.load_balancer_hostname or 'Pending'}")
-        
+
         # Validation checks
         issues = []
         if group_name != ALB_SHARED_GROUP_NAME:
@@ -579,7 +579,7 @@ def validate_alb_routing(namespace, hostname):
             issues.append(f"Target type should be 'ip', got '{target_type}'")
         if not tags:
             issues.append("No ALB tags configured")
-        
+
         if issues:
             click.echo()
             click.echo("⚠️  Configuration Issues:")
@@ -588,7 +588,7 @@ def validate_alb_routing(namespace, hostname):
         else:
             click.echo()
             click.echo("✅ All validations passed!")
-            
+
     except Exception as e:
         click.echo(f"❌ Error validating ALB routing: {e}", err=True)
         raise click.Abort()
