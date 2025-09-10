@@ -52,64 +52,22 @@ curl -u default:password --data-binary @app/clickhouse/migrations/0000_init.sql 
 3) Enable costs + span counts
 curl -u default:password --data-binary @app/clickhouse/migrations/0001_udfs_and_pricing.sql "http://localhost:8123/?query="
 curl -u default:password --data-binary @app/clickhouse/migrations/0002_span_counts_mv.sql "http://localhost:8123/?query="
-4) Seed pricing (basic)
+4) Seed pricing
+# Option A (basic): small starter set
 curl -u default:password --data-binary @app/clickhouse/migrations/0003_seed_model_costs.sql "http://localhost:8123/?query="
+# Option B (full): full offline pricing parity
+curl -u default:password --data-binary @app/clickhouse/migrations/0004_seed_model_costs_full.sql "http://localhost:8123/?query="
 5) Quick verify
 curl -s -u default:password "http://localhost:8123/?query=SHOW%20FUNCTIONS%20LIKE%20'calculate_%25'"
 curl -s -u default:password "http://localhost:8123/?query=EXISTS%20TABLE%20otel_2.trace_span_counts"
 
-Advanced: Mirror from Prod (Exact Parity)
+Advanced (Optional): Deeper Verification
 
-Only if you want local to match prod exactly.
-
-Prereqs
-- Local ClickHouse reachable at http://localhost:8123 and 9000
-- Export ClickHouse Cloud creds:
-  export CLICKHOUSE_HOST="srrqodmgj5.us-west-2.aws.clickhouse.cloud"
-  export CLICKHOUSE_PORT="8443"
-  export CLICKHOUSE_USER="default"
-  export CLICKHOUSE_PASSWORD="<password>"
-  export CLICKHOUSE_DATABASE="otel_2"
-
-A) Dump prod schema with engines adapted
-python3 - <<'PY'
-import urllib.parse; q = open('app/clickhouse/schema_dump.sql').read(); print(urllib.parse.quote(q))
-PY
-# copy output to $ENC_Q
-curl -s -u "${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}" \
-  "https://${CLICKHOUSE_HOST}:${CLICKHOUSE_PORT}/?database=${CLICKHOUSE_DATABASE}&query=$ENC_Q" \
-  > /tmp/prod_schema_local.sql
-
-B) Apply schema locally
-curl -s -u default:password "http://localhost:8123/?query=CREATE%20DATABASE%20IF%20NOT%20EXISTS%20otel_2"
-curl -s -u default:password --data-binary @/tmp/prod_schema_local.sql "http://localhost:8123/?query="
-
-C) Ensure UDFs/dictionary/MV (OSS)
-curl -s -u default:password --data-binary @app/clickhouse/migrations/0001_udfs_and_pricing.sql "http://localhost:8123/?query="
-curl -s -u default:password --data-binary @app/clickhouse/migrations/0002_span_counts_mv.sql "http://localhost:8123/?query="
-
-D) Mirror full model pricing
-python3 - <<'PY'
-import urllib.parse
-q = """
-SELECT concat(
-  'INSERT INTO otel_2.model_costs_source (model, prompt_cost_per_1k, completion_cost_per_1k) VALUES (',
-  quote(model), ', ', toString(toFloat64(prompt_cost_per_1k)), ', ', toString(toFloat64(completion_cost_per_1k)), ');'
-)
-FROM otel_2.model_costs_source
-ORDER BY model
-FORMAT TSVRaw
-"""
-print(urllib.parse.quote(q))
-PY
-# copy to $ENC_PRICING_Q
-curl -s -u "${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}" \
-  "https://${CLICKHOUSE_HOST}:${CLICKHOUSE_PORT}/?database=${CLICKHOUSE_DATABASE}&query=$ENC_PRICING_Q" \
-  > /tmp/prod_model_costs_seed.sql
-curl -s -u default:password --data-binary @/tmp/prod_model_costs_seed.sql "http://localhost:8123/?query="
-curl -s -u default:password "http://localhost:8123/?query=SYSTEM%20RELOAD%20DICTIONARY%20otel_2.model_costs_dict"
-
-Verify parity (optional)
-curl -s -u default:password "http://localhost:8123/?query=SHOW%20FUNCTIONS%20LIKE%20'normalize_model_name'"
-curl -s -u default:password "http://localhost:8123/?query=SELECT%20dictGetOrDefault('model_costs_dict','prompt_cost_per_1k','gpt-4o-mini',0.)"
-curl -s -u default:password "http://localhost:8123/?query=EXISTS%20TABLE%20otel_2.mv_trace_span_counts"
+Use these to confirm everything loaded:
+- UDFs
+  curl -s -u default:password "http://localhost:8123/?query=SHOW%20FUNCTIONS%20LIKE%20'normalize_model_name'"
+- Dictionary
+  curl -s -u default:password "http://localhost:8123/?query=SELECT%20name,%20status,%20type%20FROM%20system.dictionaries%20WHERE%20name%3D'model_costs_dict'"
+  curl -s -u default:password "http://localhost:8123/?query=SELECT%20dictGetOrDefault('model_costs_dict','prompt_cost_per_1k','gpt-4o-mini',0.)"
+- MV/table
+  curl -s -u default:password "http://localhost:8123/?query=EXISTS%20TABLE%20otel_2.mv_trace_span_counts"
