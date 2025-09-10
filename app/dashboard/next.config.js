@@ -66,19 +66,29 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
 
   async rewrites() {
-    return [
-      {
-        source: '/ingest/static/:path*',
-        destination: 'https://us-assets.i.posthog.com/static/:path*',
-      },
-      {
-        source: '/ingest/:path*',
-        destination: 'https://us.i.posthog.com/:path*',
-      },
-      {
-        source: '/ingest/decide',
-        destination: 'https://us.i.posthog.com/decide',
-      },
+    const rewrites = [];
+    
+    // Only add PostHog rewrites if PostHog is configured
+    // This prevents 401/404 errors in local development when PostHog is not set up
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      rewrites.push(
+        {
+          source: '/ingest/static/:path*',
+          destination: 'https://us-assets.i.posthog.com/static/:path*',
+        },
+        {
+          source: '/ingest/:path*',
+          destination: 'https://us.i.posthog.com/:path*',
+        },
+        {
+          source: '/ingest/decide',
+          destination: 'https://us.i.posthog.com/decide',
+        }
+      );
+    }
+    
+    // Add other rewrites that should always be present
+    rewrites.push(
       {
         source: '/functions/v1/:path*',
         destination: 'https://qjkcnuesiiqjpohzdjjm.supabase.co/functions/v1/:path*',
@@ -102,8 +112,10 @@ const nextConfig = {
       {
         source: '/api-metrics/:path*',
         destination: 'http://0.0.0.0:8000/:path*',
-      },
-    ];
+      }
+    );
+    
+    return rewrites;
   },
 
   async redirects() {
