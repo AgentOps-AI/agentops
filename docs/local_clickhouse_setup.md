@@ -41,3 +41,27 @@ python examples/openai/openai_example_sync.py
 - ClickHouse:
   curl -s -u default:password "http://localhost:8123/?query=SHOW%20TABLES%20FROM%20otel_2"
   curl -s -u default:password "http://localhost:8123/?query=SELECT%20count()%20FROM%20otel_2.otel_traces%20WHERE%20TraceId%20=%20'<TRACE_ID>'"
+
+Mirror Prod ClickHouse Locally (UDFs, Dictionary, MV)
+
+6) Apply additional migrations for prod parity
+curl -u default:password "http://localhost:8123/?query=CREATE%20DATABASE%20IF%20NOT%20EXISTS%20otel_2"
+curl -u default:password --data-binary @app/clickhouse/migrations/0001_udfs_and_pricing.sql "http://localhost:8123/?query="
+curl -u default:password --data-binary @app/clickhouse/migrations/0002_span_counts_mv.sql "http://localhost:8123/?query="
+curl -u default:password --data-binary @app/clickhouse/migrations/0003_seed_model_costs.sql "http://localhost:8123/?query="
+
+7) Verify functions and dictionary
+curl -s -u default:password "http://localhost:8123/?query=SHOW%20FUNCTIONS%20LIKE%20'calculate_%25'"
+curl -s -u default:password "http://localhost:8123/?query=SHOW%20FUNCTIONS%20LIKE%20'normalize_model_name'"
+curl -s -u default:password "http://localhost:8123/?query=SELECT%20name,%20status,%20type%20FROM%20system.dictionaries%20WHERE%20name%3D'model_costs_dict'"
+curl -s -u default:password "http://localhost:8123/?query=SELECT%20dictGetOrDefault('model_costs_dict','prompt_cost_per_1k','gpt-4o-mini',0.)"
+curl -s -u default:password "http://localhost:8123/?query=SELECT%20calculate_prompt_cost(1000,'gpt-4o-mini')"
+
+8) Verify span counts MV
+curl -s -u default:password "http://localhost:8123/?query=EXISTS%20TABLE%20otel_2.trace_span_counts"
+curl -s -u default:password "http://localhost:8123/?query=EXISTS%20TABLE%20otel_2.mv_trace_span_counts"
+
+Troubleshooting
+- If dictGetOrDefault returns 0, run: curl -u default:password "http://localhost:8123/?query=SYSTEM%20RELOAD%20DICTIONARY%20otel_2.model_costs_dict"
+- Adjust default:password if using different credentials
+- Ensure ports 8123 (HTTP) and 9000 (native) are exposed; database otel_2 is created
