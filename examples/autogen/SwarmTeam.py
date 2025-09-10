@@ -1,65 +1,16 @@
----
-title: "AutoGen"
-description: "Integrate AgentOps with Microsoft AutoGen for multi-agent workflow tracking"
----
+# Microsoft Autogen Swarm Team Example
+#
+# This example shows how you can have two AI agents work together to help a user refund a flight.
+# Each agent has a special job, and they can "handoff" the conversation to each other or to the user as needed.
+# All actions are tracked by AgentOps so you can see what happened in your dashboard.
 
-[AutoGen](https://microsoft.github.io/autogen/stable/) is Microsoft's framework for building multi-agent conversational AI systems. AgentOps provides seamless integration with AutoGen to track and monitor your multi-agent workflows.
+# First let's install the required packages
+# %pip install -U "ag2[autogen-agentchat]"
+# %pip install -U "autogen-ext[openai]"
+# %pip install -U agentops
+# %pip install -U python-dotenv
+# %pip install -U nest_asyncio
 
-## Installation
-
-<CodeGroup>
-```bash pip
-pip install agentops autogen-core python-dotenv
-```
-```bash poetry
-poetry add agentops autogen-core python-dotenv
-```
-```bash uv
-uv pip install agentops autogen-core python-dotenv
-```
-</CodeGroup>
-
-## Setting Up API Keys
-
-Before using AutoGen with AgentOps, you need to set up your API keys. You can obtain:
-- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
-- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
-
-Then to set them up, you can either export them as environment variables or set them in a `.env` file.
-
-<CodeGroup>
-    ```bash Export to CLI
-    export OPENAI_API_KEY="your_openai_api_key_here"
-    export AGENTOPS_API_KEY="your_agentops_api_key_here"
-    ```
-    ```txt Set in .env file
-    OPENAI_API_KEY="your_openai_api_key_here"
-    AGENTOPS_API_KEY="your_agentops_api_key_here"
-    ```
-</CodeGroup>
-
-Then load the environment variables in your Python code:
-
-```python
-from dotenv import load_dotenv
-import os
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Set up environment variables with fallback values
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
-```
-
-## Usage
-
-AgentOps automatically instruments AutoGen agents and tracks their interactions. Simply initialize AgentOps before creating your AutoGen agents!
-
-<CodeGroup>
-```python 
-# Then import them
-from typing import Any, Dict, List
 import asyncio
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination
@@ -78,10 +29,12 @@ load_dotenv()
 agentops.init(auto_start_session=False, tags=["autogen-swarm-team", "agentops-example"])
 tracer = agentops.start_trace(trace_name="autogen-swarm-team")
 
+
 # This is a pretend tool that "refunds" a flight when given a flight ID.
 def refund_flight(flight_id: str) -> str:
     """Refund a flight"""
     return f"Flight {flight_id} refunded"
+
 
 # Set up the AI model client (the brain for the agents)
 model_client = OpenAIChatCompletionClient(
@@ -122,6 +75,7 @@ team = Swarm([travel_agent, flights_refunder], termination_condition=termination
 # This is the task the user wants help with.
 task = "I need to refund my flight."
 
+
 # This function runs the team and handles the back-and-forth with the user.
 async def run_team_stream() -> None:
     task_result = await Console(team.run_stream(task=task))
@@ -143,38 +97,11 @@ async def run_team_stream() -> None:
         response_index += 1
 
         task_result = await Console(
-            team.run_stream(
-                task=HandoffMessage(
-                    source="user", target=last_message.source, content=user_message
-                )
-            )
+            team.run_stream(task=HandoffMessage(source="user", target=last_message.source, content=user_message))
         )
         last_message = task_result.messages[-1]
+
 
 # Start the team and let the agents and user work together to solve the problem.
 nest_asyncio.apply()
 asyncio.run(run_team_stream())
-```
-</CodeGroup>
-
-## Examples
-
-<CardGroup cols={2}>
-  <Card title="Agent Chat Example" icon="notebook" href="/v2/examples/autogen">
-    Multi-Agent chat functionality with tool calls
-  </Card>
-  <Card title="Math Agent Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/autogen/MathAgent.ipynb" newTab={true}>
-    Demonstrates an agent specialized for mathematical problem-solving.
-  </Card>
-    <Card title="Group Chat Agent Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/autogen/GroupChatTeam.ipynb" newTab={true}>
-        This GroupChat example shows how you can make several AI agents work together as a team to solve a problem.
-    </Card>
-</CardGroup>
-
-Visit your [AgentOps Dashboard](https://app.agentops.ai) to see detailed traces of your AutoGen agent interactions, performance metrics, and workflow analytics.
-
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

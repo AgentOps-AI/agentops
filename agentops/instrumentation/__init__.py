@@ -82,6 +82,11 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "class_name": "CrewaiInstrumentor",
         "min_version": "0.56.0",
     },
+    "autogen_agentchat": {
+        "module_name": "agentops.instrumentation.agentic.autogen",
+        "class_name": "AutoGenInstrumentor",
+        "min_version": "0.6.4",
+    },
     "autogen": {
         "module_name": "agentops.instrumentation.agentic.ag2",
         "class_name": "AG2Instrumentor",
@@ -293,6 +298,15 @@ def _perform_instrumentation(package_name: str):
     global _instrumenting_packages, _active_instrumentors, _has_agentic_library
     if not _should_instrument_package(package_name):
         return
+
+    # If we are about to instrument the FIRST agentic library, set the flag **before** importing
+    # its instrumentor.  This prevents re-entrancy where the agentic library imports a provider
+    # (e.g. ``openai``) while its own instrumentor module is still only *partially* initialised,
+    # which leads to the ``partially initialised module ... has no attribute`` circular-import
+    # error that users are seeing.  We only set this once – subsequent calls will short-circuit
+    # in ``_should_instrument_package``.
+    if package_name in AGENTIC_LIBRARIES and not _has_agentic_library:
+        _has_agentic_library = True
 
     # Get the appropriate configuration for the package
     # Ensure package_name is a key in either PROVIDERS or AGENTIC_LIBRARIES
