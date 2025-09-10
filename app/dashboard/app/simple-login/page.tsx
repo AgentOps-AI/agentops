@@ -52,6 +52,10 @@ const SimpleLoginPageDev = () => {
   const authBaseUrl = `${apiUrl}/auth`;
 
   const checkAuthAndFetchDetails = async () => {
+    // Avoid unnecessary 401s in local mode: if there is no session cookie, skip the check
+    if (typeof document !== 'undefined' && !document.cookie.includes('session_id=')) {
+      return false;
+    }
     const lastLoginMethod = localStorage.getItem('loginMethodUsed') as LoginType | null;
     if (loginMethodUsed !== lastLoginMethod) {
       setLoginMethodUsed(lastLoginMethod);

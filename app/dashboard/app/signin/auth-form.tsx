@@ -40,6 +40,11 @@ export function AuthForm() {
     }
 
     const checkAuth = async () => {
+      // If there is no session cookie, skip calling the API to avoid 401 spam in dev
+      if (typeof document !== 'undefined' && !document.cookie.includes('session_id=')) {
+        setIsCheckingAuth(false);
+        return;
+      }
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/opsboard/users/me`, {
           method: 'GET',
