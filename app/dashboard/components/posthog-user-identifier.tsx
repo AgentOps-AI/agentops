@@ -9,13 +9,16 @@ export function PostHogUserIdentifier() {
   const posthog = usePostHog();
 
   useEffect(() => {
-    if (posthog && user?.id) {
-      posthog.identify(user.id, {
-        email: user.email || undefined,
-        name: user.full_name || undefined,
-      });
-    } else if (posthog && !user) {
-      posthog.reset();
+    // Only proceed if PostHog is available and properly initialized
+    if (posthog && posthog.__loaded && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      if (user?.id) {
+        posthog.identify(user.id, {
+          email: user.email || undefined,
+          name: user.full_name || undefined,
+        });
+      } else if (!user) {
+        posthog.reset();
+      }
     }
   }, [posthog, user]);
 
