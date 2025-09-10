@@ -12,8 +12,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 
-    // Only initialize PostHog if we have a valid key
-    if (posthogKey) {
+    // Only initialize PostHog if we have a valid key and we're not in development
+    if (posthogKey && posthogKey.trim() !== '' && process.env.NODE_ENV !== 'development') {
       posthog.init(posthogKey, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
         person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
@@ -21,6 +21,11 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       });
     }
   }, []);
+
+  // If no PostHog key, return children without PostHog provider
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || process.env.NEXT_PUBLIC_POSTHOG_KEY.trim() === '') {
+    return <>{children}</>;
+  }
 
   return (
     <PHProvider client={posthog}>
