@@ -48,6 +48,7 @@ Notes
 - ClickHouse typically requires TLS on port 8443.
 - Auth flows require a Supabase service role key; without it, some pages may be limited.
 - API docs: ensure API_DOMAIN includes "localhost" (e.g., API_DOMAIN=localhost:8000). Compose now passes this by default via services.api.environment.
+- Dashboard is behind a compose profile by default to keep base startup light. To start it, run: docker compose --profile dashboard up -d. If you want it to start with docker compose up -d, remove the profiles line from the dashboard service in compose.yaml.
 
 Troubleshooting
 - If you customized compose and see build errors related to copying deploy/jockey, ensure the API service uses build.context: ./ and dockerfile: api/Dockerfile (the default compose in this repo already does this).
