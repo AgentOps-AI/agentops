@@ -152,6 +152,7 @@
         "v2/integrations/llamaindex",
         "v2/integrations/litellm",
         "v2/integrations/mem0",
+        "v2/integrations/memori",
         "v2/integrations/openai",
         "v2/integrations/openai_agents_python",
         "v2/integrations/openai_agents_js",
