@@ -427,7 +427,9 @@ def create_streaming_agent_wrapper(tracer, streaming_context_manager):
 def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
     """Create a streaming-aware async wrapper for agent run methods."""
 
-    async def wrapper(wrapped, instance, args, kwargs):
+    def wrapper(wrapped, instance, args, kwargs):
+        import inspect
+
         # Get agent ID for context storage
         agent_id = getattr(instance, "agent_id", None) or getattr(instance, "id", None) or id(instance)
         agent_id = str(agent_id)
@@ -463,7 +465,7 @@ def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
                 # Execute the original function within agent context
                 context_token = otel_context.attach(current_context)
                 try:
-                    result = await wrapped(*args, **kwargs)
+                    result = wrapped(*args, **kwargs)
                 finally:
                     otel_context.detach(context_token)
 
@@ -478,7 +480,7 @@ def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
                 span.set_status(Status(StatusCode.OK))
 
                 # Wrap the result to maintain context and end span when complete
-                if hasattr(result, "__aiter__"):
+                if inspect.isasyncgen(result):
                     return AsyncStreamingResultWrapper(
                         result, span, agent_id, current_context, streaming_context_manager
                     )
@@ -497,32 +499,35 @@ def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
                 streaming_context_manager.remove_context(agent_id)
                 raise
         else:
-            # For non-streaming, use normal context manager
-            with tracer.start_as_current_span(span_name) as span:
-                try:
-                    # Set agent attributes
-                    attributes = get_agent_run_attributes(args=(instance,) + args, kwargs=kwargs)
-                    for key, value in attributes.items():
-                        span.set_attribute(key, value)
-
-                    # Execute the original function
-                    result = await wrapped(*args, **kwargs)
-
-                    # Set result attributes
-                    result_attributes = get_agent_run_attributes(
-                        args=(instance,) + args, kwargs=kwargs, return_value=result
-                    )
-                    for key, value in result_attributes.items():
-                        if key not in attributes:  # Avoid duplicates
+            # For non-streaming, need to handle async call
+            async def async_wrapper():
+                with tracer.start_as_current_span(span_name) as span:
+                    try:
+                        # Set agent attributes
+                        attributes = get_agent_run_attributes(args=(instance,) + args, kwargs=kwargs)
+                        for key, value in attributes.items():
                             span.set_attribute(key, value)
 
-                    span.set_status(Status(StatusCode.OK))
-                    return result
+                        # Execute the original function
+                        result = await wrapped(*args, **kwargs)
 
-                except Exception as e:
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
-                    span.record_exception(e)
-                    raise
+                        # Set result attributes
+                        result_attributes = get_agent_run_attributes(
+                            args=(instance,) + args, kwargs=kwargs, return_value=result
+                        )
+                        for key, value in result_attributes.items():
+                            if key not in attributes:  # Avoid duplicates
+                                span.set_attribute(key, value)
+
+                        span.set_status(Status(StatusCode.OK))
+                        return result
+
+                    except Exception as e:
+                        span.set_status(Status(StatusCode.ERROR, str(e)))
+                        span.record_exception(e)
+                        raise
+
+            return async_wrapper()
 
     return wrapper
 
