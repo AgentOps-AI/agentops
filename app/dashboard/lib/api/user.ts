@@ -5,6 +5,15 @@ import { fetchAuthenticatedApi, ApiError } from '../api-client'; // Import the n
  * Fetches the data for the currently authenticated user using the backend API.
  */
 export const fetchUserAPI = async (): Promise<IUser | null> => {
+  // In local/dev without an authenticated session, avoid hitting the backend
+  // to reduce console noise and unnecessary network requests.
+  if (typeof document !== 'undefined') {
+    const hasSessionCookie = document.cookie?.includes('session_id=');
+    if (!hasSessionCookie) {
+      return null;
+    }
+  }
+
   const endpoint = '/opsboard/users/me'; // Correct backend endpoint
 
   try {
