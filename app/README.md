@@ -145,6 +145,7 @@ From app/:
 
 5) Troubleshooting (Compose)
 - CORS: APP_URL must be http://localhost:3000 so API allows dashboard origin.
+- API base URL: ensure NEXT_PUBLIC_API_URL=http://localhost:8000. If missing, the dashboard may POST to http://localhost:3000 (e.g., /auth/login) and return 404 or CORS errors.
 - Supabase: API requires service role key; anon is only for dashboard.
 - ClickHouse: Use port 8443 with CLICKHOUSE_SECURE=true; ensure your IP is allowlisted in ClickHouse Cloud.
 - Stripe: Optional unless testing billing. If testing webhooks, set NEXT_STRIPE_WEBHOOK_SECRET and run stripe listen.
