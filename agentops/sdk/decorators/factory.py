@@ -1,6 +1,7 @@
 import inspect
 import functools
 import asyncio
+import os
 from typing import Any, Dict, Callable, Optional, Union
 
 
@@ -20,6 +21,46 @@ from agentops.sdk.decorators.utility import (
     _extract_request_data,
     _extract_response_data,
 )
+
+
+# Track whether we've warned about uninitialized tracer to avoid spamming
+_uninitialized_warning_shown = False
+
+
+def _ensure_tracer_initialized(operation_name: str, entity_kind: str) -> bool:
+    """
+    Ensure the tracer is initialized before using decorators.
+    
+    Returns True if tracer is initialized (or was auto-initialized), False otherwise.
+    """
+    global _uninitialized_warning_shown
+    
+    if tracer.initialized:
+        return True
+    
+    # Check if auto-initialization is enabled via environment variable
+    auto_init = os.environ.get("AGENTOPS_AUTO_INIT", "").lower() in ("true", "1", "yes")
+    
+    if auto_init:
+        try:
+            import agentops
+            agentops.init(auto_start_session=False, instrument_llm_calls=True)
+            logger.debug(f"AgentOps auto-initialized for decorator '{operation_name}'")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to auto-initialize AgentOps: {e}")
+            return False
+    
+    # Show warning only once to avoid spam
+    if not _uninitialized_warning_shown:
+        logger.warning(
+            f"AgentOps decorator '@{entity_kind}' used on '{operation_name}' but tracer is not initialized. "
+            f"Spans will not be created. Call agentops.init() first, or set AGENTOPS_AUTO_INIT=true "
+            f"to auto-initialize when decorators are used."
+        )
+        _uninitialized_warning_shown = True
+    
+    return False
 
 
 def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
@@ -101,10 +142,11 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
         def wrapper(
             wrapped_func: Callable[..., Any], instance: Optional[Any], args: tuple, kwargs: Dict[str, Any]
         ) -> Any:
-            if not tracer.initialized:
+            operation_name = name or wrapped_func.__name__
+            
+            if not _ensure_tracer_initialized(operation_name, entity_kind):
                 return wrapped_func(*args, **kwargs)
 
-            operation_name = name or wrapped_func.__name__
             is_async = asyncio.iscoroutinefunction(wrapped_func)
             is_generator = inspect.isgeneratorfunction(wrapped_func)
             is_async_generator = inspect.isasyncgenfunction(wrapped_func)
