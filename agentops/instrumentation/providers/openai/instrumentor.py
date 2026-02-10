@@ -109,19 +109,6 @@ class OpenaiInstrumentor(CommonInstrumentor):
                     async_chat_completion_stream_wrapper(self._tracer),
                 )
 
-                # Beta chat completion streaming wrappers
-                wrap_function_wrapper(
-                    "openai.resources.beta.chat.completions",
-                    "Completions.parse",
-                    chat_completion_stream_wrapper(self._tracer),
-                )
-
-                wrap_function_wrapper(
-                    "openai.resources.beta.chat.completions",
-                    "AsyncCompletions.parse",
-                    async_chat_completion_stream_wrapper(self._tracer),
-                )
-
                 # Responses API streaming wrappers
                 wrap_function_wrapper(
                     "openai.resources.responses",
@@ -136,6 +123,24 @@ class OpenaiInstrumentor(CommonInstrumentor):
                 )
             except Exception as e:
                 logger.warning(f"[OPENAI INSTRUMENTOR] Error setting up OpenAI streaming wrappers: {e}")
+
+            # Beta chat completion wrappers (separate try/except because
+            # openai.resources.beta.chat was removed in newer openai SDK
+            # versions; a failure here should not prevent the main streaming
+            # wrappers from being applied).
+            try:
+                wrap_function_wrapper(
+                    "openai.resources.beta.chat.completions",
+                    "Completions.parse",
+                    chat_completion_stream_wrapper(self._tracer),
+                )
+                wrap_function_wrapper(
+                    "openai.resources.beta.chat.completions",
+                    "AsyncCompletions.parse",
+                    async_chat_completion_stream_wrapper(self._tracer),
+                )
+            except Exception:
+                pass  # Module not available in this openai version
         else:
             if not is_openai_v1():
                 logger.debug("[OPENAI INSTRUMENTOR] Skipping custom wrapping - not using OpenAI v1")
