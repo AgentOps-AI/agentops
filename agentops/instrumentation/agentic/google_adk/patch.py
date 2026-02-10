@@ -658,6 +658,10 @@ def _patch_module_function(module_name: str, function_name: str, wrapper_functio
     """Helper to patch module-level functions."""
     try:
         module = __import__(module_name, fromlist=[function_name])
+        if not hasattr(module, function_name):
+            # Function may not exist in this version of the module - skip silently
+            logger.debug(f"{module_name}.{function_name} not found in this version, skipping")
+            return
         wrapt.wrap_function_wrapper(module, function_name, wrapper_function(agentops_tracer))
         _wrapped_methods.append((module, function_name))
         logger.debug(f"Successfully wrapped {module_name}.{function_name}")
