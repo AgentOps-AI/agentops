@@ -17,6 +17,8 @@ tool = create_entity_decorator(SpanKind.TOOL)
 operation = task
 guardrail = create_entity_decorator(SpanKind.GUARDRAIL)
 track_endpoint = create_entity_decorator(SpanKind.HTTP)
+error = create_entity_decorator(SpanKind.ERROR)
+log = create_entity_decorator(SpanKind.LOG)
 
 
 # For backward compatibility: @session decorator calls @trace decorator
@@ -48,4 +50,6 @@ __all__ = [
     "tool",
     "guardrail",
     "track_endpoint",
+    "error",
+    "log",
 ]
