@@ -3,6 +3,8 @@ title: AG2
 description: "Track and analyze your AG2 agents with AgentOps"
 ---
 
+[AG2](https://ag2.ai/) (formerly AutoGen) is a framework for building multi-agent conversational AI systems. AgentOps provides seamless, automatic instrumentation for AG2 — just call `agentops.init()` and all agent interactions are tracked.
+
 ## Installation
 
 <CodeGroup>
@@ -110,6 +112,20 @@ user_proxy.initiate_chat(
   </Card>
   <Card title="Wikipedia Search Tool" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/tools_wikipedia_search.ipynb" newTab={true}>
     Example of AG2 agents using a Wikipedia search tool.
+  </Card>
+  <Card title="Multi-Agent Group Chat" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/groupchat.py" newTab={true}>
+    Orchestrate a team of specialized agents (researcher, coder, critic) with full AgentOps tracing.
+  </Card>
+</CardGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="AG2 - AgentOps Ecosystem Docs" icon="book" href="https://docs.ag2.ai/latest/docs/ecosystem/agentops/" newTab={true}>
+    Official AG2 documentation on integrating with AgentOps.
+  </Card>
+  <Card title="AG2 OpenTelemetry Tracing" icon="blog" href="https://docs.ag2.ai/latest/docs/blog/2026/02/08/AG2-OpenTelemetry-Tracing/" newTab={true}>
+    Full observability for multi-agent systems with AG2's built-in tracing.
   </Card>
 </CardGroup>
 

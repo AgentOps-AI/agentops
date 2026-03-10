@@ -155,8 +155,8 @@ pip install 'crewai[agentops]'
 ### AG2 
 With only two lines of code, add full observability and monitoring to AG2 (formerly AutoGen) agents. Set an `AGENTOPS_API_KEY` in your environment and call `agentops.init()`
 
-- [AG2 Observability Example](https://docs.ag2.ai/notebooks/agentchat_agentops)
-- [AG2 - AgentOps Documentation](https://docs.ag2.ai/docs/ecosystem/agentops)
+- [AG2 Observability Example](https://github.com/ag2ai/ag2/blob/main/notebook/agentchat_agentops.ipynb)
+- [AG2 - AgentOps Documentation](https://docs.ag2.ai/latest/docs/ecosystem/agentops/)
 
 ### Camel AI 
 
