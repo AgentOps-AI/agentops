@@ -260,8 +260,8 @@ pip install 'crewai[agentops]'
 ### AG2 🤖
 With only two lines of code, add full observability and monitoring to AG2 (formerly AutoGen) agents. Set an `AGENTOPS_API_KEY` in your environment and call `agentops.init()`
 
-- [AG2 Observability Example](https://docs.ag2.ai/notebooks/agentchat_agentops)
-- [AG2 - AgentOps Documentation](https://docs.ag2.ai/docs/ecosystem/agentops)
+- [AG2 Observability Example](https://github.com/ag2ai/ag2/blob/main/notebook/agentchat_agentops.ipynb)
+- [AG2 - AgentOps Documentation](https://docs.ag2.ai/latest/docs/ecosystem/agentops/)
 
 ### Camel AI 🐪
 
@@ -845,6 +845,7 @@ Check out our growth in the community:
 |<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/134388954?s=40&v=4" width="20" height="20" alt="">  &nbsp; [camel-ai](https://github.com/camel-ai) / [camel](https://github.com/camel-ai/camel) | 5166 |
 |<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/152537519?s=40&v=4" width="20" height="20" alt="">  &nbsp; [superagent-ai](https://github.com/superagent-ai) / [superagent](https://github.com/superagent-ai/superagent) | 5050 |
 |<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/30197649?s=40&v=4" width="20" height="20" alt="">  &nbsp; [iyaja](https://github.com/iyaja) / [llama-fs](https://github.com/iyaja/llama-fs) | 4713 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/188122941?s=40&v=4" width="20" height="20" alt="">  &nbsp; [ag2ai](https://github.com/ag2ai) / [ag2](https://github.com/ag2ai/ag2) | 4240 |
 |<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/162546372?s=40&v=4" width="20" height="20" alt="">  &nbsp; [BasedHardware](https://github.com/BasedHardware) / [Omi](https://github.com/BasedHardware/Omi) | 2723 |
 |<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/454862?s=40&v=4" width="20" height="20" alt="">  &nbsp; [MervinPraison](https://github.com/MervinPraison) / [PraisonAI](https://github.com/MervinPraison/PraisonAI) | 2007 |
 |<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/140554352?s=40&v=4" width="20" height="20" alt="">  &nbsp; [AgentOps-AI](https://github.com/AgentOps-AI) / [Jaiqu](https://github.com/AgentOps-AI/Jaiqu) | 272 |
