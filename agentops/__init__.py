@@ -37,6 +37,9 @@ import threading
 # Import validation functions
 from agentops.validation import validate_trace_spans, print_validation_summary, ValidationError
 
+# Import callback handlers for external integrations
+from agentops.integration.callbacks.litellm import LiteLLMCallbackHandler
+
 # Thread-safe client management
 _client_lock = threading.Lock()
 _client = None
@@ -485,4 +488,6 @@ __all__ = [
     "validate_trace_spans",
     "print_validation_summary",
     "ValidationError",
+    # Callback handlers for external integrations
+    "LiteLLMCallbackHandler",
 ]
