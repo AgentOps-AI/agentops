@@ -427,7 +427,7 @@ def create_streaming_agent_wrapper(tracer, streaming_context_manager):
 def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
     """Create a streaming-aware async wrapper for agent run methods."""
 
-    def wrapper(wrapped, instance, args, kwargs):
+    async def wrapper(wrapped, instance, args, kwargs):
         import inspect
 
         # Get agent ID for context storage
@@ -465,7 +465,7 @@ def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
                 # Execute the original function within agent context
                 context_token = otel_context.attach(current_context)
                 try:
-                    result = wrapped(*args, **kwargs)
+                    result = await wrapped(*args, **kwargs)
                 finally:
                     otel_context.detach(context_token)
 
@@ -880,7 +880,7 @@ def create_team_wrapper(tracer, streaming_context_manager):
 def create_team_async_wrapper(tracer, streaming_context_manager):
     """Create an async wrapper for Team methods that establishes the team context."""
 
-    def wrapper(wrapped, instance, args, kwargs):
+    async def wrapper(wrapped, instance, args, kwargs):
         import inspect
 
         # Get team ID for context storage
@@ -910,7 +910,7 @@ def create_team_async_wrapper(tracer, streaming_context_manager):
             # Execute the original function within team context
             context_token = otel_context.attach(current_context)
             try:
-                result = wrapped(*args, **kwargs)
+                result = await wrapped(*args, **kwargs)
             finally:
                 otel_context.detach(context_token)
 
