@@ -16,6 +16,7 @@ from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
 from agentops.instrumentation.providers.openai.utils import is_metrics_enabled
 from agentops.instrumentation.providers.openai.wrappers.chat import handle_chat_attributes, _create_tool_span
+from agentops.instrumentation.providers.openai.provider_detection import detect_provider_from_instance
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, MessageAttributes
 
 
@@ -477,6 +478,11 @@ def chat_completion_stream_wrapper(tracer, wrapped, instance, args, kwargs):
         # Extract and set request attributes
         request_attributes = handle_chat_attributes(kwargs=kwargs)
 
+        # Detect actual provider from client base_url (e.g., MiniMax, Groq)
+        provider = detect_provider_from_instance(instance)
+        if provider != "OpenAI":
+            request_attributes[SpanAttributes.LLM_SYSTEM] = provider
+
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
 
@@ -545,6 +551,11 @@ async def async_chat_completion_stream_wrapper(tracer, wrapped, instance, args, 
     try:
         # Extract and set request attributes
         request_attributes = handle_chat_attributes(kwargs=kwargs)
+
+        # Detect actual provider from client base_url (e.g., MiniMax, Groq)
+        provider = detect_provider_from_instance(instance)
+        if provider != "OpenAI":
+            request_attributes[SpanAttributes.LLM_SYSTEM] = provider
 
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
@@ -852,6 +863,12 @@ def responses_stream_wrapper(tracer, wrapped, instance, args, kwargs):
         from agentops.instrumentation.providers.openai.wrappers.responses import handle_responses_attributes
 
         request_attributes = handle_responses_attributes(kwargs=kwargs)
+
+        # Detect actual provider from client base_url (e.g., MiniMax, Groq)
+        provider = detect_provider_from_instance(instance)
+        if provider != "OpenAI":
+            request_attributes[SpanAttributes.LLM_SYSTEM] = provider
+
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
 
@@ -909,6 +926,12 @@ async def async_responses_stream_wrapper(tracer, wrapped, instance, args, kwargs
         from agentops.instrumentation.providers.openai.wrappers.responses import handle_responses_attributes
 
         request_attributes = handle_responses_attributes(kwargs=kwargs)
+
+        # Detect actual provider from client base_url (e.g., MiniMax, Groq)
+        provider = detect_provider_from_instance(instance)
+        if provider != "OpenAI":
+            request_attributes[SpanAttributes.LLM_SYSTEM] = provider
+
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
 
