@@ -48,7 +48,7 @@ class E2ETests(unittest.IsolatedAsyncioTestCase):
             "write a python function that adds two numbers together", self.client
         )
 
-        time.sleep(2)
+        asyncio.sleep(2)
 
         llm_calls = await self.db.get(
             "llms", "id", "agent_id", getattr(self.engineer, "agent_ops_agent_id")
@@ -58,7 +58,7 @@ class E2ETests(unittest.IsolatedAsyncioTestCase):
     async def test_record_agent_error(self):
         self.qa.record_error()
 
-        time.sleep(2)
+        asyncio.sleep(2)
         sessions = await self.db.get("sessions", "id", "project_id", Project.ID)
         errors = await self.db.get("errors", "id", "session_id", sessions[0].get("id"))
         self.assertIsNotNone(errors)
@@ -66,7 +66,7 @@ class E2ETests(unittest.IsolatedAsyncioTestCase):
     async def test_record_agent_action(self):
         self.qa.record_action(1, 2)
 
-        time.sleep(2)
+        asyncio.sleep(2)
 
         actions = await self.db.get(
             "actions", "id", "agent_id", getattr(self.engineer, "agent_ops_agent_id")
