@@ -391,6 +391,7 @@ class Image(BaseModel):
                 self.client.batch.delete_namespaced_job(name=builder_job_name, namespace=self.namespace)
                 configmap.delete()
             except:
+               # TODO: be more specific about exception type
                 pass  # Ignore cleanup errors
             logger.info(f"Job {builder_job_name} complete")
 

@@ -696,6 +696,8 @@ class AG2Instrumentor(CommonInstrumentor):
                                     json.dumps(func_call["arguments"]),
                                 )
                             except:
+                               
+                               # TODO: be more specific about exception type
                                 pass
 
                 elif tool_type == "code" and args:
@@ -827,6 +829,8 @@ class AG2Instrumentor(CommonInstrumentor):
                 try:
                     span.set_attribute(ToolAttributes.TOOL_RESULT, json.dumps(result[1]))
                 except:
+                   
+                   # TODO: be more specific about exception type
                     pass
 
         if tool_type == "code" and isinstance(result, tuple) and len(result) >= 3:

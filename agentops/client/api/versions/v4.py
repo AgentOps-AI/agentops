@@ -95,6 +95,8 @@ class V4Client(BaseApiClient):
                     if "error" in error_data:
                         error_msg = error_data["error"]
                 except:
+                   
+                   # TODO: be more specific about exception type
                     pass
                 raise ApiServerException(error_msg)
 
@@ -134,6 +136,8 @@ class V4Client(BaseApiClient):
                     if "error" in error_data:
                         error_msg = error_data["error"]
                 except:
+                   
+                   # TODO: be more specific about exception type
                     pass
                 raise ApiServerException(error_msg)
 

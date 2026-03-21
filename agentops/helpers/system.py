@@ -58,6 +58,13 @@ def get_sdk_details():
             "System Packages": get_sys_packages(),
         }
     except:
+        
+        
+        
+        
+        
+        
+        # TODO: be more specific about exception type
         return {}
 
 
@@ -83,6 +90,13 @@ def get_installed_packages():
             }
         }
     except:
+        
+        
+        
+        
+        
+        
+        # TODO: be more specific about exception type
         return {}
 
 
@@ -90,6 +104,13 @@ def get_current_directory():
     try:
         return {"Project Working Directory": os.getcwd()}
     except:
+        
+        
+        
+        
+        
+        
+        # TODO: be more specific about exception type
         return {}
 
 
@@ -97,6 +118,13 @@ def get_virtual_env():
     try:
         return {"Virtual Environment": os.environ.get("VIRTUAL_ENV", None)}
     except:
+        
+        
+        
+        
+        
+        
+        # TODO: be more specific about exception type
         return {}
 
 
@@ -109,6 +137,13 @@ def get_os_details():
             "OS Release": platform.release(),
         }
     except:
+        
+        
+        
+        
+        
+        
+        # TODO: be more specific about exception type
         return {}
 
 
@@ -121,6 +156,13 @@ def get_cpu_details():
             "CPU Usage": f"{psutil.cpu_percent()}%",
         }
     except:
+        
+        
+        
+        
+        
+        
+        # TODO: be more specific about exception type
         return {}
 
 
@@ -134,6 +176,13 @@ def get_ram_details():
             "Percentage": f"{ram_info.percent}%",
         }
     except:
+        
+        
+        
+        
+        
+        
+        # TODO: be more specific about exception type
         return {}
 
 
