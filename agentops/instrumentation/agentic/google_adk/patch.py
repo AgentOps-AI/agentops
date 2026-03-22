@@ -449,37 +449,43 @@ def _adk_trace_tool_call_wrapper(agentops_tracer):
         # Call original to preserve ADK behavior
         result = wrapped(*args, **kwargs)
 
-        tool_args = args[0] if args else kwargs.get("args")
+        # trace_tool_call(tool, args, function_response_event)
+        tool = args[0] if len(args) > 0 else kwargs.get("tool")
+        tool_args = args[1] if len(args) > 1 else kwargs.get("args")
         current_span = opentelemetry_api_trace.get_current_span()
-        if current_span.is_recording() and tool_args is not None:
+        if current_span.is_recording():
             current_span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
-            current_span.set_attribute("gcp.vertex.agent.tool_call_args", json.dumps(tool_args))
+            if tool_args is not None:
+                current_span.set_attribute("gcp.vertex.agent.tool_call_args", json.dumps(tool_args))
+            if tool is not None and hasattr(tool, "name"):
+                current_span.set_attribute("gcp.vertex.agent.tool_name", tool.name)
         return result
 
     return wrapper
 
 
-def _adk_trace_tool_response_wrapper(agentops_tracer):
+def _adk_trace_merged_tool_calls_wrapper(agentops_tracer):
     @wrapt.decorator
     def wrapper(wrapped, instance, args, kwargs):
         # Call original to preserve ADK behavior
         result = wrapped(*args, **kwargs)
 
-        invocation_context = args[0] if len(args) > 0 else kwargs.get("invocation_context")
-        event_id = args[1] if len(args) > 1 else kwargs.get("event_id")
-        function_response_event = args[2] if len(args) > 2 else kwargs.get("function_response_event")
+        # trace_merged_tool_calls(response_event_id, function_response_event)
+        response_event_id = args[0] if len(args) > 0 else kwargs.get("response_event_id")
+        function_response_event = args[1] if len(args) > 1 else kwargs.get("function_response_event")
 
         current_span = opentelemetry_api_trace.get_current_span()
         if current_span.is_recording():
             current_span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
-            if invocation_context:
-                current_span.set_attribute("gcp.vertex.agent.invocation_id", invocation_context.invocation_id)
-            if event_id:
-                current_span.set_attribute("gcp.vertex.agent.event_id", event_id)
+            if response_event_id:
+                current_span.set_attribute("gcp.vertex.agent.event_id", response_event_id)
             if function_response_event:
-                current_span.set_attribute(
-                    "gcp.vertex.agent.tool_response", function_response_event.model_dump_json(exclude_none=True)
-                )
+                try:
+                    current_span.set_attribute(
+                        "gcp.vertex.agent.tool_response", function_response_event.model_dump_json(exclude_none=True)
+                    )
+                except Exception:
+                    current_span.set_attribute("gcp.vertex.agent.tool_response", "<not serializable>")
             current_span.set_attribute("gcp.vertex.agent.llm_request", "{}")
             current_span.set_attribute("gcp.vertex.agent.llm_response", "{}")
         return result
@@ -707,7 +713,7 @@ def patch_adk(agentops_tracer):
     # Patch ADK's telemetry functions to add attributes to AgentOps spans
     _patch_module_function("google.adk.telemetry", "trace_tool_call", _adk_trace_tool_call_wrapper, agentops_tracer)
     _patch_module_function(
-        "google.adk.telemetry", "trace_tool_response", _adk_trace_tool_response_wrapper, agentops_tracer
+        "google.adk.telemetry", "trace_merged_tool_calls", _adk_trace_merged_tool_calls_wrapper, agentops_tracer
     )
     _patch_module_function("google.adk.telemetry", "trace_call_llm", _adk_trace_call_llm_wrapper, agentops_tracer)
 
