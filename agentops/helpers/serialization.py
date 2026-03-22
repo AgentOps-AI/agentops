@@ -103,6 +103,7 @@ def model_to_dict(obj: Any) -> dict:
         try:
             return obj.__dict__
         except:
+            # TODO: be more specific about exception type
             return {}
 
 
