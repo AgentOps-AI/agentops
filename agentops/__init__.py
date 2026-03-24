@@ -27,6 +27,7 @@ from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
 from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail, track_endpoint
+from agentops.sdk.decorators import error as error_decorator, log as log_decorator
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
@@ -447,6 +448,46 @@ def update_trace_metadata(metadata: Dict[str, Any], prefix: str = "trace.metadat
         return False
 
 
+def error(name: str = "error", message: str = "", **attributes: Any) -> None:
+    """Record an error event as a one-shot span.
+
+    Creates and immediately closes a span of kind ERROR with the given message.
+
+    Args:
+        name: Name of the error event.
+        message: Error message or description.
+        **attributes: Additional attributes to set on the span.
+    """
+    from agentops.sdk.decorators.utility import _create_as_current_span
+
+    extra = {k: str(v) for k, v in attributes.items()}
+    if message:
+        extra["error.message"] = message
+    with _create_as_current_span(name, SpanKind.ERROR, attributes=extra) as span:
+        span.set_status(StatusCode.ERROR, message)
+
+
+def log(name: str = "log", message: str = "", level: str = "INFO", **attributes: Any) -> None:
+    """Record a log event as a one-shot span.
+
+    Creates and immediately closes a span of kind LOG with the given message and level.
+
+    Args:
+        name: Name of the log event.
+        message: Log message content.
+        level: Log level (e.g. DEBUG, INFO, WARNING, ERROR).
+        **attributes: Additional attributes to set on the span.
+    """
+    from agentops.sdk.decorators.utility import _create_as_current_span
+
+    extra = {k: str(v) for k, v in attributes.items()}
+    if message:
+        extra["log.message"] = message
+    extra["log.level"] = level
+    with _create_as_current_span(name, SpanKind.LOG, attributes=extra):
+        pass
+
+
 __all__ = [
     # Legacy exports
     "start_session",
@@ -476,6 +517,11 @@ __all__ = [
     "tool",
     "guardrail",
     "track_endpoint",
+    "error_decorator",
+    "log_decorator",
+    # Standalone span functions
+    "error",
+    "log",
     # Enums
     "TraceState",
     "SUCCESS",
