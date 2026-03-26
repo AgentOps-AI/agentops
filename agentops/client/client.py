@@ -148,6 +148,8 @@ class Client:
         # Recreate the Config object to parse environment variables at the time of initialization
         # This allows re-init with new env vars if needed, though true singletons usually init once.
         self.config = Config()
+        # Also refresh from env to ensure env vars set after import are picked up
+        self.config.refresh_from_env()
         self.configure(**kwargs)
 
         # Only treat as re-initialization if a different non-None API key is explicitly provided
