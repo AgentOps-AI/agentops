@@ -68,11 +68,10 @@ def demonstrate_basic_agents():
         )
 
         # Create a team with coordination mode
-        # The "coordinate" mode allows agents to work together and share information
+        # The team allows agents to work together and share information
         team = Team(
-            name="News and Weather Team",
-            mode="coordinate",  # Agents will coordinate their responses
             members=[news_agent, weather_agent],
+            name="News and Weather Team",
         )
 
         # Run a task that requires team coordination
