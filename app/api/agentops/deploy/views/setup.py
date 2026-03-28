@@ -80,11 +80,11 @@ class GithubListReposView(BaseView):
             "Authorization": f"Bearer {project.github_oath_access_token}",
             "Accept": "application/vnd.github+json",
         }
-        
+
         all_repos = []
         page = 1
         per_page = 100  # Maximum allowed by GitHub API
-        
+
         try:
             while True:
                 params = {
@@ -93,15 +93,15 @@ class GithubListReposView(BaseView):
                     "sort": "created",  # Sort by creation date
                     "direction": "desc"  # Most recent first
                 }
-                
+
                 resp = requests.get("https://api.github.com/user/repos", headers=headers, params=params)
                 resp.raise_for_status()
                 repos = resp.json()
-                
+
                 # If no repos returned, we've reached the end
                 if not repos:
                     break
-                
+
                 # Add repos from this page
                 all_repos.extend([
                     {
@@ -114,14 +114,14 @@ class GithubListReposView(BaseView):
                     }
                     for repo in repos
                 ])
-                
+
                 # If we got fewer repos than per_page, we've reached the end
                 if len(repos) < per_page:
                     break
-                
+
                 page += 1
-                
+
             return all_repos
-            
+
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to fetch repos from GitHub: {str(e)}")

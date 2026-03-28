@@ -25,8 +25,8 @@ async def test_regenerate_api_key_not_admin(mock_request, orm_session, test_user
 
     # Create a user-org relationship with developer role (not admin or owner)
     user_org = UserOrgModel(
-        user_id=test_user.id, 
-        org_id=org.id, 
+        user_id=test_user.id,
+        org_id=org.id,
         role=OrgRoles.developer,  # Developer role, not admin or owner
         user_email=test_user.email
     )
