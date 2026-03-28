@@ -17,13 +17,16 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 
-    // Only initialize PostHog if we have a valid key
-    if (posthogKey) {
+    // Only initialize PostHog if we have a valid key and we're not in development without it
+    if (posthogKey && posthogKey.trim() !== '') {
+      console.log('Initializing PostHog with key:', posthogKey.substring(0, 8) + '...');
       posthog.init(posthogKey, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
         person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
         capture_pageview: false, // Disable automatic pageview capture, as we capture manually
       });
+    } else {
+      console.log('PostHog disabled: No NEXT_PUBLIC_POSTHOG_KEY provided or key is empty');
     }
   }, [isProd]);
 
@@ -45,9 +48,10 @@ function PostHogPageView() {
   const searchParams = useSearchParams();
   const posthog = usePostHog();
 
-  // Track pageviews
+  // Track pageviews only if PostHog is properly initialized
   useEffect(() => {
-    if (pathname && posthog && posthog.__loaded) {
+    // Check if PostHog is available and properly loaded
+    if (pathname && posthog && posthog.__loaded && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
       let url = window.origin + pathname;
       if (searchParams.toString()) {
         url = url + '?' + searchParams.toString();
