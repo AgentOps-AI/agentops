@@ -234,6 +234,45 @@ This section outlines the revised architecture for handling authentication, API 
 *   Removed the `OperationalTokenProvider` and the concept of a separate operational token.
 *   All authenticated data API calls use the Supabase JWT and go through `fetchAuthenticatedApi`, either directly or via helper functions in `lib/api/`.
 
+## Troubleshooting Common Issues 🔧
+
+### Console Errors in Local Development
+
+When running the dashboard locally, you might see console errors related to PostHog analytics and authentication. These have been addressed with the following fixes:
+
+#### PostHog Analytics Errors (401/404)
+- **Issue**: PostHog tries to load resources from `us-assets.i.posthog.com` even when not configured
+- **Solution**: PostHog is now automatically disabled in local development when no API key is provided
+- **Configuration**: Leave `NEXT_PUBLIC_POSTHOG_KEY` empty in your `.env.local` file for local development
+
+#### API Authentication Errors (401)
+- **Issue**: The `/opsboard/users/me` endpoint returns 401 when not logged in
+- **Solution**: These errors are now suppressed in development mode as they're expected behavior
+- **Note**: You'll still be redirected to the signin page when authentication is required
+
+#### MIME Type Errors
+- **Issue**: Incorrect MIME type when loading PostHog resources like `array.json`
+- **Solution**: PostHog rewrites in `next.config.js` are now conditional based on configuration
+
+#### Setting Up Local Development Without Errors
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+2. For local development, leave analytics services empty:
+   ```bash
+   # In .env.local - leave these commented out or empty
+   # NEXT_PUBLIC_POSTHOG_KEY=
+   # NEXT_PUBLIC_POSTHOG_HOST=
+   # NEXT_PUBLIC_SENTRY_DSN=
+   ```
+
+3. Ensure your backend API is running at the configured URL (default: `http://localhost:8000`)
+
+These changes ensure a cleaner console output during local development while maintaining full analytics capabilities in production environments.
+
 ## Cypress E2E Testing 🧪
 
 For details on setting up and running End-to-End tests with Cypress, please refer to the dedicated README:
