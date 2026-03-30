@@ -364,8 +364,11 @@ class LanggraphInstrumentor(BaseInstrumentor):
             if inspect.iscoroutinefunction(original_func):
 
                 @wraps(original_func)
-                async def wrapped_node_async(state):
+                async def wrapped_node_async(*args, **kwargs):
                     # Track node execution in parent graph span
+                    # LangGraph passes state as the first positional arg; additional
+                    # kwargs (e.g. config: RunnableConfig) are forwarded transparently.
+                    state = args[0] if args else kwargs.get("state")
                     self._track_node_execution(key)
 
                     # Check if this node contains an LLM call
@@ -385,8 +388,8 @@ class LanggraphInstrumentor(BaseInstrumentor):
                             )
 
                             try:
-                                # Call the original function
-                                result = await original_func(state)
+                                # Forward all args so that optional kwargs like config are preserved
+                                result = await original_func(*args, **kwargs)
 
                                 # Extract LLM information from the result
                                 self._extract_llm_info_from_result(span, state, result)
@@ -399,12 +402,15 @@ class LanggraphInstrumentor(BaseInstrumentor):
                                 raise
                     else:
                         # Non-LLM node, just execute normally
-                        return await original_func(state)
+                        return await original_func(*args, **kwargs)
             else:
 
                 @wraps(original_func)
-                def wrapped_node_sync(state):
+                def wrapped_node_sync(*args, **kwargs):
                     # Track node execution in parent graph span
+                    # LangGraph passes state as the first positional arg; additional
+                    # kwargs (e.g. config: RunnableConfig) are forwarded transparently.
+                    state = args[0] if args else kwargs.get("state")
                     self._track_node_execution(key)
 
                     # Check if this node contains an LLM call
@@ -423,8 +429,8 @@ class LanggraphInstrumentor(BaseInstrumentor):
                             )
 
                             try:
-                                # Call the original function
-                                result = original_func(state)
+                                # Forward all args so that optional kwargs like config are preserved
+                                result = original_func(*args, **kwargs)
 
                                 # Extract LLM information from the result
                                 self._extract_llm_info_from_result(span, state, result)
@@ -437,7 +443,7 @@ class LanggraphInstrumentor(BaseInstrumentor):
                                 raise
                     else:
                         # Non-LLM node, just execute normally
-                        return original_func(state)
+                        return original_func(*args, **kwargs)
 
                 return wrapped_node_sync
 
