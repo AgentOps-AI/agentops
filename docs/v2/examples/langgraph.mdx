@@ -162,13 +162,11 @@ def stream_graph_updates(user_input: str):
 
 def run_chatbot():
     """Main function to run the chatbot with AgentOps tracking."""
-    # Start AgentOps session
-    session = agentops.start_session(tags=["langgraph", "chatbot"])
-    
-    try:
+    # Start AgentOps trace for this chat session
+    with agentops.start_trace(trace_name="LangGraph Chatbot", tags=["langgraph", "chatbot"]):
         print("🤖 LangGraph Chatbot Started!")
         print("Type 'quit', 'exit', or 'q' to stop.\n")
-        
+
         while True:
             try:
                 user_input = input("User: ")
@@ -183,14 +181,6 @@ def run_chatbot():
             except Exception as e:
                 print(f"Error: {e}")
                 break
-        
-        # End session successfully
-        agentops.end_session("Success")
-        
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        agentops.end_session("Failed", end_state_reason=str(e))
-        raise
 
 # Main execution
 if __name__ == "__main__":
@@ -207,12 +197,12 @@ python chatbot.py
 ```
 
 **What happens:**
-1. AgentOps session starts automatically
+1. AgentOps trace starts
 2. Interactive chat loop begins
 3. Each user message flows through: START → chatbot node → END
 4. LLM generates responses based on conversation history
 5. AgentOps captures all state transitions and LLM interactions
-6. Session ends when you type 'quit'
+6. Trace ends when you type 'quit'
 
 **Example conversation:**
 ```
@@ -248,8 +238,7 @@ After running your chatbot, visit your [AgentOps Dashboard](https://app.agentops
 
 **AgentOps Integration Points:**
 - `agentops.init()` - Enables automatic LangGraph instrumentation
-- `agentops.start_session()` - Begins tracking each chat session
-- `agentops.end_session()` - Completes the session with status
+- `agentops.start_trace()` - Wraps each chat session in a trace
 
 ## Next Steps
 
