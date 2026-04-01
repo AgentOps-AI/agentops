@@ -82,6 +82,22 @@ class Client:
         with self._auth_lock:
             return self._auth_token
 
+    def is_authenticated(self) -> bool:
+        """Check if the client is properly authenticated."""
+        with self._auth_lock:
+            return self._auth_token is not None and self._project_id is not None
+
+    def get_auth_status(self) -> dict:
+        """Get detailed authentication status for debugging."""
+        with self._auth_lock:
+            return {
+                "authenticated": self._auth_token is not None,
+                "has_project_id": self._project_id is not None,
+                "project_id": self._project_id,
+                "auth_task_running": self._auth_task is not None and not self._auth_task.done() if self._auth_task else False,
+                "initialized": self._initialized,
+            }
+
     def _set_auth_data(self, token: str, project_id: str):
         """Set authentication data thread-safely."""
         with self._auth_lock:
@@ -96,6 +112,7 @@ class Client:
     async def _fetch_auth_async(self, api_key: str) -> Optional[dict]:
         """Asynchronously fetch authentication token."""
         try:
+            logger.debug(f"Attempting to authenticate with API key: {api_key[:8]}...")
             response = await self.api.v3.fetch_auth_token(api_key)
             if response:
                 self._set_auth_data(response["token"], response["project_id"])
@@ -107,12 +124,13 @@ class Client:
                 tracing_config = {"project_id": response["project_id"]}
                 tracer.update_config(tracing_config)
 
-                logger.debug("Successfully fetched authentication token asynchronously")
+                logger.info("Successfully authenticated with AgentOps API")
                 return response
             else:
-                logger.debug("Authentication failed - will continue without authentication")
+                logger.error("Authentication failed - no response received from API")
                 return None
-        except Exception:
+        except Exception as e:
+            logger.error(f"Authentication failed with exception: {e}")
             return None
 
     def _start_auth_task(self, api_key: str):
