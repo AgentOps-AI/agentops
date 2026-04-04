@@ -92,11 +92,8 @@ class OpenaiInstrumentor(CommonInstrumentor):
     def _custom_wrap(self, **kwargs):
         """Add custom wrappers for streaming functionality."""
         if is_openai_v1() and self._tracer:
-            # from wrapt import wrap_function_wrapper
-            # # Add streaming wrappers for v1
+            # Chat completion streaming wrappers (create)
             try:
-                # Chat completion streaming wrappers
-
                 wrap_function_wrapper(
                     "openai.resources.chat.completions",
                     "Completions.create",
@@ -108,21 +105,45 @@ class OpenaiInstrumentor(CommonInstrumentor):
                     "AsyncCompletions.create",
                     async_chat_completion_stream_wrapper(self._tracer),
                 )
+            except Exception as e:
+                logger.warning(f"[OPENAI INSTRUMENTOR] Error wrapping chat.completions.create: {e}")
 
-                # Beta chat completion streaming wrappers
+            # Chat completion parse wrappers — try the current SDK path first,
+            # then fall back to the legacy beta path used in openai < 2.0.
+            _parse_wrapped = False
+            try:
                 wrap_function_wrapper(
-                    "openai.resources.beta.chat.completions",
+                    "openai.resources.chat.completions",
                     "Completions.parse",
                     chat_completion_stream_wrapper(self._tracer),
                 )
-
                 wrap_function_wrapper(
-                    "openai.resources.beta.chat.completions",
+                    "openai.resources.chat.completions",
                     "AsyncCompletions.parse",
                     async_chat_completion_stream_wrapper(self._tracer),
                 )
+                _parse_wrapped = True
+            except Exception:
+                pass
 
-                # Responses API streaming wrappers
+            if not _parse_wrapped:
+                # Legacy path: openai < 2.0 exposed .parse() under beta.chat.completions
+                try:
+                    wrap_function_wrapper(
+                        "openai.resources.beta.chat.completions",
+                        "Completions.parse",
+                        chat_completion_stream_wrapper(self._tracer),
+                    )
+                    wrap_function_wrapper(
+                        "openai.resources.beta.chat.completions",
+                        "AsyncCompletions.parse",
+                        async_chat_completion_stream_wrapper(self._tracer),
+                    )
+                except Exception as e:
+                    logger.debug(f"[OPENAI INSTRUMENTOR] beta.chat.completions.parse not available: {e}")
+
+            # Responses API streaming wrappers
+            try:
                 wrap_function_wrapper(
                     "openai.resources.responses",
                     "Responses.create",
@@ -135,7 +156,7 @@ class OpenaiInstrumentor(CommonInstrumentor):
                     async_responses_stream_wrapper(self._tracer),
                 )
             except Exception as e:
-                logger.warning(f"[OPENAI INSTRUMENTOR] Error setting up OpenAI streaming wrappers: {e}")
+                logger.warning(f"[OPENAI INSTRUMENTOR] Error wrapping responses API: {e}")
         else:
             if not is_openai_v1():
                 logger.debug("[OPENAI INSTRUMENTOR] Skipping custom wrapping - not using OpenAI v1")
