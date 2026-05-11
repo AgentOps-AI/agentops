@@ -94,55 +94,61 @@ class Client:
         HttpClient.set_project_id(project_id)
 
     async def _fetch_auth_async(self, api_key: str) -> Optional[dict]:
-        """Asynchronously fetch authentication token."""
-        try:
-            response = await self.api.v3.fetch_auth_token(api_key)
-            if response:
-                self._set_auth_data(response["token"], response["project_id"])
+        """Asynchronously fetch authentication token.
 
-                # Update V4 client with token
-                self.api.v4.set_auth_token(response["token"])
+        Raises:
+            InvalidApiKeyException: propagated from v3.fetch_auth_token on failure
+        """
+        response = await self.api.v3.fetch_auth_token(api_key)
+        self._set_auth_data(response["token"], response["project_id"])
 
-                # Update tracer config with real project ID
-                tracing_config = {"project_id": response["project_id"]}
-                tracer.update_config(tracing_config)
+        # Update V4 client with token
+        self.api.v4.set_auth_token(response["token"])
 
-                logger.debug("Successfully fetched authentication token asynchronously")
-                return response
-            else:
-                logger.debug("Authentication failed - will continue without authentication")
-                return None
-        except Exception:
-            return None
+        # Update tracer config with real project ID
+        tracing_config = {"project_id": response["project_id"]}
+        tracer.update_config(tracing_config)
+
+        logger.debug("Successfully fetched authentication token asynchronously")
+        return response
 
     def _start_auth_task(self, api_key: str):
-        """Start the async authentication task."""
+        """Start the async authentication task.
+
+        In synchronous contexts (no running event loop), blocks until auth completes
+        and re-raises any authentication exception so init() can surface it to the caller.
+        In async contexts, schedules a background task; the caller must handle the result.
+        """
         if self._auth_task and not self._auth_task.done():
             return  # Task already running
 
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # Use existing event loop
+                # Async context: schedule as a background task; exceptions won't propagate here
                 self._auth_task = loop.create_task(self._fetch_auth_async(api_key))
-            else:
-                # Create new event loop in background thread
-                def run_async_auth():
-                    asyncio.run(self._fetch_auth_async(api_key))
-
-                import threading
-
-                auth_thread = threading.Thread(target=run_async_auth, daemon=True)
-                auth_thread.start()
+                return
         except RuntimeError:
-            # Create new event loop in background thread
-            def run_async_auth():
+            pass
+
+        # Synchronous context: run auth in a thread so asyncio.run() works, then join
+        # and re-raise so the caller (init()) surfaces the error immediately.
+        auth_exc: list = []
+
+        def run_async_auth():
+            try:
                 asyncio.run(self._fetch_auth_async(api_key))
+            except Exception as exc:
+                auth_exc.append(exc)
 
-            import threading
+        auth_thread = threading.Thread(target=run_async_auth, daemon=True)
+        auth_thread.start()
+        auth_thread.join(timeout=35)  # slightly longer than the HTTP timeout (30s)
 
-            auth_thread = threading.Thread(target=run_async_auth, daemon=True)
-            auth_thread.start()
+        if auth_thread.is_alive():
+            raise TimeoutError("AgentOps authentication timed out after 35 seconds")
+        if auth_exc:
+            raise auth_exc[0]
 
     def init(self, **kwargs: Any) -> None:  # Return type updated to None
         # Recreate the Config object to parse environment variables at the time of initialization
