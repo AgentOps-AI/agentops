@@ -1,6 +1,6 @@
 import pytest
 import concurrent.futures
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import agentops
@@ -37,7 +37,9 @@ def setup_agentops(mock_api_key):
     with patch("agentops.client.client.ApiClient") as mock_api_client:
         # Create mock API instance
         mock_api = MagicMock()
-        mock_api.v3.fetch_auth_token.return_value = {"token": "mock_token", "project_id": "mock_project_id"}
+        mock_api.v3.fetch_auth_token = AsyncMock(
+            return_value={"token": "mock_token", "project_id": "mock_project_id"}
+        )
         mock_api_client.return_value = mock_api
 
         # Mock global tracer to avoid actual initialization

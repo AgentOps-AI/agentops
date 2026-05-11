@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 # Tests for the new session management functionality
 # These tests call the actual public API but mock the underlying implementation
@@ -25,10 +25,12 @@ def mock_tracing_core():
 @pytest.fixture(scope="function")
 def mock_api_client():
     """Mock the API client to avoid actual API calls"""
-    with patch("agentops.client.api.ApiClient") as mock_api:
+    with patch("agentops.client.client.ApiClient") as mock_api:
         # Configure the v3.fetch_auth_token method to return a valid response
         mock_v3 = MagicMock()
-        mock_v3.fetch_auth_token.return_value = {"token": "mock-jwt-token", "project_id": "mock-project-id"}
+        mock_v3.fetch_auth_token = AsyncMock(
+            return_value={"token": "mock-jwt-token", "project_id": "mock-project-id"}
+        )
         mock_api.return_value.v3 = mock_v3
 
         yield mock_api
@@ -423,9 +425,11 @@ def test_session_management_integration():
         mock_tracer.initialized = True
 
         # Mock API client
-        with patch("agentops.client.api.ApiClient") as mock_api:
+        with patch("agentops.client.client.ApiClient") as mock_api:
             mock_v3 = MagicMock()
-            mock_v3.fetch_auth_token.return_value = {"token": "mock-jwt-token", "project_id": "mock-project-id"}
+            mock_v3.fetch_auth_token = AsyncMock(
+                return_value={"token": "mock-jwt-token", "project_id": "mock-project-id"}
+            )
             mock_api.return_value.v3 = mock_v3
 
             # Initialize AgentOps

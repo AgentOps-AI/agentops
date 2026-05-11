@@ -7,6 +7,7 @@ This module provides the client for the V3 version of the AgentOps API.
 from agentops.client.api.base import BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
 from agentops.client.http.http_client import HttpClient
+from agentops.exceptions import InvalidApiKeyException
 from agentops.logging import logger
 from termcolor import colored
 
@@ -32,38 +33,35 @@ class V3Client(BaseApiClient):
             api_key: The API key to authenticate with
 
         Returns:
-            AuthTokenResponse containing token and project information, or None if failed
+            AuthTokenResponse containing token and project information
+
+        Raises:
+            InvalidApiKeyException: If the API key is invalid or authentication fails
         """
-        try:
-            path = "/v3/auth/token"
-            data = {"api_key": api_key}
-            headers = self.prepare_headers()
+        path = "/v3/auth/token"
+        data = {"api_key": api_key}
+        headers = self.prepare_headers()
 
-            # Build full URL
-            url = self._get_full_url(path)
+        # Build full URL
+        url = self._get_full_url(path)
 
-            # Make async request
-            response_data = await HttpClient.async_request(
-                method="POST", url=url, data=data, headers=headers, timeout=30
+        # Make async request
+        response_data = await HttpClient.async_request(
+            method="POST", url=url, data=data, headers=headers, timeout=30
+        )
+
+        if response_data is None or not response_data.get("token"):
+            raise InvalidApiKeyException(api_key, self.endpoint)
+
+        # Check project premium status
+        if response_data.get("project_prem_status") != "pro":
+            logger.info(
+                colored(
+                    "\x1b[34mYou're on the agentops free plan 🤔\x1b[0m",
+                    "blue",
+                )
             )
 
-            token = response_data.get("token")
-            if not token:
-                logger.warning("Authentication failed: Perhaps an invalid API key?")
-                return None
-
-            # Check project premium status
-            if response_data.get("project_prem_status") != "pro":
-                logger.info(
-                    colored(
-                        "\x1b[34mYou're on the agentops free plan 🤔\x1b[0m",
-                        "blue",
-                    )
-                )
-
-            return response_data
-
-        except Exception:
-            return None
+        return response_data
 
     # Add V3-specific API methods here
