@@ -34,6 +34,9 @@ import jwt
 from pathlib import Path
 import urllib.parse
 
+import json
+import re
+
 import pydantic
 from fastapi import Request, Response
 from fastapi.exceptions import HTTPException
@@ -69,7 +72,7 @@ from .exceptions import AuthException
 from .session import Session
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-templates = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+templates = Environment(loader=FileSystemLoader(TEMPLATE_DIR))  # JS encoding applied explicitly via json.dumps
 
 
 _all__ = [
@@ -277,7 +280,11 @@ async def auth_callback(request: Request) -> HTMLResponse:
     if not redirect_to:
         invite_org_id = request.query_params.get('invite')
         if invite_org_id:
-            redirect_to = f"{APP_URL}/settings/organization?invite={invite_org_id}"
+            # Restrict invite to safe org-ID characters before embedding in URL
+            if re.match(r'^[a-zA-Z0-9_-]+$', invite_org_id):
+                redirect_to = f"{APP_URL}/settings/organization?invite={invite_org_id}"
+            else:
+                redirect_to = DASHBOARD_URL
         else:
             redirect_to = DASHBOARD_URL
 
@@ -286,8 +293,12 @@ async def auth_callback(request: Request) -> HTMLResponse:
         redirect_to = DASHBOARD_URL
 
     template = templates.get_template('auth_callback.html')
+    # json.dumps produces a JS-safe quoted string (e.g. "\"https://...\""), preventing
+    # injection of JS-special characters such as ' ; ) into the <script> context.
     content = template.render(
-        nonce=nonce, auth_session_url=reverse_path('auth_session'), dashboard_url=redirect_to
+        nonce=nonce,
+        auth_session_url=reverse_path('auth_session'),
+        dashboard_url=json.dumps(str(redirect_to)),
     )
 
     return HTMLResponse(content=content, headers=headers)

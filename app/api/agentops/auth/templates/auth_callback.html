@@ -58,7 +58,8 @@ or if the user manually copies and pastes the URL.
         }
       }
 
-      window.location.replace('{{ dashboard_url }}');
+      window.location.replace({{ dashboard_url }});
+      {# dashboard_url is a json.dumps()-encoded JS string literal — no outer quotes needed #}
     })();
   </script>
 </body>
