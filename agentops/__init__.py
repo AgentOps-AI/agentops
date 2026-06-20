@@ -4,6 +4,7 @@ from agentops.legacy import (
     end_session,
     track_agent,
     track_tool,
+    record_function,
     end_all_sessions,
     Session,
     ToolEvent,
@@ -476,6 +477,8 @@ __all__ = [
     "tool",
     "guardrail",
     "track_endpoint",
+    # Legacy decorator
+    "record_function",
     # Enums
     "TraceState",
     "SUCCESS",
