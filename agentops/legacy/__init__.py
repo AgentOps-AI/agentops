@@ -9,6 +9,8 @@ These integrations use different patterns:
 This module maintains backward compatibility with all these API patterns.
 """
 
+import asyncio
+import functools
 from typing import Optional, Any, Dict, List, Union
 
 from agentops.logging import logger
@@ -263,6 +265,49 @@ def track_tool(*args: Any, **kwargs: Any) -> Any:
     return noop
 
 
+@deprecated("Use @task or @tool decorator from agentops instead.")
+def record_function(event_name: Optional[str] = None, **kwargs: Any) -> Any:
+    """
+    @deprecated Decorator for manually instrumenting functions.
+    
+    Previously available in v3.x, this decorator is kept for backward compatibility.
+    It wraps the function to create a trace span using the new v4 instrumentation system.
+    
+    Args:
+        event_name: Optional name for the span. Defaults to the wrapped function name.
+        **kwargs: Additional span attributes.
+    
+    Returns:
+        A decorator that instruments the wrapped function.
+    """
+    from agentops.sdk.core import tracer
+    from opentelemetry.trace import SpanKind
+    from agentops.semconv.span_kinds import AgentOpsSpanKindValues
+
+    def decorator(func):
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            span_name = event_name or func.__name__
+            with tracer.start_as_current_span(span_name, kind=SpanKind.INTERNAL) as span:
+                span.set_attribute("agentops.span_kind", AgentOpsSpanKindValues.TASK.value)
+                span.set_attribute("agentops.entity_name", "record_function")
+                return func(*args, **kwargs)
+
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            span_name = event_name or func.__name__
+            with tracer.start_as_current_span(span_name, kind=SpanKind.INTERNAL) as span:
+                span.set_attribute("agentops.span_kind", AgentOpsSpanKindValues.TASK.value)
+                span.set_attribute("agentops.entity_name", "record_function")
+                return await func(*args, **kwargs)
+
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        return sync_wrapper
+
+    return decorator
+
+
 __all__ = [
     "start_session",
     "end_session",
@@ -271,6 +316,7 @@ __all__ = [
     "ActionEvent",
     "track_agent",
     "track_tool",
+    "record_function",
     "end_all_sessions",
     "Session",
     "LLMEvent",
