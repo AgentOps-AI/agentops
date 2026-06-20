@@ -5,6 +5,7 @@ Provides @trace for creating trace-level spans (sessions) and other decorators f
 
 from agentops.helpers.deprecation import deprecated
 from agentops.sdk.decorators.factory import create_entity_decorator
+from agentops.sdk.decorators.error import error
 from agentops.semconv.span_kinds import SpanKind
 
 # Create decorators for specific entity types using the factory
@@ -48,4 +49,5 @@ __all__ = [
     "tool",
     "guardrail",
     "track_endpoint",
+    "error",
 ]
