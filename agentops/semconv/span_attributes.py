@@ -116,3 +116,7 @@ class SpanAttributes:
     HTTP_RESPONSE_BODY = "http.response.body"
     HTTP_USER_AGENT = "http.user_agent"
     HTTP_REQUEST_ID = "http.request_id"
+
+    # Log-specific attributes
+    LOG_MESSAGE = "agentops.log.message"
+    LOG_LEVEL = "agentops.log.level"
