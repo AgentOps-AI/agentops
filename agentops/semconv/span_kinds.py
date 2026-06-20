@@ -17,6 +17,7 @@ class AgentOpsSpanKindValues(Enum):
     TEXT = "text"
     GUARDRAIL = "guardrail"
     HTTP = "http"
+    LOG = "log"
     UNKNOWN = "unknown"
 
 

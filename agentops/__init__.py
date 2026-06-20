@@ -27,6 +27,7 @@ from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
 from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail, track_endpoint
+from agentops.sdk.decorators.log import log
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
@@ -485,4 +486,6 @@ __all__ = [
     "validate_trace_spans",
     "print_validation_summary",
     "ValidationError",
+    # Log function
+    "log",
 ]
