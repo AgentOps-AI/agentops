@@ -26,7 +26,7 @@ import json
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail, track_endpoint
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail, track_endpoint, error
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
