@@ -167,15 +167,14 @@ def demonstrate_research_team():
 
         # Create collaborative team with advanced features
         agent_team = Team(
-            name="Discussion Team",
-            mode="collaborate",
-            model=OpenAIChat("gpt-4o"),
             members=[
                 reddit_researcher,
                 hackernews_researcher,
                 academic_paper_researcher,
                 twitter_researcher,
             ],
+            name="Discussion Team",
+            model=OpenAIChat("gpt-4o"),
             instructions=[
                 "You are a discussion master coordinating a research team.",
                 "Facilitate productive discussion between all researchers.",
@@ -183,10 +182,6 @@ def demonstrate_research_team():
                 "Guide the team towards a comprehensive understanding of the topic.",
                 "You have to stop the discussion when you think the team has reached a consensus.",
             ],
-            success_criteria="The team has reached a consensus with insights from all perspectives.",
-            enable_agentic_context=True,
-            add_context=True,
-            show_tool_calls=True,
             markdown=True,
             debug_mode=True,
             show_members_responses=True,

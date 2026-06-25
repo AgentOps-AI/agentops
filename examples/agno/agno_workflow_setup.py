@@ -15,7 +15,7 @@ By using workflows, you can create sophisticated agent pipelines that are both p
 
 """
 
-from agno.agent import Agent, RunResponse
+from agno.agent import Agent, RunOutput
 import agentops
 from dotenv import load_dotenv
 from agno.workflow import Workflow
@@ -52,7 +52,7 @@ class CacheWorkflow(Workflow):
     # This agent will be used to generate responses when cache misses occur
     agent = Agent(model=OpenAIChat(id="gpt-4o-mini"), description="General purpose agent for generating responses")
 
-    def run(self, message: str) -> Iterator[RunResponse]:
+    def run(self, message: str) -> Iterator[RunOutput]:
         """
         Execute the workflow with caching logic.
 
@@ -66,14 +66,14 @@ class CacheWorkflow(Workflow):
             message: The input query to process
 
         Yields:
-            RunResponse: Streamed response chunks
+            RunOutput: Streamed response chunks
         """
         logger.info(f"Checking cache for '{message}'")
 
         if self.session_state.get(message):
             logger.info(f"Cache hit for '{message}'")
             # Return cached response immediately (no API call needed)
-            yield RunResponse(run_id=self.run_id, content=self.session_state.get(message))
+            yield RunOutput(run_id=self.run_id, content=self.session_state.get(message))
             return
 
         logger.info(f"Cache miss for '{message}'")
@@ -99,11 +99,11 @@ def demonstrate_workflows():
     try:
         workflow = CacheWorkflow()
 
-        response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
+        response: Iterator[RunOutput] = workflow.run(message="Tell me a joke.")
 
         pprint_run_response(response, markdown=True, show_time=True)
 
-        response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
+        response: Iterator[RunOutput] = workflow.run(message="Tell me a joke.")
 
         pprint_run_response(response, markdown=True, show_time=True)
 

@@ -5,4 +5,4 @@ googlesearch-python
 pycountry
 arxiv
 pypdf
-duckduckgo-search
+ddgs
