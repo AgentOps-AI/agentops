@@ -124,10 +124,7 @@ class TestIsJsonable:
         a["b"] = b
         b["a"] = a
 
-        # The current implementation doesn't handle ValueError from circular references
-        # So this will raise an exception instead of returning False
-        with pytest.raises(ValueError, match="Circular reference detected"):
-            is_jsonable(a)
+        assert is_jsonable(a) is False
 
 
 # Define test cases for filter_unjsonable
