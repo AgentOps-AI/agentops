@@ -1,34 +1,106 @@
-# Mintlify Starter Kit
+# AgentOps Documentation
 
-Click on `Use this template` to copy the Mintlify starter kit. The starter kit contains examples including
+This directory contains the official documentation for AgentOps, built with [Mintlify](https://mintlify.com).
 
-- Guide pages
-- Navigation
-- Customizations
-- API Reference pages
-- Use of popular components
+## 📚 Documentation Structure
 
-### 👩‍💻 Development
+- **v2/** - Latest documentation version
+  - `introduction.mdx` - Getting started with AgentOps
+  - `quickstart.mdx` - Quick setup guide
+  - `integrations/` - Integration guides
+  - `usage/` - Usage examples and best practices
+  - `concepts/` - Core concepts and architecture
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify) to preview the documentation changes locally. To install, use the following command
+- **Backend Setup Guide** - [backend-setup.md](./backend-setup.md) - Comprehensive guide for running the AgentOps backend services
 
-```
+## 👩‍💻 Development
+
+### Prerequisites
+
+Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify):
+
+```bash
 npm i -g mintlify
 ```
 
-Run the following command at the root of your documentation (where mint.json is)
+### Running Locally
 
-```
+Run the following command at the root of the docs directory:
+
+```bash
 mintlify dev
 ```
 
-### 😎 Publishing Changes
+The documentation will be available at `http://localhost:3000`.
 
-Changes will be deployed to production automatically after pushing to the default branch.
+### Building Documentation
 
-You can also preview changes using PRs, which generates a preview link of the docs.
+To build the documentation for production:
 
-#### Troubleshooting
+```bash
+mintlify build
+```
 
-- Mintlify dev isn't running - Run `mintlify install` it'll re-install dependencies.
-- Page loads as a 404 - Make sure you are running in a folder with `mint.json`
+## 📝 Writing Documentation
+
+### File Format
+
+- Use `.mdx` files for documentation pages
+- MDX allows you to use React components within Markdown
+- Follow the existing structure in the `v2/` directory
+
+### Adding New Pages
+
+1. Create a new `.mdx` file in the appropriate directory
+2. Update `mint.json` to include the new page in navigation
+3. Use frontmatter for page metadata:
+
+```mdx
+---
+title: "Page Title"
+description: "Page description"
+---
+```
+
+### Components
+
+Mintlify provides various components for enhanced documentation:
+
+- Code blocks with syntax highlighting
+- API reference components
+- Tabs and accordions
+- Cards and callouts
+
+Refer to the [Mintlify documentation](https://mintlify.com/docs) for component usage.
+
+## 🚀 Publishing Changes
+
+Changes are automatically deployed when pushed to the main branch. Preview deployments are created for pull requests.
+
+### Deployment Process
+
+1. Create a feature branch for your changes
+2. Make your documentation updates
+3. Create a pull request
+4. Preview link will be generated automatically
+5. After review and merge, changes deploy to production
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+- **Mintlify dev isn't running**: Run `mintlify install` to reinstall dependencies
+- **Page loads as 404**: Ensure you're running in the directory containing `mint.json`
+- **Build errors**: Check that all referenced files exist and MDX syntax is valid
+
+### Getting Help
+
+- Check the [Mintlify documentation](https://mintlify.com/docs)
+- Review existing documentation examples in the `v2/` directory
+- Open an issue in the AgentOps repository
+
+## 📄 Additional Resources
+
+- [Backend Setup Guide](./backend-setup.md) - Detailed instructions for running backend services
+- [API Documentation](https://api.agentops.ai/docs) - Interactive API reference
+- [AgentOps GitHub](https://github.com/AgentOps-AI/AgentOps) - Main repository
