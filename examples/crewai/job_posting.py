@@ -21,7 +21,8 @@ os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY", "your_serper_api_key_
 
 # Initialize AgentOps client
 agentops.init(
-    auto_start_session=False, trace_name="CrewAI Job Posting", tags=["crewai", "job-posting", "agentops-example"]
+    api_key=os.getenv("AGENTOPS_API_KEY"),
+    auto_start_session=False
 )
 
 web_search_tool = WebsiteSearchTool()
