@@ -4,7 +4,7 @@ description: 'Organize and filter your sessions with customizable tags'
 ---
 ## Adding Tags
 
-You can add tags when initializing AgentOps, whicreh is the most common approach:
+You can add tags when initializing AgentOps, which is the most common approach:
 
 ```python
 import agentops
@@ -23,7 +23,7 @@ Alternatively, when using manual trace creation:
 agentops.init(api_key="YOUR_API_KEY", auto_start_session=False)
 
 # Later start a trace with specific tags (modern approach)
-trace = agentops.start_trace(trace_name="test_workflow", default_tags=["development", "testing", "claude-3"])
+trace = agentops.start_trace(trace_name="test_workflow", tags=["development", "testing", "claude-3"])
 ```
 
 <Note>
