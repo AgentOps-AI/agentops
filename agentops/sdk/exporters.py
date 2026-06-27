@@ -68,7 +68,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
 
         super().__init__(endpoint=endpoint, **parent_kwargs)
 
-    def _get_current_jwt(self) -> Optional[str]:
+    def _get_jwt(self) -> Optional[str]:
         """Get the current JWT token from the provider or stored JWT."""
         if self._jwt_provider:
             try:
@@ -112,7 +112,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
             prepared_headers.update(filtered_headers)
 
         # Add current JWT token if available (this ensures Authorization cannot be overridden)
-        jwt_token = self._get_current_jwt()
+        jwt_token = self._get_jwt()
         if jwt_token:
             prepared_headers["Authorization"] = f"Bearer {jwt_token}"
 
@@ -135,6 +135,13 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         try:
             # Get current JWT and prepare headers
             current_headers = self._prepare_headers()
+            
+            # Check if we have a valid JWT token
+            jwt_token = self._get_jwt()
+            if not jwt_token:
+                logger.warning("No JWT token available yet - spans will be queued for retry")
+                # Don't mark as auth failure, just return failure to retry later
+                return SpanExportResult.FAILURE
 
             # Temporarily update the session headers for this request
             original_headers = dict(self._session.headers)
@@ -148,6 +155,9 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
                 if result == SpanExportResult.SUCCESS:
                     with self._lock:
                         self._last_auth_failure = 0
+                    logger.debug(f"Successfully exported {len(spans)} spans")
+                else:
+                    logger.debug(f"Failed to export {len(spans)} spans with result: {result}")
 
                 return result
 
@@ -163,7 +173,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
                     self._last_auth_failure = time.time()
 
                 logger.warning(
-                    f"Authentication failed during span export: {e}. "
+                    f"Authentication failed during span export (HTTP {e.response.status_code}): {e}. "
                     f"Will retry in {self._auth_failure_threshold} seconds."
                 )
                 return SpanExportResult.FAILURE
@@ -193,7 +203,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
 
         except Exception as e:
             # Any other error
-            logger.error(f"Unexpected error during span export: {e}")
+            logger.error(f"Unexpected error during span export: {e}", exc_info=True)
             return SpanExportResult.FAILURE
 
     def clear(self):

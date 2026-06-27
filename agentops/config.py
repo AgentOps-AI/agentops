@@ -123,17 +123,23 @@ class Config:
     exporter_endpoint: Optional[str] = field(
         default_factory=lambda: os.getenv("AGENTOPS_EXPORTER_ENDPOINT", "https://otlp.agentops.ai/v1/traces"),
         metadata={
-            "description": "Endpoint for the span exporter. When not provided, the default AgentOps endpoint will be used."
+            "description": "Endpoint for the exporter. If none is provided, key will be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable."
         },
     )
-
-    exporter: Optional[SpanExporter] = field(
-        default_factory=lambda: None, metadata={"description": "Custom span exporter for OpenTelemetry trace data"}
+    
+    wait_for_auth: bool = field(
+        default_factory=lambda: get_env_bool("AGENTOPS_WAIT_FOR_AUTH", True),
+        metadata={"description": "Whether to wait for authentication to complete before starting spans"},
+    )
+    
+    auth_timeout: float = field(
+        default_factory=lambda: float(os.getenv("AGENTOPS_AUTH_TIMEOUT", "5.0")),
+        metadata={"description": "Maximum time in seconds to wait for authentication to complete"},
     )
 
-    processor: Optional[SpanProcessor] = field(
-        default_factory=lambda: None, metadata={"description": "Custom span processor for OpenTelemetry trace data"}
-    )
+    # Optional custom exporter and processor for OpenTelemetry
+    exporter: Optional[SpanExporter] = field(default=None, init=False)
+    processor: Optional[SpanProcessor] = field(default=None, init=False)
 
     def configure(
         self,
@@ -157,6 +163,8 @@ class Config:
         exporter: Optional[SpanExporter] = None,
         processor: Optional[SpanProcessor] = None,
         exporter_endpoint: Optional[str] = None,
+        wait_for_auth: Optional[bool] = None,
+        auth_timeout: Optional[float] = None,
     ):
         """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
@@ -237,6 +245,12 @@ class Config:
 
         if exporter_endpoint is not None:
             self.exporter_endpoint = exporter_endpoint
+            
+        if wait_for_auth is not None:
+            self.wait_for_auth = wait_for_auth
+            
+        if auth_timeout is not None:
+            self.auth_timeout = auth_timeout
         # else:
         #     self.exporter_endpoint = self.endpoint
 
@@ -260,9 +274,9 @@ class Config:
             "fail_safe": self.fail_safe,
             "prefetch_jwt_token": self.prefetch_jwt_token,
             "log_session_replay_url": self.log_session_replay_url,
-            "exporter": self.exporter,
-            "processor": self.processor,
             "exporter_endpoint": self.exporter_endpoint,
+            "wait_for_auth": self.wait_for_auth,
+            "auth_timeout": self.auth_timeout,
         }
 
     def json(self):

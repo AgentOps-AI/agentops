@@ -92,6 +92,8 @@ def init(
     fail_safe: Optional[bool] = None,
     log_session_replay_url: Optional[bool] = None,
     exporter_endpoint: Optional[str] = None,
+    wait_for_auth: Optional[bool] = None,
+    auth_timeout: Optional[float] = None,
     **kwargs,
 ):
     """
@@ -121,6 +123,10 @@ def init(
         log_session_replay_url (bool): Whether to log session replay URLs to the console. Defaults to True.
         exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
             be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
+        wait_for_auth (bool, optional): Whether to wait for authentication to complete before allowing
+            span exports. Defaults to True. Can be set via AGENTOPS_WAIT_FOR_AUTH environment variable.
+        auth_timeout (float, optional): Maximum time in seconds to wait for authentication to complete.
+            Defaults to 5.0. Can be set via AGENTOPS_AUTH_TIMEOUT environment variable.
         **kwargs: Additional configuration parameters to be passed to the client.
     """
     global _client
@@ -163,6 +169,8 @@ def init(
         "fail_safe": fail_safe,
         "log_session_replay_url": log_session_replay_url,
         "exporter_endpoint": exporter_endpoint,
+        "wait_for_auth": wait_for_auth,
+        "auth_timeout": auth_timeout,
         **kwargs,
     }
 
@@ -193,6 +201,8 @@ def configure(**kwargs):
             - exporter: Custom span exporter for OpenTelemetry trace data
             - processor: Custom span processor for OpenTelemetry trace data
             - exporter_endpoint: Endpoint for the exporter
+            - wait_for_auth: Whether to wait for authentication to complete
+            - auth_timeout: Maximum time to wait for authentication
     """
     global _client
 
@@ -213,6 +223,8 @@ def configure(**kwargs):
         "exporter",
         "processor",
         "exporter_endpoint",
+        "wait_for_auth",
+        "auth_timeout",
     }
 
     # Check for invalid parameters
