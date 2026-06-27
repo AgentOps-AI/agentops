@@ -107,6 +107,12 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "class_name": "SmolagentsInstrumentor",
         "min_version": "1.0.0",
     },
+    "mcp_agent": {
+        "module_name": "agentops.instrumentation.agentic.mcp_agent",
+        "class_name": "MCPAgentInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "mcp-agent",
+    },
     "langgraph": {
         "module_name": "agentops.instrumentation.agentic.langgraph",
         "class_name": "LanggraphInstrumentor",
