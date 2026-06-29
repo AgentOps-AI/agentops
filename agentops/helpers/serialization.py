@@ -87,23 +87,40 @@ def model_to_dict(obj: Any) -> dict:
     Returns:
         Dictionary representation of the object, or empty dict if conversion fails
     """
-    if obj is None:
-        return {}
-    if isinstance(obj, dict):
-        return obj
-    if hasattr(obj, "model_dump"):  # Pydantic v2
-        return obj.model_dump()
-    elif hasattr(obj, "dict"):  # Pydantic v1
-        return obj.dict()
-    # TODO this is causing recursion on nested objects.
-    # elif hasattr(obj, "parse"):  # Raw API response
-    #     return model_to_dict(obj.parse())
-    else:
+    def _object_dict(value: Any) -> dict:
         # Try to use __dict__ as fallback
         try:
-            return obj.__dict__
+            return value.__dict__
         except:
             return {}
+
+    def _model_to_dict(value: Any, seen: set[int]) -> dict:
+        if value is None:
+            return {}
+        if isinstance(value, dict):
+            return value
+
+        value_id = id(value)
+        if value_id in seen:
+            return {}
+        seen.add(value_id)
+
+        if hasattr(value, "model_dump"):  # Pydantic v2
+            return value.model_dump()
+        elif hasattr(value, "dict"):  # Pydantic v1
+            return value.dict()
+        elif hasattr(value, "parse"):  # Raw API response
+            try:
+                parsed = value.parse()
+            except Exception:
+                return _object_dict(value)
+            if parsed is value:
+                return _object_dict(value)
+            return _model_to_dict(parsed, seen)
+        else:
+            return _object_dict(value)
+
+    return _model_to_dict(obj, set())
 
 
 def safe_serialize(obj: Any) -> Any:
