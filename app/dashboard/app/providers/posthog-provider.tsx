@@ -16,13 +16,16 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     if (!isProd) return;
 
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const isProd = process.env.NODE_ENV === 'production';
+    const enableInDev = process.env.NEXT_PUBLIC_ENABLE_POSTHOG_IN_DEV === 'true';
 
-    // Only initialize PostHog if we have a valid key
-    if (posthogKey) {
+    // Only initialize PostHog if we have a valid key and it's production
+    // or explicitly enabled for development.
+    if (posthogKey && (isProd || enableInDev)) {
       posthog.init(posthogKey, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
-        person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
-        capture_pageview: false, // Disable automatic pageview capture, as we capture manually
+        person_profiles: 'identified_only',
+        capture_pageview: false,
       });
     }
   }, [isProd]);

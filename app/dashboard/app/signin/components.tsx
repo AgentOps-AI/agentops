@@ -15,7 +15,7 @@ import { GithubIcon as Github, Loading03Icon as Loader } from 'hugeicons-react';
 import { MagicWand01Icon as WandSparkles } from 'hugeicons-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import posthog from 'posthog-js';
+// posthog is not required directly in this file; remove unused import to prevent bundling warnings
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 
