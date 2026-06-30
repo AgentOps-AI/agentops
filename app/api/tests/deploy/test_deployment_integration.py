@@ -79,7 +79,7 @@ class TestDeploymentSecretsAPI:
             # Create the view and call it directly
             view = CreateUpdateSecretView(mock_request)
             body = CreateSecretRequest(name="DATABASE_URL", value="postgresql://localhost:5432/test")
-            
+
             response = await view(
                 project_id="project-123",
                 body=body,
@@ -103,7 +103,7 @@ class TestDeploymentSecretsAPI:
         ):
             # Create the view and call it directly
             view = ListSecretsView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 orm=orm_session,
@@ -119,13 +119,13 @@ class TestDeploymentSecretsAPI:
         with patch.object(ProjectModel, 'get_by_id', return_value=None):
             # Create the view and call it directly
             view = ListSecretsView(mock_request)
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await view(
                     project_id="00000000-0000-0000-0000-000000000000",
                     orm=orm_session,
                 )
-            
+
             assert exc_info.value.status_code == 404
             assert "Project not found" in str(exc_info.value.detail)
 
@@ -155,7 +155,7 @@ class TestDeploymentManagementAPI:
         ):
             # Create the view and call it directly
             view = InitiateDeploymentView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 orm=orm_session,
@@ -172,10 +172,10 @@ class TestDeploymentManagementAPI:
         """Test getting deployment status via view function."""
         from datetime import datetime
         from enum import Enum
-        
+
         class MockStatus(Enum):
             SUCCESS = "success"
-        
+
         # Setup mocks
         mock_events = [
             Mock(
@@ -193,7 +193,7 @@ class TestDeploymentManagementAPI:
         ):
             # Create the view and call it directly
             view = DeploymentStatusView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 job_id="test-job-123",
@@ -211,7 +211,7 @@ class TestDeploymentManagementAPI:
     ):
         """Test getting deployment status with start date filter via view function."""
         from datetime import datetime
-        
+
         # Setup mocks
         mock_get_events.return_value = []
 
@@ -222,7 +222,7 @@ class TestDeploymentManagementAPI:
             # Create the view and call it directly
             view = DeploymentStatusView(mock_request)
             start_date = datetime.fromisoformat("2024-01-01T12:00:00")
-            
+
             response = await view(
                 project_id="project-123",
                 job_id="test-job-456",
@@ -259,7 +259,7 @@ class TestViewValidation:
             # Create the view and call it directly
             view = CreateUpdateSecretView(mock_request)
             body = CreateSecretRequest(name="DATABASE_URL", value="postgresql://localhost:5432/test")
-            
+
             # The view should let the exception bubble up
             with pytest.raises(Exception) as exc_info:
                 await view(
@@ -267,7 +267,7 @@ class TestViewValidation:
                     body=body,
                     orm=orm_session,
                 )
-            
+
             assert "Kubernetes API error" in str(exc_info.value)
 
 
@@ -287,11 +287,11 @@ class TestDeploymentHistoryAPI:
     ):
         """Test getting deployment history via view function."""
         from enum import Enum
-        
+
         class MockStatus(Enum):
             SUCCESS = "success"
             RUNNING = "running"
-        
+
         # Setup mock jobs
         mock_jobs = [
             {
@@ -303,14 +303,14 @@ class TestDeploymentHistoryAPI:
             },
             {
                 "job_id": "job-456",
-                "project_id": "project-123", 
+                "project_id": "project-123",
                 "namespace": "test-namespace",
                 "queued_at": "2024-01-01T11:00:00",
                 "config": {},
             },
         ]
         mock_get_tasks.return_value = mock_jobs
-        
+
         # Setup mock status for each job (get_task_status returns BaseEvent)
         def mock_status_side_effect(job_id):
             if job_id == "job-123":
@@ -324,7 +324,7 @@ class TestDeploymentHistoryAPI:
                     message="Deployment in progress",
                 )
             return None
-        
+
         mock_get_status.side_effect = mock_status_side_effect
 
         with (
@@ -333,7 +333,7 @@ class TestDeploymentHistoryAPI:
         ):
             # Create the view and call it directly
             view = DeploymentHistoryView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 orm=orm_session,
@@ -341,14 +341,14 @@ class TestDeploymentHistoryAPI:
 
             # Verify response
             assert len(response.jobs) == 2
-            
+
             # Check first job
             job1 = response.jobs[0]
             assert job1.id == "job-123"
             assert job1.queued_at == "2024-01-01T10:00:00"
             assert job1.status == "success"
             assert job1.message == "Deployment completed successfully"
-            
+
             # Check second job
             job2 = response.jobs[1]
             assert job2.id == "job-456"
@@ -373,7 +373,7 @@ class TestDeploymentHistoryAPI:
             {
                 "job_id": "job-789",
                 "project_id": "project-123",
-                "namespace": "test-namespace", 
+                "namespace": "test-namespace",
                 "queued_at": "2024-01-01T12:00:00",
                 "config": {},
             },
@@ -387,7 +387,7 @@ class TestDeploymentHistoryAPI:
         ):
             # Create the view and call it directly
             view = DeploymentHistoryView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 orm=orm_session,
@@ -419,7 +419,7 @@ class TestDeploymentHistoryAPI:
         ):
             # Create the view and call it directly
             view = DeploymentHistoryView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 orm=orm_session,
@@ -445,9 +445,8 @@ class TestDeploymentPacksAPI:
 
     def test_hosting_project_deployment_config_with_fastapi_pack(self, mock_project_with_api_key):
         """Test that FASTAPI pack creates correct deployment config."""
-        from jockey import DeploymentConfig
         from agentops.deploy.models import HostingProjectModel
-        
+
         # Create hosting project with FASTAPI pack
         hosting_project = HostingProjectModel()
         hosting_project.id = "project-123"
@@ -459,11 +458,11 @@ class TestDeploymentPacksAPI:
         hosting_project.watch_path = None
         hosting_project.user_callback_url = None
         hosting_project.project = mock_project_with_api_key
-        
+
         # Mock list_secrets to return empty list
         with patch('jockey.list_secrets', return_value=[]):
             config = hosting_project.deployment_config
-            
+
             # Verify FASTAPI pack defaults are applied
             assert config.dockerfile_template == "fastapi-agent"
             assert config.ports == [8000]
@@ -473,9 +472,8 @@ class TestDeploymentPacksAPI:
 
     def test_hosting_project_deployment_config_with_crewai_pack(self, mock_project_with_api_key):
         """Test that CREWAI pack creates correct deployment config."""
-        from jockey import DeploymentConfig
         from agentops.deploy.models import HostingProjectModel
-        
+
         # Create hosting project with CREWAI pack
         hosting_project = HostingProjectModel()
         hosting_project.id = "project-123"
@@ -487,11 +485,11 @@ class TestDeploymentPacksAPI:
         hosting_project.watch_path = "src/"
         hosting_project.user_callback_url = None
         hosting_project.project = mock_project_with_api_key
-        
+
         # Mock list_secrets to return empty list
         with patch('jockey.list_secrets', return_value=[]):
             config = hosting_project.deployment_config
-            
+
             # Verify CREWAI pack defaults are applied
             assert config.dockerfile_template == "crewai-agent"
             assert config.ports == [8080]
@@ -502,9 +500,8 @@ class TestDeploymentPacksAPI:
 
     def test_hosting_project_deployment_config_with_crewai_job_pack(self, mock_project_with_api_key):
         """Test that CREWAI_JOB pack creates correct deployment config."""
-        from jockey import DeploymentConfig
         from agentops.deploy.models import HostingProjectModel
-        
+
         # Create hosting project with CREWAI_JOB pack
         hosting_project = HostingProjectModel()
         hosting_project.id = "project-123"
@@ -516,11 +513,11 @@ class TestDeploymentPacksAPI:
         hosting_project.watch_path = "src/"
         hosting_project.user_callback_url = None
         hosting_project.project = mock_project_with_api_key
-        
+
         # Mock list_secrets to return empty list
         with patch('jockey.list_secrets', return_value=[]):
             config = hosting_project.deployment_config
-            
+
             # Verify CREWAI_JOB pack defaults are applied
             assert config.dockerfile_template == "crewai-job"
             assert config.ports == []  # No ports for job execution
@@ -530,9 +527,8 @@ class TestDeploymentPacksAPI:
 
     def test_hosting_project_deployment_config_with_none_pack_fallback(self, mock_project_with_api_key):
         """Test that None pack_name falls back to FASTAPI."""
-        from jockey import DeploymentConfig
         from agentops.deploy.models import HostingProjectModel
-        
+
         # Create hosting project with None pack_name
         hosting_project = HostingProjectModel()
         hosting_project.id = "project-123"
@@ -544,11 +540,11 @@ class TestDeploymentPacksAPI:
         hosting_project.watch_path = None
         hosting_project.user_callback_url = None
         hosting_project.project = mock_project_with_api_key
-        
+
         # Mock list_secrets to return empty list
         with patch('jockey.list_secrets', return_value=[]):
             config = hosting_project.deployment_config
-            
+
             # Should fall back to FASTAPI defaults
             assert config.dockerfile_template == "fastapi-agent"
             assert config.ports == [8000]
@@ -556,9 +552,8 @@ class TestDeploymentPacksAPI:
 
     def test_hosting_project_deployment_config_with_invalid_pack_raises_error(self, mock_project_with_api_key):
         """Test that invalid pack_name raises ValueError."""
-        from jockey import DeploymentConfig
         from agentops.deploy.models import HostingProjectModel
-        
+
         # Create hosting project with invalid pack_name
         hosting_project = HostingProjectModel()
         hosting_project.id = "project-123"
@@ -570,7 +565,7 @@ class TestDeploymentPacksAPI:
         hosting_project.watch_path = None
         hosting_project.user_callback_url = None
         hosting_project.project = mock_project_with_api_key
-        
+
         # Mock list_secrets to return empty list
         with patch('jockey.list_secrets', return_value=[]):
             with pytest.raises(ValueError, match="Invalid deployment pack name: INVALID_PACK"):
@@ -596,10 +591,10 @@ class TestDeploymentPacksAPI:
         hosting_project.watch_path = "src/"
         hosting_project.user_callback_url = None
         hosting_project.project = mock_project_with_api_key
-        
+
         # Setup mocks
         mock_queue.return_value = "job-456"
-        
+
         with (
             patch.object(HostingProjectModel, 'get_by_id', return_value=hosting_project),
             patch.object(ProjectModel, 'get_by_id', return_value=mock_project_with_api_key),
@@ -607,7 +602,7 @@ class TestDeploymentPacksAPI:
         ):
             # Create the view and call it directly
             view = InitiateDeploymentView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 orm=orm_session,
@@ -617,12 +612,12 @@ class TestDeploymentPacksAPI:
             assert response.success is True
             assert response.message == "Deployment initiated successfully"
             assert response.job_id == "job-456"
-            
+
             # Verify queue_task was called with correct config
             mock_queue.assert_called_once()
             call_args = mock_queue.call_args
             config = call_args[1]["config"]  # Get config from kwargs
-            
+
             # Should have CREWAI pack defaults
             assert config.dockerfile_template == "crewai-agent"
             assert config.ports == [8080]
@@ -649,10 +644,10 @@ class TestDeploymentPacksAPI:
         hosting_project.watch_path = "custom/path/"
         hosting_project.user_callback_url = "https://custom-callback.com"
         hosting_project.project = mock_project_with_api_key
-        
+
         # Setup mocks
         mock_queue.return_value = "job-789"
-        
+
         with (
             patch.object(HostingProjectModel, 'get_by_id', return_value=hosting_project),
             patch.object(ProjectModel, 'get_by_id', return_value=mock_project_with_api_key),
@@ -660,7 +655,7 @@ class TestDeploymentPacksAPI:
         ):
             # Create the view and call it directly
             view = InitiateDeploymentView(mock_request)
-            
+
             response = await view(
                 project_id="project-123",
                 orm=orm_session,
@@ -668,17 +663,17 @@ class TestDeploymentPacksAPI:
 
             # Verify response
             assert response.success is True
-            
+
             # Verify config has pack defaults but user overrides
             mock_queue.assert_called_once()
             call_args = mock_queue.call_args
             config = call_args[1]["config"]  # Get config from kwargs
-            
+
             # Pack defaults
             assert config.dockerfile_template == "fastapi-agent"
             assert config.ports == [8000]
             assert config.build_files == {}
-            
+
             # User overrides
             assert config.repository_url == "https://github.com/test/custom-repo"
             assert config.branch == "feature-branch"

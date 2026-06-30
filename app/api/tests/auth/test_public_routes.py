@@ -14,7 +14,7 @@ from agentops.common.route_config import BaseView
 
 # Mark to skip rate limit tests when Redis is not available
 redis_required = pytest.mark.skipif(
-    not (REDIS_HOST and REDIS_PORT), 
+    not (REDIS_HOST and REDIS_PORT),
     reason="Rate limit tests require Redis (REDIS_HOST and REDIS_PORT env vars)"
 )
 
@@ -211,7 +211,7 @@ def test_public_route_decorator_class_based_view():
 
     # Create an instance and test validation
     view_instance = TestView(mock_request)
-    
+
     # The wrapped __call__ method should validate the request
     with patch('agentops.auth.views._validate_request') as mock_validate:
         import asyncio
@@ -220,10 +220,10 @@ def test_public_route_decorator_class_based_view():
         mock_validate.assert_called_once_with(mock_request)
 
 
-@patch("agentops.auth.views.API_URL", "https://api.agentops.ai")  
+@patch("agentops.auth.views.API_URL", "https://api.agentops.ai")
 def test_public_route_decorator_invalid_class():
     """Test that the public_route decorator raises TypeError for non-BaseView classes."""
-    
+
     # Should raise TypeError when decorating a non-BaseView class
     with pytest.raises(TypeError, match="must inherit from BaseView"):
         @public_route

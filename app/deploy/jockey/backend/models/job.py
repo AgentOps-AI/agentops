@@ -428,7 +428,7 @@ class Job(BaseModel):
         except Exception as e:
             logger.error(f"Failed to get logs for job {self.name}: {e}")
             return f"Failed to get logs: {e}"
-        
+
     def to_string(self) -> str:
         """Convert to string representation."""
         return f"Job(name={self.name}, image_url={self.image_url}, namespace={self.namespace})"

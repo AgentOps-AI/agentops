@@ -13,9 +13,7 @@ from jockey.worker.queue import (
     get_queued_tasks,
     _get_task_key,
     _get_queue_key,
-    _get_event_key,
     TASKS_HASH_NAME,
-    REDIS_KEY_PREFIX,
 )
 from jockey.config import DeploymentConfig, TaskType
 

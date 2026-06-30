@@ -127,7 +127,7 @@ def redis_client_with_container(redis_container, monkeypatch):
 def clean_redis(redis_client_with_container):
     """Provide a clean Redis client and track keys for cleanup."""
     from jockey.worker import queue
-    
+
     tracked_keys = []
 
     # Helper function to track keys
@@ -136,7 +136,7 @@ def clean_redis(redis_client_with_container):
         return key
 
     redis_client_with_container.track_key = track_key
-    
+
     # Add queue functions as methods
     redis_client_with_container.store_event = queue.store_event
     redis_client_with_container.get_task_status = queue.get_task_status

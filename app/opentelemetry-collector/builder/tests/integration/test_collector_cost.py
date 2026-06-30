@@ -34,16 +34,16 @@ def jwt_token(jwt_secret):
         "project_id": "test-project-id",
         "api_key": "test-api-key"
     }
-    
+
     # Generate the JWT token
     token = jwt.encode(payload, jwt_secret, algorithm="HS256")
-    
+
     # Write to .jwt file for the collector to use
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     jwt_path = os.path.join(project_root, '.jwt')
     with open(jwt_path, 'w') as f:
         f.write(token)
-    
+
     return token
 
 

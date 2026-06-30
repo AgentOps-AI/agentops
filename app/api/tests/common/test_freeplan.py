@@ -156,8 +156,8 @@ def test_combined_exclude_maxlines_and_maxitems():
     multiline_text = "line1\nline2\nline3\nline4"
     test_list = ["item1", "item2", "item3", "item4"]
     response = CombinedResponse(
-        excluded_field="excluded", 
-        multiline_field=multiline_text, 
+        excluded_field="excluded",
+        multiline_field=multiline_text,
         list_field=test_list,
         regular_field="regular"
     )
@@ -245,11 +245,11 @@ class TestFreePlanClampStartTime:
         """Test that None start_time returns cutoff and modified=True."""
         days_cutoff = 30
         result, modified = freeplan_clamp_start_time(None, days_cutoff)
-        
+
         # Should return cutoff datetime
         expected_cutoff = datetime.now(timezone.utc) - timedelta(days=days_cutoff)
         assert abs((result - expected_cutoff).total_seconds()) < 1
-        
+
         # Should be marked as modified since None was converted to cutoff
         assert modified is True
 
@@ -259,13 +259,13 @@ class TestFreePlanClampStartTime:
         days_cutoff = 30
         # Date older than cutoff (further in the past)
         old_start_time = now - timedelta(days=days_cutoff + 10)
-        
+
         result, modified = freeplan_clamp_start_time(old_start_time, days_cutoff)
-        
+
         # Should return cutoff, not the original old date
         expected_cutoff = now - timedelta(days=days_cutoff)
         assert abs((result - expected_cutoff).total_seconds()) < 1
-        
+
         # Should be marked as modified since it was clamped
         assert modified is True
 
@@ -275,12 +275,12 @@ class TestFreePlanClampStartTime:
         days_cutoff = 30
         # Date newer than cutoff (more recent)
         recent_start_time = now - timedelta(days=days_cutoff - 5)
-        
+
         result, modified = freeplan_clamp_start_time(recent_start_time, days_cutoff)
-        
+
         # Should return the original date unchanged
         assert result == recent_start_time
-        
+
         # Should not be marked as modified since no clamping occurred
         assert modified is False
 
@@ -289,12 +289,12 @@ class TestFreePlanClampStartTime:
         now = datetime.now(timezone.utc)
         days_cutoff = 30
         cutoff_start_time = now - timedelta(days=days_cutoff)
-        
+
         result, modified = freeplan_clamp_start_time(cutoff_start_time, days_cutoff)
-        
+
         # Should return a date very close to the cutoff date (allowing for timing differences)
         assert abs((result - cutoff_start_time).total_seconds()) < 1
-        
+
         # The timing precision issue means this might be marked as modified due to microsecond differences
         # So we'll accept either outcome for this edge case
         assert modified in [True, False]
@@ -305,21 +305,21 @@ class TestFreePlanClampStartTime:
         # Fix the current time
         fixed_now = datetime(2023, 1, 15, tzinfo=timezone.utc)
         mock_datetime.now.return_value = fixed_now
-        
+
         cutoff_days = 30
         cutoff = fixed_now - timedelta(days=cutoff_days)
-        
+
         # Test None case
         result, modified = freeplan_clamp_start_time(None, cutoff_days)
         assert result == cutoff
         assert modified is True
-        
+
         # Test old date case
         old_date = fixed_now - timedelta(days=cutoff_days + 5)
         result, modified = freeplan_clamp_start_time(old_date, cutoff_days)
         assert result == cutoff
         assert modified is True
-        
+
         # Test recent date case
         recent_date = fixed_now - timedelta(days=cutoff_days - 5)
         result, modified = freeplan_clamp_start_time(recent_date, cutoff_days)
@@ -333,15 +333,15 @@ class TestFreePlanClampEndTime:
     def test_end_time_is_none(self):
         """Test that None end_time returns current time and modified=True."""
         days_cutoff = 30
-        
+
         # Capture current time before the call
         before_call = datetime.now(timezone.utc)
         result, modified = freeplan_clamp_end_time(None, days_cutoff)
         after_call = datetime.now(timezone.utc)
-        
+
         # Should return current time (within reasonable bounds)
         assert before_call <= result <= after_call
-        
+
         # Should be marked as modified since None was converted to current time
         assert modified is True
 
@@ -351,13 +351,13 @@ class TestFreePlanClampEndTime:
         days_cutoff = 30
         # Date older than cutoff (further in the past)
         old_end_time = now - timedelta(days=days_cutoff + 10)
-        
+
         result, modified = freeplan_clamp_end_time(old_end_time, days_cutoff)
-        
+
         # Should return cutoff, not the original old date
         expected_cutoff = now - timedelta(days=days_cutoff)
         assert abs((result - expected_cutoff).total_seconds()) < 1
-        
+
         # Should be marked as modified since it was clamped
         assert modified is True
 
@@ -367,12 +367,12 @@ class TestFreePlanClampEndTime:
         days_cutoff = 30
         # Date newer than cutoff (more recent)
         recent_end_time = now - timedelta(days=days_cutoff - 5)
-        
+
         result, modified = freeplan_clamp_end_time(recent_end_time, days_cutoff)
-        
+
         # Should return the original date unchanged
         assert result == recent_end_time
-        
+
         # Should not be marked as modified since no clamping occurred
         assert modified is False
 
@@ -381,12 +381,12 @@ class TestFreePlanClampEndTime:
         now = datetime.now(timezone.utc)
         days_cutoff = 30
         cutoff_end_time = now - timedelta(days=days_cutoff)
-        
+
         result, modified = freeplan_clamp_end_time(cutoff_end_time, days_cutoff)
-        
+
         # Should return a date very close to the cutoff date (allowing for timing differences)
         assert abs((result - cutoff_end_time).total_seconds()) < 1
-        
+
         # The timing precision issue means this might be marked as modified due to microsecond differences
         # So we'll accept either outcome for this edge case
         assert modified in [True, False]
@@ -397,21 +397,21 @@ class TestFreePlanClampEndTime:
         # Fix the current time
         fixed_now = datetime(2023, 1, 15, tzinfo=timezone.utc)
         mock_datetime.now.return_value = fixed_now
-        
+
         cutoff_days = 30
         cutoff = fixed_now - timedelta(days=cutoff_days)
-        
+
         # Test None case - should return current time
         result, modified = freeplan_clamp_end_time(None, cutoff_days)
         assert result == fixed_now
         assert modified is True
-        
+
         # Test old date case - should be clamped to cutoff
         old_date = fixed_now - timedelta(days=cutoff_days + 5)
         result, modified = freeplan_clamp_end_time(old_date, cutoff_days)
         assert result == cutoff
         assert modified is True
-        
+
         # Test recent date case - should not be clamped
         recent_date = fixed_now - timedelta(days=cutoff_days - 5)
         result, modified = freeplan_clamp_end_time(recent_date, cutoff_days)
