@@ -122,7 +122,14 @@ export async function fetchAuthenticatedApi<T = any>(
           errorBody = 'Failed to read error response body';
         }
       }
-      console.error(`[API Client] API Error ${response.status} for ${endpoint}:`, errorBody);
+      // Avoid noisy console errors for expected 401s in local development or during
+      // unauthenticated flows (e.g., landing on signin). Still construct ApiError for handling.
+      const isAuthError = response.status === 401 || response.status === 403;
+      if (!isAuthError) {
+        console.error(`[API Client] API Error ${response.status} for ${endpoint}:`, errorBody);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[API Client] Auth ${response.status} for ${endpoint}`);
+      }
       throw new ApiError(
         `API request failed with status ${response.status}`,
         response.status,
@@ -149,7 +156,9 @@ export async function fetchAuthenticatedApi<T = any>(
       if (error.status === 401) {
         // Ensure this runs only on the client side
         if (typeof window !== 'undefined') {
-          console.warn('[API Client] Received 401 Unauthorized for ${endpoint}.');
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(`[API Client] Received 401 Unauthorized for ${endpoint}.`);
+          }
           // Prevent infinite loops if signin page itself triggers a 401 somehow
           if (window.location.pathname !== '/signin') {
             window.location.href = '/signin';
