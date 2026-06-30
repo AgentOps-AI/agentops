@@ -81,6 +81,7 @@ def upload_logfile(trace_id: int) -> None:
     Upload the log content from the memory buffer to the API.
     """
     from agentops import get_client
+    from agentops.logging import logger
 
     # Get the content from the buffer
     log_content = _log_buffer.getvalue()
@@ -88,6 +89,18 @@ def upload_logfile(trace_id: int) -> None:
         return
 
     client = get_client()
+
+    # Check if authentication is complete before attempting to upload
+    if not client.api.v4.auth_token:
+        logger.debug(
+            "[agentops.upload_logfile] Skipping logfile upload - authentication not yet complete. "
+            "This is normal for short-running traces that complete before authentication finishes."
+        )
+        # Clear the buffer even if we don't upload
+        _log_buffer.seek(0)
+        _log_buffer.truncate()
+        return
+
     client.api.v4.upload_logfile(log_content, trace_id)
 
     # Clear the buffer after upload
