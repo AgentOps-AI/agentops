@@ -71,6 +71,8 @@ The AgentOps app is open source under the MIT license. Explore the code in our [
     <a href="https://docs.agentops.ai/v1/integrations/camel"><img src="docs/images/external/camel/camel.png" height="45" alt="Camel AI"></a>
     <a href="https://docs.llamaindex.ai/en/stable/module_guides/observability/?h=agentops#agentops"><img src="docs/images/external/ollama/ollama-icon.png" height="45" alt="LlamaIndex"></a>
     <a href="https://docs.agentops.ai/v1/integrations/cohere"><img src="docs/images/external/cohere/cohere-logo.svg" height="45" alt="Cohere"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/agno"><img src="docs/images/external/agno/agno.png" height="45" alt="Agno"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/google_adk"><img src="docs/images/external/google-adk/google-adk-logo.png" height="45" alt="ADK"></a>
   </div>
 </div>
 
