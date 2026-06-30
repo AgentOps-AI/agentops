@@ -16,14 +16,22 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     if (!isProd) return;
 
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isLocalhost = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || 
+       window.location.hostname === '127.0.0.1' || 
+       window.location.hostname.startsWith('192.168.'));
 
-    // Only initialize PostHog if we have a valid key
-    if (posthogKey) {
+    // Only initialize PostHog if we have a valid key AND we're not in local development
+    // This prevents console errors when PostHog is not configured for local development
+    if (posthogKey && !isLocalhost) {
       posthog.init(posthogKey, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
         person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
         capture_pageview: false, // Disable automatic pageview capture, as we capture manually
       });
+    } else if (isDevelopment && !posthogKey) {
+      console.log('[PostHog] Analytics disabled in local development mode');
     }
   }, [isProd]);
 
@@ -47,7 +55,8 @@ function PostHogPageView() {
 
   // Track pageviews
   useEffect(() => {
-    if (pathname && posthog && posthog.__loaded) {
+    // Only track if PostHog is properly initialized and loaded
+    if (pathname && posthog && posthog.__loaded && posthog.isFeatureEnabled !== undefined) {
       let url = window.origin + pathname;
       if (searchParams.toString()) {
         url = url + '?' + searchParams.toString();
