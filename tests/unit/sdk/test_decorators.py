@@ -761,3 +761,97 @@ class TestToolDecorator:
             span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL
         )
         assert SpanAttributes.LLM_USAGE_TOOL_COST not in tool_span.attributes
+
+
+class TestDecoratorInitializationWarning:
+    """Tests for decorator behavior when tracer is not initialized."""
+
+    def test_decorator_warns_when_tracer_not_initialized(self, caplog):
+        """Test that decorators warn when tracer is not initialized."""
+        import agentops.sdk.decorators.factory as factory_module
+        
+        # Reset the warning flag to ensure we can test the warning
+        factory_module._uninitialized_warning_shown = False
+        
+        # Create a mock tracer state where initialized is False
+        original_initialized = factory_module.tracer._initialized
+        factory_module.tracer._initialized = False
+        
+        try:
+            @agent
+            def test_agent_func():
+                return "test result"
+            
+            # Call the decorated function
+            result = test_agent_func()
+            
+            # Function should still execute and return the result
+            assert result == "test result"
+            
+            # Check that warning was logged
+            assert factory_module._uninitialized_warning_shown is True
+            
+        finally:
+            # Restore original state
+            factory_module.tracer._initialized = original_initialized
+            factory_module._uninitialized_warning_shown = False
+
+    def test_decorator_warning_only_shown_once(self):
+        """Test that the warning is only shown once to avoid spam."""
+        import agentops.sdk.decorators.factory as factory_module
+        
+        # Reset the warning flag
+        factory_module._uninitialized_warning_shown = False
+        
+        original_initialized = factory_module.tracer._initialized
+        factory_module.tracer._initialized = False
+        
+        try:
+            @tool
+            def test_tool_1():
+                return "tool 1"
+            
+            @tool
+            def test_tool_2():
+                return "tool 2"
+            
+            # Call both tools
+            test_tool_1()
+            assert factory_module._uninitialized_warning_shown is True
+            
+            # Reset to check that warning isn't shown again
+            # (the flag stays True, so second call shouldn't warn)
+            test_tool_2()
+            # The flag should still be True (not reset)
+            assert factory_module._uninitialized_warning_shown is True
+            
+        finally:
+            factory_module.tracer._initialized = original_initialized
+            factory_module._uninitialized_warning_shown = False
+
+    def test_decorator_executes_function_when_tracer_not_initialized(self):
+        """Test that decorated functions still execute even when tracer is not initialized."""
+        import agentops.sdk.decorators.factory as factory_module
+        
+        factory_module._uninitialized_warning_shown = False
+        original_initialized = factory_module.tracer._initialized
+        factory_module.tracer._initialized = False
+        
+        try:
+            call_count = 0
+            
+            @operation
+            def counting_operation(value):
+                nonlocal call_count
+                call_count += 1
+                return value * 2
+            
+            result = counting_operation(5)
+            
+            # Function should execute
+            assert result == 10
+            assert call_count == 1
+            
+        finally:
+            factory_module.tracer._initialized = original_initialized
+            factory_module._uninitialized_warning_shown = False
