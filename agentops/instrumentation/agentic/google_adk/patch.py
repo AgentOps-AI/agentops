@@ -267,12 +267,20 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
             # Usage metadata
             if "usage_metadata" in response_dict:
                 usage = response_dict["usage_metadata"]
+                # Support both old-style (prompt_token_count/candidates_token_count) and
+                # new ADK 2.1+ style (input_tokens/output_tokens) field names (#1418).
                 if "prompt_token_count" in usage:
                     attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_token_count"]
+                elif "input_tokens" in usage:
+                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["input_tokens"]
                 if "candidates_token_count" in usage:
                     attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["candidates_token_count"]
+                elif "output_tokens" in usage:
+                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["output_tokens"]
                 if "total_token_count" in usage:
                     attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_token_count"]
+                elif "total_tokens" in usage:
+                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_tokens"]
 
                 # Additional token details if available
                 if "prompt_tokens_details" in usage:
