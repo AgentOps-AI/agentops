@@ -17,6 +17,8 @@ class AgentOpsSpanKindValues(Enum):
     TEXT = "text"
     GUARDRAIL = "guardrail"
     HTTP = "http"
+    ERROR = "error"
+    LOG = "log"
     UNKNOWN = "unknown"
 
 
@@ -46,3 +48,5 @@ class SpanKind:
     TEXT = AgentOpsSpanKindValues.TEXT.value
     GUARDRAIL = AgentOpsSpanKindValues.GUARDRAIL.value
     HTTP = AgentOpsSpanKindValues.HTTP.value
+    ERROR = AgentOpsSpanKindValues.ERROR.value
+    LOG = AgentOpsSpanKindValues.LOG.value
