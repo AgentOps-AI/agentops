@@ -477,6 +477,7 @@ def alb_status():
                 ingresses = Ingress.filter(namespace=namespace)
                 all_ingresses.extend(ingresses)
             except:
+                # TODO: be more specific about exception type
                 continue  # Skip if namespace doesn't exist or no access
         
         shared_alb_ingresses = []

@@ -77,6 +77,7 @@ def get_team_run_attributes(
                     member_names = [m.get("name", "Unknown") for m in member_agents]
                     attributes["team.member_names"] = ", ".join(member_names)
                 except:
+                    # TODO: be more specific about exception type
                     attributes["team.members"] = str(member_agents)
 
     # Process input arguments - handle both internal and public method signatures

@@ -227,6 +227,7 @@ def get_agent_run_attributes(
                         args_str = json.dumps(tool_exec.tool_args)
                         attributes[f"tool.{i}.parameters"] = args_str
                     except:
+                        # TODO: be more specific about exception type
                         attributes[f"tool.{i}.parameters"] = str(tool_exec.tool_args)
 
                 if hasattr(tool_exec, "result") and tool_exec.result:

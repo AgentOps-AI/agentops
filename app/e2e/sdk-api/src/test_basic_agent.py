@@ -32,7 +32,7 @@ class E2ETests(unittest.IsolatedAsyncioTestCase):
 
     async def test_completion(self):
         await self.agent.async_chat_completion()
-        time.sleep(2)
+        asyncio.sleep(2)
         sessions = await self.db.get("sessions", "id", "project_id", Project.ID)
         llm_calls = await self.db.get("llms", "*", "session_id", sessions[0].get("id"))
 
@@ -44,7 +44,7 @@ class E2ETests(unittest.IsolatedAsyncioTestCase):
 
     async def test_stream_completion(self):
         await self.agent.async_chat_completion_stream()
-        time.sleep(2)
+        asyncio.sleep(2)
         sessions = await self.db.get("sessions", "id", "project_id", Project.ID)
         llm_calls = await self.db.get("llms", "*", "session_id", sessions[0].get("id"))
 

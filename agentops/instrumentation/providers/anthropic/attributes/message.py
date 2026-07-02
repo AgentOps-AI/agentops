@@ -166,7 +166,9 @@ def _process_content(content, role, index):
             attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = simple_content
             attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "text"
         except:
-            # Ultimate fallback
+            
+            
+            # TODO: be more specific about exception type
             attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
             attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = "(complex content)"
             attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "unknown"
@@ -204,6 +206,8 @@ def _create_simplified_message(msg):
         try:
             return {"role": role, "content": str(content)}
         except:
+            
+            # TODO: be more specific about exception type
             return {"role": role, "content": "(complex content)"}
 
 

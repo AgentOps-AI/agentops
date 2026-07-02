@@ -654,7 +654,8 @@ async def v2_update_logs(request: Request, supabase: AsyncSupabaseClient):
             existing_content = existing_file.decode("utf-8")
             new_content = existing_content + logs_content
         except:
-            # File doesn't exist yet
+            
+            # TODO: be more specific about exception type
             new_content = logs_content
 
         # Upload the file
