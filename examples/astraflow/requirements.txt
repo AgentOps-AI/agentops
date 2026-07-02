@@ -1,0 +1,3 @@
+openai  # Astraflow is OpenAI-compatible and uses the OpenAI client
+agentops
+python-dotenv
