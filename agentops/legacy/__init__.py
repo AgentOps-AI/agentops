@@ -60,6 +60,46 @@ was garbage collected but its trace might still be recording. Ensure legacy sess
         """Ends the session for CrewAI >= 0.105.0 compatibility. Calls the global legacy end_session."""
         end_session(session_or_status=self, **kwargs)
 
+    def get_analytics(self) -> Dict[str, Any]:
+        """
+        Returns analytics data for this session.
+
+        Provides backward compatibility with older AgentOps versions where
+        session.get_analytics() was the standard way to retrieve session metrics.
+
+        Returns:
+            Dict containing token counts, costs, and other session metrics.
+        """
+        analytics: Dict[str, Any] = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "total_cost": 0.0,
+        }
+
+        if not self.trace_context or not self.trace_context.span:
+            return analytics
+
+        span = self.trace_context.span
+        try:
+            if hasattr(span, "_attributes"):
+                attrs = span._attributes
+            elif hasattr(span, "attributes"):
+                attrs = span.attributes
+            else:
+                return analytics
+
+            if attrs:
+                analytics["prompt_tokens"] = int(attrs.get("gen_ai.usage.prompt_tokens", 0) or 0)
+                analytics["completion_tokens"] = int(attrs.get("gen_ai.usage.completion_tokens", 0) or 0)
+                analytics["total_tokens"] = analytics["prompt_tokens"] + analytics["completion_tokens"]
+                cost_val = attrs.get("gen_ai.usage.total_cost", 0) or 0
+                analytics["total_cost"] = float(cost_val) if cost_val else 0.0
+        except (TypeError, ValueError, AttributeError):
+            pass
+
+        return analytics
+
 
 @deprecated("Use agentops.start_trace() instead.")
 def start_session(

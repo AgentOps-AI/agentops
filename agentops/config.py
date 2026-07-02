@@ -135,6 +135,32 @@ class Config:
         default_factory=lambda: None, metadata={"description": "Custom span processor for OpenTelemetry trace data"}
     )
 
+    def refresh_from_env(self) -> None:
+        """Re-read all configuration values from environment variables.
+
+        This allows configuration to be updated after import by setting
+        environment variables and calling init() or configure().
+        Values explicitly set via parameters take precedence over env vars.
+        """
+        self.api_key = os.getenv("AGENTOPS_API_KEY")
+        self.endpoint = os.getenv("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
+        self.app_url = os.getenv("AGENTOPS_APP_URL", "https://app.agentops.ai")
+        self.max_wait_time = get_env_int("AGENTOPS_MAX_WAIT_TIME", 5000)
+        self.export_flush_interval = get_env_int("AGENTOPS_EXPORT_FLUSH_INTERVAL", 1000)
+        self.max_queue_size = get_env_int("AGENTOPS_MAX_QUEUE_SIZE", 512)
+        self.default_tags = get_env_list("AGENTOPS_DEFAULT_TAGS")
+        self.trace_name = os.getenv("AGENTOPS_TRACE_NAME")
+        self.instrument_llm_calls = get_env_bool("AGENTOPS_INSTRUMENT_LLM_CALLS", True)
+        self.auto_start_session = get_env_bool("AGENTOPS_AUTO_START_SESSION", True)
+        self.auto_init = get_env_bool("AGENTOPS_AUTO_INIT", True)
+        self.skip_auto_end_session = get_env_bool("AGENTOPS_SKIP_AUTO_END_SESSION", False)
+        self.env_data_opt_out = get_env_bool("AGENTOPS_ENV_DATA_OPT_OUT", False)
+        self.log_level = os.getenv("AGENTOPS_LOG_LEVEL", "INFO")
+        self.fail_safe = get_env_bool("AGENTOPS_FAIL_SAFE", False)
+        self.prefetch_jwt_token = get_env_bool("AGENTOPS_PREFETCH_JWT_TOKEN", True)
+        self.log_session_replay_url = get_env_bool("AGENTOPS_LOG_SESSION_REPLAY_URL", True)
+        self.exporter_endpoint = os.getenv("AGENTOPS_EXPORTER_ENDPOINT", "https://otlp.agentops.ai/v1/traces")
+
     def configure(
         self,
         api_key: Optional[str] = None,
