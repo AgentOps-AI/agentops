@@ -500,10 +500,10 @@ def get_response_tools_attributes(tools: List["ToolTypes"]) -> AttributeMap:
 def get_response_tool_web_search_attributes(tool: "WebSearchTool", index: int) -> AttributeMap:
     """Handles interpretation of an openai WebSearchTool object."""
     parameters = {}
-    if hasattr(tool, "search_context_size"):
+    if hasattr(tool, "search_context_size") and tool.search_context_size is not None:
         parameters["search_context_size"] = tool.search_context_size
 
-    if hasattr(tool, "user_location"):
+    if hasattr(tool, "user_location") and tool.user_location is not None:
         parameters["user_location"] = tool.user_location.__dict__
 
     tool_data = tool.__dict__
@@ -518,16 +518,16 @@ def get_response_tool_file_search_attributes(tool: "FileSearchTool", index: int)
     """Handles interpretation of an openai FileSearchTool object."""
     parameters = {}
 
-    if hasattr(tool, "vector_store_ids"):
+    if hasattr(tool, "vector_store_ids") and tool.vector_store_ids is not None:
         parameters["vector_store_ids"] = tool.vector_store_ids
 
-    if hasattr(tool, "filters"):
+    if hasattr(tool, "filters") and tool.filters is not None:
         parameters["filters"] = tool.filters.__dict__
 
-    if hasattr(tool, "max_num_results"):
+    if hasattr(tool, "max_num_results") and tool.max_num_results is not None:
         parameters["max_num_results"] = tool.max_num_results
 
-    if hasattr(tool, "ranking_options"):
+    if hasattr(tool, "ranking_options") and tool.ranking_options is not None:
         parameters["ranking_options"] = tool.ranking_options.__dict__
 
     tool_data = tool.__dict__
