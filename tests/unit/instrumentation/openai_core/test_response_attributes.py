@@ -644,6 +644,80 @@ class TestResponseAttributes:
             assert "max_num_results" in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
             assert "ranking_options" in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
 
+    def test_get_response_tool_web_search_attributes_with_none_user_location(self):
+        """Test extraction of attributes from web search tool when user_location is None"""
+        # Create a mock web search tool with user_location=None (optional field default)
+        web_search_tool = MockWebSearchTool(
+            {"type": "web_search_preview", "search_context_size": "medium", "user_location": None}
+        )
+
+        # Call the function directly - should NOT raise AttributeError
+        with patch("agentops.instrumentation.providers.openai.attributes.response.WebSearchTool", MockWebSearchTool):
+            result = get_response_tool_web_search_attributes(web_search_tool, 0)
+
+            # Verify attributes - should still work without user_location
+            assert isinstance(result, dict)
+            assert MessageAttributes.TOOL_CALL_NAME.format(i=0) in result
+            assert result[MessageAttributes.TOOL_CALL_NAME.format(i=0)] == "web_search_preview"
+            assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0) in result
+            # user_location should NOT be in parameters since it was None
+            assert "user_location" not in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            # search_context_size should still be present
+            assert "search_context_size" in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+
+    def test_get_response_tool_file_search_attributes_with_none_filters_and_ranking(self):
+        """Test extraction of attributes from file search tool when filters and ranking_options are None"""
+        # Create a mock file search tool with filters=None and ranking_options=None (optional defaults)
+        file_search_tool = MockFileSearchTool(
+            {
+                "type": "file_search",
+                "vector_store_ids": ["store_123"],
+                "filters": None,
+                "max_num_results": 10,
+                "ranking_options": None,
+            }
+        )
+
+        # Call the function directly - should NOT raise AttributeError
+        with patch("agentops.instrumentation.providers.openai.attributes.response.FileSearchTool", MockFileSearchTool):
+            result = get_response_tool_file_search_attributes(file_search_tool, 0)
+
+            # Verify attributes - should still work without filters/ranking_options
+            assert isinstance(result, dict)
+            assert MessageAttributes.TOOL_CALL_TYPE.format(i=0) in result
+            assert result[MessageAttributes.TOOL_CALL_TYPE.format(i=0)] == "file_search"
+            assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0) in result
+            # filters and ranking_options should NOT be in parameters since they were None
+            assert "filters" not in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert "ranking_options" not in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            # vector_store_ids and max_num_results should still be present
+            assert "vector_store_ids" in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert "max_num_results" in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+
+    def test_get_response_tool_search_attributes_skip_none_optional_parameters(self):
+        """Test extraction skips optional search parameters when values are None"""
+        web_search_tool = MockWebSearchTool(
+            {"type": "web_search_preview", "search_context_size": None, "user_location": None}
+        )
+        file_search_tool = MockFileSearchTool(
+            {
+                "type": "file_search",
+                "vector_store_ids": None,
+                "filters": None,
+                "max_num_results": None,
+                "ranking_options": None,
+            }
+        )
+
+        with patch("agentops.instrumentation.providers.openai.attributes.response.WebSearchTool", MockWebSearchTool):
+            web_result = get_response_tool_web_search_attributes(web_search_tool, 0)
+
+        with patch("agentops.instrumentation.providers.openai.attributes.response.FileSearchTool", MockFileSearchTool):
+            file_result = get_response_tool_file_search_attributes(file_search_tool, 0)
+
+        assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0) not in web_result
+        assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0) not in file_result
+
     def test_get_response_tool_computer_attributes(self):
         """Test extraction of attributes from computer tool"""
         # Create a mock computer tool
