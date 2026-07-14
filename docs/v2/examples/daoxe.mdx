@@ -1,0 +1,100 @@
+---
+title: 'DaoXE'
+description: 'DaoXE multi-protocol gateway Chat Completions example with AgentOps'
+---
+{/*  SOURCE_FILE: examples/daoxe/daoxe_chat_example.py  */}
+
+_View source on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/daoxe/daoxe_chat_example.py'} target={'_blank'}>GitHub</a>_
+
+# DaoXE Chat Completions Example
+
+This example shows how to monitor DaoXE traffic with AgentOps by using the OpenAI Python client against DaoXE's Chat Completions endpoint.
+
+DaoXE is a multi-model, multi-protocol API gateway. Here we only exercise the OpenAI-compatible Chat Completions path (`https://daoxe.com/v1` + `chat.completions`), which AgentOps instruments automatically.
+
+## Installation
+
+<CodeGroup>
+  ```bash pip
+  pip install -U agentops openai python-dotenv
+  ```
+  ```bash poetry
+  poetry add -U agentops openai python-dotenv
+  ```
+  ```bash uv
+  uv pip install -U agentops openai python-dotenv
+  ```
+</CodeGroup>
+
+## Environment
+
+```bash
+export DAOXE_API_KEY="your_daoxe_api_key"
+export AGENTOPS_API_KEY="your_agentops_api_key"
+export DAOXE_MODEL="your_account_model_id"
+```
+
+Model IDs are account-scoped. Use authenticated model listing or the live catalog at [daoxe.com/pricing](https://daoxe.com/pricing). DaoXE is available outside mainland China.
+
+## Code
+
+```python
+from openai import OpenAI
+import agentops
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
+
+agentops.init(
+    auto_start_session=False,
+    trace_name="DaoXE Chat Example",
+    tags=["daoxe", "chat-completions", "agentops-example"],
+)
+tracer = agentops.start_trace(
+    trace_name="DaoXE Chat Example",
+    tags=["daoxe-example", "multi-protocol-gateway", "agentops-example"],
+)
+
+client = OpenAI(
+    base_url="https://daoxe.com/v1",
+    api_key=os.getenv("DAOXE_API_KEY", "your_daoxe_api_key_here"),
+)
+
+response = client.chat.completions.create(
+    model=os.getenv("DAOXE_MODEL", "YOUR_ACCOUNT_MODEL_ID"),
+    messages=[
+        {
+            "role": "system",
+            "content": "You are a concise assistant for API and observability tips.",
+        },
+        {
+            "role": "user",
+            "content": "Give one practical tip for monitoring multi-model LLM gateways.",
+        },
+    ],
+)
+
+print(response.choices[0].message.content)
+
+agentops.end_trace(tracer, end_state="Success")
+
+print("\n" + "=" * 50)
+print("Now let's verify that our LLM calls were tracked properly...")
+try:
+    agentops.validate_trace_spans(trace_context=tracer)
+    print("\n✅ Success! All LLM spans were properly recorded in AgentOps.")
+except agentops.ValidationError as e:
+    print(f"\n❌ Error validating spans: {e}")
+    raise
+```
+
+## Related
+
+- Integration guide: [DaoXE integration](/v2/integrations/daoxe)
+- Product: [https://daoxe.com](https://daoxe.com)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

@@ -1,0 +1,3 @@
+openai  # DaoXE Chat Completions via OpenAI client
+agentops
+python-dotenv

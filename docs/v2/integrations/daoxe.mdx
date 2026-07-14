@@ -1,0 +1,149 @@
+---
+title: DaoXE
+description: "Track multi-model Chat Completions traffic through the DaoXE multi-protocol gateway with AgentOps"
+---
+
+AgentOps works with [DaoXE](https://daoxe.com) through the OpenAI Python SDK. DaoXE is a multi-model, multi-protocol API gateway (OpenAI Chat Completions / Responses, Anthropic Messages, and other published routes). This page covers the **OpenAI Chat Completions** path that AgentOps instruments automatically when you point the OpenAI client at DaoXE.
+
+## Installation
+
+<CodeGroup>
+```bash pip
+pip install agentops openai
+```
+```bash poetry
+poetry add agentops openai
+```
+```bash uv
+uv pip install agentops openai
+```
+</CodeGroup>
+
+## Setting Up API Keys
+
+Before using DaoXE with AgentOps, set:
+
+- **DAOXE_API_KEY**: From your [DaoXE dashboard](https://daoxe.com) (regions outside mainland China)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+- **DAOXE_MODEL** (optional): An account-scoped model ID from DaoXE authenticated model discovery or the [pricing catalog](https://daoxe.com/pricing). Model availability depends on your account group — do not hard-code a shared public ID list.
+
+Export them in your shell or put them in a `.env` file:
+
+<CodeGroup>
+```bash Export to CLI
+export DAOXE_API_KEY="your_daoxe_api_key_here"
+export AGENTOPS_API_KEY="your_agentops_api_key_here"
+export DAOXE_MODEL="your_account_model_id"
+```
+```txt Set in .env file
+DAOXE_API_KEY="your_daoxe_api_key_here"
+AGENTOPS_API_KEY="your_agentops_api_key_here"
+DAOXE_MODEL="your_account_model_id"
+```
+</CodeGroup>
+
+Load them in Python if you use dotenv:
+
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+os.environ["DAOXE_API_KEY"] = os.getenv("DAOXE_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
+```
+
+## Basic Usage
+
+Initialize AgentOps first, then create an OpenAI client with DaoXE as `base_url`. AgentOps records the Chat Completions call automatically.
+
+<CodeGroup>
+```python Basic Usage
+import os
+import agentops
+from openai import OpenAI
+
+agentops.init()
+
+client = OpenAI(
+    api_key=os.getenv("DAOXE_API_KEY"),
+    base_url="https://daoxe.com/v1",
+)
+
+response = client.chat.completions.create(
+    model=os.getenv("DAOXE_MODEL", "YOUR_ACCOUNT_MODEL_ID"),
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain multi-protocol API gateways in one sentence."},
+    ],
+)
+
+print(response.choices[0].message.content)
+```
+</CodeGroup>
+
+## Streaming Completions
+
+Streaming responses are tracked the same way:
+
+<CodeGroup>
+```python Streaming
+import os
+import agentops
+from openai import OpenAI
+
+agentops.init()
+
+client = OpenAI(
+    api_key=os.getenv("DAOXE_API_KEY"),
+    base_url="https://daoxe.com/v1",
+)
+
+stream = client.chat.completions.create(
+    model=os.getenv("DAOXE_MODEL", "YOUR_ACCOUNT_MODEL_ID"),
+    messages=[
+        {"role": "user", "content": "Write a short note about LLM observability."},
+    ],
+    stream=True,
+)
+
+for chunk in stream:
+    delta = chunk.choices[0].delta.content
+    if delta is not None:
+        print(delta, end="", flush=True)
+print()
+```
+</CodeGroup>
+
+## Model IDs
+
+Pass the model ID your DaoXE account can call. Prefer:
+
+1. Authenticated `GET https://daoxe.com/v1/models` with your key, or
+2. The live catalog on [daoxe.com/pricing](https://daoxe.com/pricing)
+
+Availability is account-scoped and can change; keep the ID in env (`DAOXE_MODEL`) rather than baking a fixed list into app code.
+
+## Notes
+
+- Base URL for Chat Completions: `https://daoxe.com/v1` (path `/chat/completions`).
+- Auth header: `Authorization: Bearer $DAOXE_API_KEY`.
+- DaoXE also exposes other protocols (for example Anthropic Messages). This AgentOps path uses the OpenAI client + Chat Completions route so existing OpenAI instrumentation applies without custom wrappers.
+- DaoXE serves customers outside mainland China; create keys and review limits on [daoxe.com](https://daoxe.com).
+
+## Examples
+
+<CardGroup cols={2}>
+  <Card title="DaoXE Chat Example" icon="notebook" href="/v2/examples/daoxe">
+    Minimal Chat Completions example with AgentOps tracing
+  </Card>
+  <Card title="DaoXE on GitHub" icon="github" href="https://github.com/AgentOps-AI/agentops/tree/main/examples/daoxe" newTab={true}>
+    Source under examples/daoxe
+  </Card>
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
