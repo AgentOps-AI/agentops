@@ -14,7 +14,7 @@ from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
 from agentops.sdk.core import tracer
 from agentops.semconv import SpanKind, SpanAttributes, LangChainAttributes, LangChainAttributeValues, CoreAttributes
-from agentops.integration.callbacks.langchain.utils import get_model_info
+from agentops.integration.callbacks.langchain.utils import get_completion_attributes, get_model_info
 
 from langchain_core.callbacks.base import BaseCallbackHandler, AsyncCallbackHandler
 from langchain_core.outputs import LLMResult
@@ -237,18 +237,11 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
             span = self.active_spans.get(run_id)
 
-            if hasattr(response, "generations") and response.generations:
-                completions = []
-                for gen_list in response.generations:
-                    for gen in gen_list:
-                        if hasattr(gen, "text"):
-                            completions.append(gen.text)
-
-                if completions:
-                    try:
-                        span.set_attribute(SpanAttributes.LLM_COMPLETIONS, safe_serialize(completions))
-                    except Exception as e:
-                        logger.warning(f"Failed to set completions: {e}")
+            try:
+                for attribute, value in get_completion_attributes(response).items():
+                    span.set_attribute(attribute, value)
+            except Exception as e:
+                logger.warning(f"Failed to set completions: {e}")
 
             if hasattr(response, "llm_output") and response.llm_output:
                 token_usage = response.llm_output.get("token_usage", {})
