@@ -2,6 +2,8 @@ import pytest
 from unittest.mock import Mock, patch
 from types import SimpleNamespace
 
+from opentelemetry.trace import StatusCode
+
 from agentops.instrumentation.common.streaming import (
     BaseStreamWrapper,
     SyncStreamWrapper,
@@ -248,7 +250,8 @@ class TestSyncStreamWrapper:
         with pytest.raises(ValueError, match="Test error"):
             list(wrapper)
 
-        mock_span.set_status.assert_called()
+        statuses = [call.args[0].status_code for call in mock_span.set_status.call_args_list]
+        assert statuses == [StatusCode.ERROR]
         mock_span.record_exception.assert_called_once()
         mock_span.end.assert_called_once()
 
@@ -294,7 +297,8 @@ class TestAsyncStreamWrapper:
             async for chunk in wrapper:
                 pass
 
-        mock_span.set_status.assert_called()
+        statuses = [call.args[0].status_code for call in mock_span.set_status.call_args_list]
+        assert statuses == [StatusCode.ERROR]
         mock_span.record_exception.assert_called_once()
         mock_span.end.assert_called_once()
 
