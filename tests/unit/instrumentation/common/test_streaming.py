@@ -133,19 +133,10 @@ class TestBaseStreamWrapper:
         extract_content = lambda x: "test"
         wrapper = BaseStreamWrapper(mock_stream, mock_span, extract_content)
 
-        # Mock chunk with usage_metadata
-        mock_chunk = Mock()
-        mock_chunk.usage_metadata = {"prompt_tokens": 10, "completion_tokens": 5}
+        # Use the mapping shape emitted by some streaming providers.
+        mock_chunk = SimpleNamespace(usage_metadata={"prompt_tokens": 10, "completion_tokens": 5})
 
-        with patch(
-            "agentops.instrumentation.common.token_counting.TokenUsageExtractor.extract_from_response"
-        ) as mock_extract:
-            mock_usage = Mock()
-            mock_usage.prompt_tokens = 10
-            mock_usage.completion_tokens = 5
-            mock_extract.return_value = mock_usage
-
-            wrapper._process_chunk(mock_chunk)
+        wrapper._process_chunk(mock_chunk)
 
         assert wrapper.token_usage.prompt_tokens == 10
         assert wrapper.token_usage.completion_tokens == 5
