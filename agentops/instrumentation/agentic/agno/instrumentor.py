@@ -143,6 +143,14 @@ class AsyncStreamingResultWrapper:
                 self.span.end()
                 self.streaming_context_manager.remove_context(self.agent_id)
             raise
+        except Exception as e:
+            if not self._consumed:
+                self._consumed = True
+                self.span.set_status(Status(StatusCode.ERROR, str(e)))
+                self.span.record_exception(e)
+                self.span.end()
+                self.streaming_context_manager.remove_context(self.agent_id)
+            raise
         finally:
             otel_context.detach(context_token)
 
