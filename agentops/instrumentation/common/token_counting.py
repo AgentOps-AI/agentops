@@ -4,6 +4,7 @@ This module provides utilities for extracting and recording token usage
 information from various response formats.
 """
 
+from collections.abc import Mapping
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -88,13 +89,18 @@ class TokenUsageExtractor:
         if not usage_data:
             return TokenUsage()
 
+        def get_value(field: str) -> Optional[int]:
+            if isinstance(usage_data, Mapping):
+                return usage_data.get(field)
+            return getattr(usage_data, field, None)
+
         return TokenUsage(
-            prompt_tokens=getattr(usage_data, "prompt_tokens", None),
-            completion_tokens=getattr(usage_data, "completion_tokens", None),
-            total_tokens=getattr(usage_data, "total_tokens", None),
-            cached_prompt_tokens=getattr(usage_data, "cached_prompt_tokens", None),
-            cached_read_tokens=getattr(usage_data, "cache_read_input_tokens", None),
-            reasoning_tokens=getattr(usage_data, "reasoning_tokens", None),
+            prompt_tokens=get_value("prompt_tokens"),
+            completion_tokens=get_value("completion_tokens"),
+            total_tokens=get_value("total_tokens"),
+            cached_prompt_tokens=get_value("cached_prompt_tokens"),
+            cached_read_tokens=get_value("cache_read_input_tokens"),
+            reasoning_tokens=get_value("reasoning_tokens"),
         )
 
     @staticmethod
