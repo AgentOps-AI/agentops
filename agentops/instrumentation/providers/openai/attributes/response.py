@@ -462,9 +462,9 @@ def get_response_output_message_attributes(index: int, message: "ResponseOutputM
     attributes = _extract_attributes_from_mapping_with_index(message, RESPONSE_OUTPUT_MESSAGE_ATTRIBUTES, index)
 
     if message.content:
-        for i, content in enumerate(message.content):
+        for content in message.content:
             if isinstance(content, ResponseOutputText):
-                attributes.update(get_response_output_text_attributes(content, i))
+                attributes.update(get_response_output_text_attributes(content, index))
 
             else:
                 logger.debug(
