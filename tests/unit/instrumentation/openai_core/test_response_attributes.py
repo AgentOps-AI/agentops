@@ -10,6 +10,8 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
+from openai.types.responses import ResponseOutputMessage, ResponseOutputText, ResponseReasoningItem
+
 from agentops.instrumentation.providers.openai.attributes.response import (
     get_response_kwarg_attributes,
     get_response_response_attributes,
@@ -399,6 +401,35 @@ class TestResponseAttributes:
 
             # Verify basic expected attributes
             assert isinstance(result, dict)
+
+    def test_response_message_content_uses_parent_output_index(self):
+        """Message text must share the parent output item's completion index."""
+        reasoning = ResponseReasoningItem(
+            id="reasoning_1",
+            summary=[],
+            type="reasoning",
+            status="completed",
+        )
+        message = ResponseOutputMessage(
+            id="msg_1",
+            content=[
+                ResponseOutputText(
+                    annotations=[],
+                    text="answer",
+                    type="output_text",
+                )
+            ],
+            role="assistant",
+            status="completed",
+            type="message",
+        )
+
+        attributes = get_response_output_attributes([reasoning, message])
+
+        assert attributes[MessageAttributes.COMPLETION_ID.format(i=0)] == "reasoning_1"
+        assert MessageAttributes.COMPLETION_CONTENT.format(i=0) not in attributes
+        assert attributes[MessageAttributes.COMPLETION_ID.format(i=1)] == "msg_1"
+        assert attributes[MessageAttributes.COMPLETION_CONTENT.format(i=1)] == "answer"
 
     def test_get_response_output_text_attributes(self):
         """Test extraction of attributes from output text"""
