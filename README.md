@@ -832,7 +832,7 @@ AgentOps is designed to make agent observability, testing, and monitoring easy.
 
 Check out our growth in the community:
 
-<img src="https://api.star-history.com/svg?repos=AgentOps-AI/agentops&type=Date" style="max-width: 500px" width="50%" alt="Logo">
+<img src="https://star-history.dera.page/svg?repos=AgentOps-AI/agentops&type=Date" style="max-width: 500px" width="50%" alt="Logo">
 
 ## Popular projects using AgentOps
 
