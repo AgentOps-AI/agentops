@@ -9,15 +9,19 @@ description: "Track and analyze your AG2 agents with AgentOps"
 
 <CodeGroup>
   ```bash pip
-  pip install agentops pyautogen
+  pip install agentops ag2
   ```
   ```bash poetry
-  poetry add agentops pyautogen
+  poetry add agentops ag2
   ```
   ```bash uv
-  uv pip install agentops pyautogen
+  uv pip install agentops ag2
   ```
 </CodeGroup>
+
+> ⚠️ **Important:** `pyautogen` is deprecated. `ag2` is now the recommended package.
+>
+> **API Migration:** The `ag2` package uses a different API than `pyautogen`. The examples below use the legacy `autogen` API and will be updated in a future version. For the current `ag2` API, see the [AG2 documentation](https://docs.ag2.ai/).
 
 ## Setting Up API Keys
 
