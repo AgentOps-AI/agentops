@@ -1,4 +1,6 @@
-from agentops.instrumentation.common.token_counting import TokenUsage
+from types import SimpleNamespace
+
+from agentops.instrumentation.common.token_counting import TokenUsage, TokenUsageExtractor
 from agentops.semconv import SpanAttributes
 
 
@@ -24,3 +26,31 @@ class TestTokenUsageToAttributes:
         assert SpanAttributes.LLM_USAGE_COMPLETION_TOKENS not in attrs
         assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in attrs
         assert attrs[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 5
+
+
+class TestTokenUsageExtractor:
+    def test_extracts_mapping_usage_metadata(self):
+        response = SimpleNamespace(
+            usage_metadata={
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "total_tokens": 15,
+            }
+        )
+
+        usage = TokenUsageExtractor.extract_from_response(response)
+
+        assert usage.prompt_tokens == 10
+        assert usage.completion_tokens == 5
+        assert usage.total_tokens == 15
+
+    def test_extracts_attribute_usage(self):
+        response = SimpleNamespace(
+            usage=SimpleNamespace(prompt_tokens=7, completion_tokens=3, total_tokens=10)
+        )
+
+        usage = TokenUsageExtractor.extract_from_response(response)
+
+        assert usage.prompt_tokens == 7
+        assert usage.completion_tokens == 3
+        assert usage.total_tokens == 10

@@ -6,6 +6,7 @@ information from various response formats.
 
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from collections.abc import Mapping
 
 from agentops.logging import logger
 from agentops.semconv import SpanAttributes
@@ -84,9 +85,19 @@ class TokenUsageExtractor:
 
     @staticmethod
     def _extract_from_usage_object(usage_data: Any) -> TokenUsage:
-        """Extract from a usage object with standard attributes."""
+        """Extract from a usage object or mapping with standard attribute names."""
         if not usage_data:
             return TokenUsage()
+
+        if isinstance(usage_data, Mapping):
+            return TokenUsage(
+                prompt_tokens=usage_data.get("prompt_tokens"),
+                completion_tokens=usage_data.get("completion_tokens"),
+                total_tokens=usage_data.get("total_tokens"),
+                cached_prompt_tokens=usage_data.get("cached_prompt_tokens"),
+                cached_read_tokens=usage_data.get("cache_read_input_tokens"),
+                reasoning_tokens=usage_data.get("reasoning_tokens"),
+            )
 
         return TokenUsage(
             prompt_tokens=getattr(usage_data, "prompt_tokens", None),
