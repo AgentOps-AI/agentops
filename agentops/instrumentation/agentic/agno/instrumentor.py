@@ -7,6 +7,7 @@ This provides clean visibility into agent workflows and actual tool usage with p
 parent-child span relationships.
 """
 
+import asyncio
 from typing import List, Any, Optional, Dict
 from opentelemetry import trace, context as otel_context
 from opentelemetry.trace import Status, StatusCode
@@ -140,6 +141,22 @@ class AsyncStreamingResultWrapper:
             # Clean up when iteration is complete
             if not self._consumed:
                 self._consumed = True
+                self.span.end()
+                self.streaming_context_manager.remove_context(self.agent_id)
+            raise
+        except asyncio.CancelledError as e:
+            if not self._consumed:
+                self._consumed = True
+                self.span.set_status(Status(StatusCode.ERROR, str(e)))
+                self.span.record_exception(e)
+                self.span.end()
+                self.streaming_context_manager.remove_context(self.agent_id)
+            raise
+        except Exception as e:
+            if not self._consumed:
+                self._consumed = True
+                self.span.set_status(Status(StatusCode.ERROR, str(e)))
+                self.span.record_exception(e)
                 self.span.end()
                 self.streaming_context_manager.remove_context(self.agent_id)
             raise
