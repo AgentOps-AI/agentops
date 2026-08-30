@@ -4,6 +4,7 @@ This module provides utilities for instrumenting streaming API responses
 in a consistent way across different providers.
 """
 
+import asyncio
 from typing import Optional, Any, Dict, Callable
 from abc import ABC
 import time
@@ -67,8 +68,12 @@ class BaseStreamWrapper(ABC):
                     self.token_usage.completion_tokens or 0
                 ) + chunk_usage.completion_tokens
 
-    def _finalize(self):
-        """Finalize the stream processing."""
+    def _finalize(self, *, set_success_status: bool = True):
+        """Finalize the stream processing.
+
+        Args:
+            set_success_status: Whether to mark the span as successful after setting final attributes.
+        """
         try:
             # Set final content
             final_content = "".join(self.accumulated_content)
@@ -87,7 +92,8 @@ class BaseStreamWrapper(ABC):
             for attr_name, value in self.token_usage.to_attributes().items():
                 safe_set_attribute(self.span, attr_name, value)
 
-            self.span.set_status(Status(StatusCode.OK))
+            if set_success_status:
+                self.span.set_status(Status(StatusCode.OK))
         except Exception as e:
             logger.error(f"Error finalizing stream: {e}")
             self.span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -100,32 +106,41 @@ class SyncStreamWrapper(BaseStreamWrapper):
     """Wrapper for synchronous streaming responses."""
 
     def __iter__(self):
+        failed = False
         try:
             for chunk in self.stream:
                 self._process_chunk(chunk)
                 yield chunk
         except Exception as e:
+            failed = True
             self.span.set_status(Status(StatusCode.ERROR, str(e)))
             self.span.record_exception(e)
             raise
         finally:
-            self._finalize()
+            self._finalize(set_success_status=not failed)
 
 
 class AsyncStreamWrapper(BaseStreamWrapper):
     """Wrapper for asynchronous streaming responses."""
 
     async def __aiter__(self):
+        failed = False
         try:
             async for chunk in self.stream:
                 self._process_chunk(chunk)
                 yield chunk
+        except asyncio.CancelledError as e:
+            failed = True
+            self.span.set_status(Status(StatusCode.ERROR, str(e)))
+            self.span.record_exception(e)
+            raise
         except Exception as e:
+            failed = True
             self.span.set_status(Status(StatusCode.ERROR, str(e)))
             self.span.record_exception(e)
             raise
         finally:
-            self._finalize()
+            self._finalize(set_success_status=not failed)
 
 
 def create_stream_wrapper_factory(
