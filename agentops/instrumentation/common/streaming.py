@@ -4,6 +4,7 @@ This module provides utilities for instrumenting streaming API responses
 in a consistent way across different providers.
 """
 
+import asyncio
 from typing import Optional, Any, Dict, Callable
 from abc import ABC
 import time
@@ -128,6 +129,11 @@ class AsyncStreamWrapper(BaseStreamWrapper):
             async for chunk in self.stream:
                 self._process_chunk(chunk)
                 yield chunk
+        except asyncio.CancelledError as e:
+            failed = True
+            self.span.set_status(Status(StatusCode.ERROR, str(e)))
+            self.span.record_exception(e)
+            raise
         except Exception as e:
             failed = True
             self.span.set_status(Status(StatusCode.ERROR, str(e)))

@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from unittest.mock import Mock, patch
 from types import SimpleNamespace
@@ -300,6 +302,27 @@ class TestAsyncStreamWrapper:
         statuses = [call.args[0].status_code for call in mock_span.set_status.call_args_list]
         assert statuses == [StatusCode.ERROR]
         mock_span.record_exception.assert_called_once()
+        mock_span.end.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_iteration_with_cancellation(self):
+        """Test cancellation is recorded without overwriting it with success."""
+
+        async def cancelled_async_stream():
+            yield "chunk1"
+            raise asyncio.CancelledError("stream cancelled")
+
+        mock_span = Mock()
+        extract_content = lambda x: x
+        wrapper = AsyncStreamWrapper(cancelled_async_stream(), mock_span, extract_content)
+
+        with pytest.raises(asyncio.CancelledError, match="stream cancelled") as exc_info:
+            async for chunk in wrapper:
+                pass
+
+        statuses = [call.args[0].status_code for call in mock_span.set_status.call_args_list]
+        assert statuses == [StatusCode.ERROR]
+        mock_span.record_exception.assert_called_once_with(exc_info.value)
         mock_span.end.assert_called_once()
 
 
