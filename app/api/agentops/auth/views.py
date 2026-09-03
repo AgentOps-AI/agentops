@@ -143,6 +143,9 @@ def _encode_session_cookie(session: Session) -> str:
     Currently this just includes the session_id in order to avoid storing any
     sensitive information in the cookie.
     """
+    if not AUTH_COOKIE_SECRET:
+        raise AuthException("AUTH_COOKIE_SECRET environment variable is not configured.")
+
     session_id = str(session.session_id)
     return jwt.encode({"session_id": session_id}, AUTH_COOKIE_SECRET, algorithm=AUTH_JWT_ALGO)
 
@@ -153,6 +156,9 @@ def _decode_session_cookie(cookie: str) -> Session | None:
     Raises AuthException if the cookie is invalid or expired.
     Returns None if the session is not found.
     """
+    if not AUTH_COOKIE_SECRET:
+        raise AuthException("AUTH_COOKIE_SECRET environment variable is not configured.")
+
     try:
         data = jwt.decode(cookie, AUTH_COOKIE_SECRET, algorithms=[AUTH_JWT_ALGO])
         return Session.get(data['session_id'])
