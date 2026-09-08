@@ -26,6 +26,35 @@ from agentops.instrumentation.providers.anthropic.attributes.tools import (
 )
 
 
+def get_usage_attributes(usage: Any) -> AttributeMap:
+    """Extract Anthropic token usage, including prompt-cache breakdowns.
+
+    Anthropic reports cache read and cache creation tokens separately from
+    native ``input_tokens``. Keep the existing native total unchanged and
+    expose those fields independently so consumers can choose their accounting
+    policy without double-counting cache tokens.
+    """
+    attributes = {}
+
+    usage_fields = {
+        SpanAttributes.LLM_USAGE_PROMPT_TOKENS: "input_tokens",
+        SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: "output_tokens",
+        SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS: "cache_read_input_tokens",
+        SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS: "cache_creation_input_tokens",
+    }
+    for attribute, field in usage_fields.items():
+        value = getattr(usage, field, None)
+        if value is not None:
+            attributes[attribute] = value
+
+    input_tokens = getattr(usage, "input_tokens", None)
+    output_tokens = getattr(usage, "output_tokens", None)
+    if input_tokens is not None and output_tokens is not None:
+        attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = input_tokens + output_tokens
+
+    return attributes
+
+
 def get_message_attributes(
     args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Any = None
 ) -> AttributeMap:
@@ -318,18 +347,7 @@ def get_message_response_attributes(response: "Message") -> AttributeMap:
 
     # Extract usage information
     if hasattr(response, "usage"):
-        usage = response.usage
-        if hasattr(usage, "input_tokens"):
-            input_tokens = usage.input_tokens
-            attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = input_tokens
-
-        if hasattr(usage, "output_tokens"):
-            output_tokens = usage.output_tokens
-            attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = output_tokens
-
-        if hasattr(usage, "input_tokens") and hasattr(usage, "output_tokens"):
-            total_tokens = usage.input_tokens + usage.output_tokens
-            attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
+        attributes.update(get_usage_attributes(response.usage))
 
     # Extract stop reason if available
     if hasattr(response, "stop_reason"):
@@ -435,19 +453,7 @@ def get_completion_response_attributes(response: "Completion") -> AttributeMap:
 
     # Extract usage information (newer versions have this)
     if hasattr(response, "usage"):
-        usage = response.usage
-        if hasattr(usage, "input_tokens"):
-            input_tokens = usage.input_tokens
-            attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = input_tokens
-
-        if hasattr(usage, "output_tokens"):
-            output_tokens = usage.output_tokens
-            attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = output_tokens
-
-        # Calculate total tokens if we have both input and output
-        if hasattr(usage, "input_tokens") and hasattr(usage, "output_tokens"):
-            total_tokens = usage.input_tokens + usage.output_tokens
-            attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
+        attributes.update(get_usage_attributes(response.usage))
 
     return attributes
 
@@ -518,18 +524,7 @@ def get_stream_event_attributes(event: Any) -> AttributeMap:
     elif event_type == "RawMessageStartEvent":
         if hasattr(event, "message"):
             if hasattr(event.message, "usage"):
-                usage = event.message.usage
-                if hasattr(usage, "input_tokens"):
-                    input_tokens = usage.input_tokens
-                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = input_tokens
-
-                if hasattr(usage, "output_tokens"):
-                    output_tokens = usage.output_tokens
-                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = output_tokens
-
-                if hasattr(usage, "input_tokens") and hasattr(usage, "output_tokens"):
-                    total_tokens = usage.input_tokens + usage.output_tokens
-                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
+                attributes.update(get_usage_attributes(event.message.usage))
 
     elif event_type == "RawMessageDeltaEvent":
         if hasattr(event, "delta"):

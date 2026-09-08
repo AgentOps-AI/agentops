@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 from opentelemetry.trace import SpanKind
 
@@ -108,7 +109,12 @@ def test_stream_final_message_attributes(mock_tracer, mock_stream_manager):
 
     final_message = MagicMock()
     final_message.content = [MagicMock(text="Final response")]
-    final_message.usage = MagicMock(input_tokens=10, output_tokens=20)
+    final_message.usage = SimpleNamespace(
+        input_tokens=10,
+        output_tokens=20,
+        cache_read_input_tokens=40,
+        cache_creation_input_tokens=30,
+    )
     mock_stream_manager._MessageStreamManager__stream._MessageStream__final_message_snapshot = final_message
 
     result = wrapper(wrapped, None, [], {})
@@ -123,3 +129,37 @@ def test_stream_final_message_attributes(mock_tracer, mock_stream_manager):
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, 10)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, 20)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 30)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, 40)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, 30)
+
+
+@pytest.mark.asyncio
+async def test_async_stream_final_message_attributes_include_cache_usage(mock_tracer, mock_async_stream_manager):
+    """Async stream final usage includes both Anthropic cache token fields."""
+    wrapper = messages_stream_async_wrapper(mock_tracer)
+    wrapped = MagicMock(return_value=mock_async_stream_manager)
+    final_message = SimpleNamespace(
+        content=[SimpleNamespace(text="Final response")],
+        usage=SimpleNamespace(
+            input_tokens=10,
+            output_tokens=20,
+            cache_read_input_tokens=40,
+            cache_creation_input_tokens=30,
+        ),
+    )
+    mock_async_stream_manager._AsyncMessageStreamManager__stream._AsyncMessageStream__final_message_snapshot = (
+        final_message
+    )
+
+    result = wrapper(wrapped, None, [], {})
+
+    async with result as stream:
+        async for _ in stream.text_stream:
+            pass
+
+    span = mock_tracer.start_span.return_value
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, 10)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, 20)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 30)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, 40)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, 30)
