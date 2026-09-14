@@ -48,7 +48,7 @@ async def req():
     # Start a streaming message request
     stream = client.messages.create(
         max_tokens=1024,
-        model="claude-3-7-sonnet-20250219",
+        model="claude-sonnet-5",
         messages=[
             {
                 "role": "user",
