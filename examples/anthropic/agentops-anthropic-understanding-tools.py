@@ -103,7 +103,7 @@ initial_messages = [
 # Now to construct a request!
 response = client.messages.create(
     max_tokens=5000,
-    model="claude-3-7-sonnet-20250219",
+    model="claude-sonnet-5",
     tools=[
         {
             "name": "generate_missions",
@@ -149,7 +149,7 @@ initial_messages.append(
 # And now to get a response!
 response = client.messages.create(
     max_tokens=5000,
-    model="claude-3-7-sonnet-20250219",
+    model="claude-sonnet-5",
     tools=[
         {
             "name": "generate_missions",
@@ -263,7 +263,7 @@ inventoryscan()
 # With that, let's construct our new tools and run this!!
 response = client.messages.create(
     max_tokens=5000,
-    model="claude-3-7-sonnet-20250219",
+    model="claude-sonnet-5",
     tools=[
         {
             "name": "enemyscan_tool",
@@ -344,7 +344,7 @@ initial_messages.append(
 )
 response = client.messages.create(
     max_tokens=5000,
-    model="claude-3-7-sonnet-20250219",
+    model="claude-sonnet-5",
     tools=[
         {
             "name": "enemyscan_tool",

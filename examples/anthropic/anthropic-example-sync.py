@@ -79,7 +79,7 @@ generatedsentence = f"{random.choice(first)} {random.choice(second)} {random.cho
 # And now to construct a stream/message! We set an example for the assistant now!
 stream = client.messages.create(
     max_tokens=2400,
-    model="claude-3-7-sonnet-20250219",  # Comma added here
+    model="claude-sonnet-5",  # Comma added here
     messages=[
         {
             "role": "user",

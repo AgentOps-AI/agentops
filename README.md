@@ -447,7 +447,7 @@ message = client.messages.create(
                 "content": "Tell me a cool fact about AgentOps",
             }
         ],
-        model="claude-3-opus-20240229",
+        model="claude-opus-5",
     )
 print(message.content)
 
@@ -469,7 +469,7 @@ client = anthropic.Anthropic(
 
 stream = client.messages.create(
     max_tokens=1024,
-    model="claude-3-opus-20240229",
+    model="claude-opus-5",
     messages=[
         {
             "role": "user",
@@ -510,7 +510,7 @@ async def main() -> None:
                 "content": "Tell me something interesting about async agents",
             }
         ],
-        model="claude-3-opus-20240229",
+        model="claude-opus-5",
     )
     print(message.content)
 
