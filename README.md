@@ -374,7 +374,7 @@ First class support for Cohere(>=5.4.0). This is a living integration, should yo
 pip install cohere
 ```
 
-```python python
+```python
 import cohere
 import agentops
 
@@ -391,7 +391,7 @@ print(chat)
 agentops.end_session('Success')
 ```
 
-```python python
+```python
 import cohere
 import agentops
 
@@ -427,7 +427,7 @@ Track agents built with the Anthropic Python SDK (>=0.32.0).
 pip install anthropic
 ```
 
-```python python
+```python
 import anthropic
 import agentops
 
@@ -455,7 +455,7 @@ agentops.end_session('Success')
 ```
 
 Streaming
-```python python
+```python
 import anthropic
 import agentops
 
@@ -491,7 +491,7 @@ for event in stream:
 
 Async
 
-```python python
+```python
 import asyncio
 from anthropic import AsyncAnthropic
 
@@ -535,7 +535,7 @@ pip install mistralai
 
 Sync
 
-```python python
+```python
 from mistralai import Mistral
 import agentops
 
@@ -563,7 +563,7 @@ agentops.end_session('Success')
 
 Streaming
 
-```python python
+```python
 from mistralai import Mistral
 import agentops
 
@@ -599,7 +599,7 @@ agentops.end_session('Success')
 
 Async
 
-```python python
+```python
 import asyncio
 from mistralai import Mistral
 
@@ -627,7 +627,7 @@ await main()
 
 Async Streaming
 
-```python python
+```python
 import asyncio
 from mistralai import Mistral
 
@@ -679,7 +679,7 @@ pip install camel-ai[all]
 pip install agentops
 ```
 
-```python python
+```python
 #Import Dependencies
 import agentops
 import os
@@ -714,7 +714,7 @@ AgentOps provides support for LiteLLM(>=1.3.1), allowing you to call 100+ LLMs u
 pip install litellm
 ```
 
-```python python
+```python
 # Do not use LiteLLM like this
 # from litellm import completion
 # ...
