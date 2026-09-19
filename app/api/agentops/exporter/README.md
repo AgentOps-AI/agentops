@@ -44,6 +44,6 @@ events -> span
 agent -> span (that holds other spans)
 "every event belongs to an agent"
 
-/sessions/{session_id}/stats # should be superceeded by braelyn API
+/sessions/{session_id}/stats # should be superseded by braelyn API
 
 92.5 GB of data

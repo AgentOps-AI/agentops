@@ -3627,7 +3627,7 @@ tracer = agentops.start_trace(
 )
 client = OpenAI()
 
-# And we are all set! Note the seesion url above. We will use it to track the chatbot.
+# And we are all set! Note the session url above. We will use it to track the chatbot.
 #
 # Let's create a simple chatbot that generates stories.
 system_prompt = """
@@ -3779,7 +3779,7 @@ class Tasks:
             description=dedent(
                 f"""\
 								Draft a job posting for the role described by the hiring manager: "{hiring_needs}". Use the insights on "{company_description}" to start with a compelling introduction, followed by a detailed role description, responsibilities, and required skills and qualifications. Ensure the tone aligns with the company's culture and incorporate any unique benefits or opportunities offered by the company.
-								Specfic benefits: "{specific_benefits}"""
+								Specific benefits: "{specific_benefits}"""
             ),
             expected_output=dedent(
                 """\
@@ -3796,7 +3796,7 @@ class Tasks:
             ),
             expected_output=dedent(
                 """\
-								A polished, error-free job posting that is clear, engaging, and perfectly aligned with the company's culture and values. Feedback on potential improvements and final approval for publishing. Formated in markdown."""
+								A polished, error-free job posting that is clear, engaging, and perfectly aligned with the company's culture and values. Feedback on potential improvements and final approval for publishing. Formatted in markdown."""
             ),
             agent=agent,
             output_file="job_posting.md",
