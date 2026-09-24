@@ -1,3 +1,4 @@
+import json
 import pytest
 from decimal import Decimal
 from pathlib import Path
@@ -174,6 +175,34 @@ class TestTokenCostFunctions:
         dumped = model.model_dump()
         assert dumped["input"] == "0.001"
         
+    def test_load_model_costs_skips_invalid_rows(self, tmp_path, monkeypatch):
+        """Invalid rows are skipped without aborting or duplicating a prior row."""
+        model_prices = {
+            "invalid-first": {
+                "litellm_provider": "test",
+                "input_cost_per_token": 0,
+                "output_cost_per_token": 0.00003,
+            },
+            "valid-model": {
+                "litellm_provider": "test",
+                "input_cost_per_token": 0.00001,
+                "output_cost_per_token": 0.00003,
+            },
+            "invalid-after-valid": {
+                "litellm_provider": "test",
+                "input_cost_per_token": 0,
+                "output_cost_per_token": 0.00003,
+            },
+        }
+        (tmp_path / "model_prices.json").write_text(
+            json.dumps(model_prices), encoding="utf-8"
+        )
+        monkeypatch.setattr("builder.costs.get_tokencost_path", lambda: tmp_path)
+
+        costs = load_model_costs()
+
+        assert [cost.model for cost in costs] == ["valid-model"]
+
     def test_get_tokencost_path_integration(self):
         """Integration test for get_tokencost_path with the real package."""
         path = get_tokencost_path()
