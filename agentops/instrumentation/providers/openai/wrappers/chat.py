@@ -197,9 +197,9 @@ def handle_chat_attributes(
                 attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["completion_tokens"]
 
             # Reasoning tokens
-            output_details = usage.get("output_tokens_details", {})
-            if isinstance(output_details, dict) and "reasoning_tokens" in output_details:
-                attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = output_details["reasoning_tokens"]
+            completion_details = usage.get("completion_tokens_details")
+            if isinstance(completion_details, dict) and completion_details.get("reasoning_tokens") is not None:
+                attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = completion_details["reasoning_tokens"]
 
         # Choices
         if should_send_prompts() and "choices" in response_dict:
