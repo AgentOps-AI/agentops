@@ -139,14 +139,45 @@ def _set_response_attributes(attributes: AttributeMap, response: Any) -> None:
     if hasattr(response, "model"):
         attributes[SpanAttributes.LLM_RESPONSE_MODEL] = response.model
 
-    if hasattr(response, "usage_metadata"):
-        usage = response.usage_metadata
-        if hasattr(usage, "prompt_token_count"):
-            attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage.prompt_token_count
-        if hasattr(usage, "candidates_token_count"):
-            attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage.candidates_token_count
-        if hasattr(usage, "total_token_count"):
-            attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage.total_token_count
+    usage = getattr(response, "usage_metadata", None) or getattr(response, "usage", None)
+    if usage is not None:
+        if isinstance(usage, dict):
+            prompt_tokens = (
+                usage.get("prompt_token_count")
+                or usage.get("input_token_count")
+                or usage.get("input_tokens")
+                or usage.get("prompt_tokens")
+            )
+            completion_tokens = (
+                usage.get("candidates_token_count")
+                or usage.get("output_token_count")
+                or usage.get("output_tokens")
+                or usage.get("completion_tokens")
+            )
+            total_tokens = usage.get("total_token_count") or usage.get("total_tokens")
+        else:
+            prompt_tokens = (
+                getattr(usage, "prompt_token_count", None)
+                or getattr(usage, "input_token_count", None)
+                or getattr(usage, "input_tokens", None)
+                or getattr(usage, "prompt_tokens", None)
+            )
+            completion_tokens = (
+                getattr(usage, "candidates_token_count", None)
+                or getattr(usage, "output_token_count", None)
+                or getattr(usage, "output_tokens", None)
+                or getattr(usage, "completion_tokens", None)
+            )
+            total_tokens = getattr(usage, "total_token_count", None) or getattr(usage, "total_tokens", None)
+
+        if prompt_tokens is not None:
+            attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = prompt_tokens
+        if completion_tokens is not None:
+            attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = completion_tokens
+        if total_tokens is not None:
+            attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
+        elif prompt_tokens is not None and completion_tokens is not None:
+            attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = prompt_tokens + completion_tokens
 
     try:
         if hasattr(response, "text"):

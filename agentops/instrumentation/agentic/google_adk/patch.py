@@ -265,26 +265,47 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
                 attributes[SpanAttributes.LLM_RESPONSE_MODEL] = response_dict["model"]
 
             # Usage metadata
-            if "usage_metadata" in response_dict:
-                usage = response_dict["usage_metadata"]
-                if "prompt_token_count" in usage:
-                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_token_count"]
-                if "candidates_token_count" in usage:
-                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["candidates_token_count"]
-                if "total_token_count" in usage:
-                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_token_count"]
+            usage = response_dict.get("usage_metadata") or response_dict.get("usage")
+            if usage and isinstance(usage, dict):
+                prompt_tokens = (
+                    usage.get("prompt_token_count")
+                    or usage.get("input_token_count")
+                    or usage.get("input_tokens")
+                    or usage.get("prompt_tokens")
+                )
+                completion_tokens = (
+                    usage.get("candidates_token_count")
+                    or usage.get("output_token_count")
+                    or usage.get("output_tokens")
+                    or usage.get("completion_tokens")
+                )
+                total_tokens = (
+                    usage.get("total_token_count")
+                    or usage.get("total_tokens")
+                )
+
+                if prompt_tokens is not None:
+                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = prompt_tokens
+                if completion_tokens is not None:
+                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = completion_tokens
+                if total_tokens is not None:
+                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
+                elif prompt_tokens is not None and completion_tokens is not None:
+                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = prompt_tokens + completion_tokens
 
                 # Additional token details if available
-                if "prompt_tokens_details" in usage:
-                    for detail in usage["prompt_tokens_details"]:
-                        if "modality" in detail and "token_count" in detail:
+                prompt_details = usage.get("prompt_tokens_details") or usage.get("input_tokens_details")
+                if prompt_details and isinstance(prompt_details, list):
+                    for detail in prompt_details:
+                        if isinstance(detail, dict) and "modality" in detail and "token_count" in detail:
                             attributes[f"gen_ai.usage.prompt_tokens.{detail['modality'].lower()}"] = detail[
                                 "token_count"
                             ]
 
-                if "candidates_tokens_details" in usage:
-                    for detail in usage["candidates_tokens_details"]:
-                        if "modality" in detail and "token_count" in detail:
+                candidates_details = usage.get("candidates_tokens_details") or usage.get("output_tokens_details")
+                if candidates_details and isinstance(candidates_details, list):
+                    for detail in candidates_details:
+                        if isinstance(detail, dict) and "modality" in detail and "token_count" in detail:
                             attributes[f"gen_ai.usage.completion_tokens.{detail['modality'].lower()}"] = detail[
                                 "token_count"
                             ]
