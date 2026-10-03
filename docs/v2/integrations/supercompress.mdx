@@ -1,0 +1,108 @@
+---
+title: SuperCompress
+description: "Compress bulky agent context before LLM calls and track the token/cost impact with AgentOps"
+---
+
+[SuperCompress](https://www.supercompress.dev) is query-aware context compression for LLM agents.
+It shrinks noisy tool dumps and history **before** the model call while keeping the user ask intact.
+AgentOps then traces the resulting LLM spend so you can see dollars avoided in the dashboard.
+
+## Why SuperCompress + AgentOps?
+
+| Concern | SuperCompress | AgentOps |
+| ------- | ------------- | -------- |
+| Cut tokens in bulky context | ✅ | — |
+| Keep the latest user ask untouched | ✅ | — |
+| Replay / debug agent runs | — | ✅ |
+| Track LLM cost across providers | — | ✅ |
+
+Typical agent flows pay for huge system/tool payloads. Compress first, then let AgentOps show the cheaper completion.
+
+## Installation
+
+<CodeGroup>
+```bash pip
+pip install agentops supercompress openai python-dotenv
+```
+```bash poetry
+poetry add agentops supercompress openai python-dotenv
+```
+```bash uv
+uv pip install agentops supercompress openai python-dotenv
+```
+</CodeGroup>
+
+## API keys
+
+- **AGENTOPS_API_KEY** — [AgentOps dashboard](https://app.agentops.ai/settings/projects)
+- **OPENAI_API_KEY** — (or any OpenAI-compatible provider you call after compress)
+- **SUPERCOMPRESS_API_KEY** — optional; required only for hosted `mode="precision"` / Neural Keep. Local `mode="compiler"` works without it.
+
+<CodeGroup>
+```bash Export to CLI
+export AGENTOPS_API_KEY="your_agentops_api_key_here"
+export OPENAI_API_KEY="your_openai_api_key_here"
+# optional hosted SuperCompress
+export SUPERCOMPRESS_API_KEY="your_supercompress_api_key_here"
+```
+```txt Set in .env file
+AGENTOPS_API_KEY="your_agentops_api_key_here"
+OPENAI_API_KEY="your_openai_api_key_here"
+SUPERCOMPRESS_API_KEY="your_supercompress_api_key_here"
+```
+</CodeGroup>
+
+## Usage
+
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import agentops
+from openai import OpenAI
+from supercompress import compress_for_turn
+
+agentops.init(auto_start_session=False, trace_name="SuperCompress Example")
+tracer = agentops.start_trace(
+    trace_name="SuperCompress Example",
+    tags=["supercompress", "token-savings"],
+)
+
+bulky_context = "... long tool dump / history ..."
+user_ask = "Why does checkout crash on empty cart?"
+
+# Never put the ask into the compression target as the only input —
+# pass it as user_query so SuperCompress keeps it intact.
+result = compress_for_turn(
+    context="",
+    user_query=user_ask,
+    context_blocks=[bulky_context],
+    budget_ratio=0.35,
+    mode="compiler",  # or "precision" with SUPERCOMPRESS_API_KEY
+)
+
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "system", "content": result.compressed_text},
+        {"role": "user", "content": user_ask},
+    ],
+)
+print(response.choices[0].message.content)
+print(f"tokens {result.original_tokens} → {result.kept_tokens}")
+
+agentops.end_trace(tracer, end_state="Success")
+```
+
+## Example notebook
+
+See [`examples/supercompress/`](https://github.com/AgentOps-AI/agentops/tree/main/examples/supercompress) for a runnable script + notebook.
+
+## Links
+
+- [SuperCompress](https://www.supercompress.dev)
+- [SuperCompress docs](https://www.supercompress.dev/docs/integrations)
+- [AgentOps dashboard](https://app.agentops.ai)
