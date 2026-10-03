@@ -1,0 +1,4 @@
+agentops
+openai
+supercompress
+python-dotenv

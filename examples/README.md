@@ -61,6 +61,10 @@ This directory contains comprehensive examples demonstrating how to integrate Ag
   - `grok_examples` - Basic Grok API usage
   - `grok_vision_examples` - Vision capabilities with Grok
 
+
+- **[`supercompress/`](./supercompress/)** - Query-aware context compression before LLM calls
+ - `supercompress_example` - Compress bulky agent dumps, keep the ask, track savings in AgentOps
+
 ### Utility Scripts
 
 - **[`generate_documentation.py`](./generate_documentation.py)** - Script to convert Jupyter notebooks to MDX documentation files

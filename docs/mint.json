@@ -157,6 +157,7 @@
         "v2/integrations/openai_agents_python",
         "v2/integrations/openai_agents_js",
         "v2/integrations/smolagents",
+        "v2/integrations/supercompress",
         "v2/integrations/ibm_watsonx_ai",
         "v2/integrations/xai",
         "v2/integrations/xpander"
