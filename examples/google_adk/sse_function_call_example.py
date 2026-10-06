@@ -35,7 +35,7 @@ agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"), trace_name="adk_sse_text_fu
 APP_NAME = "adk_sse_text_function_call_app"
 USER_ID = "user_sse_text_fc"
 SESSION_ID = "session_sse_text_fc"
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-3.6-flash"
 
 
 # Simple tool to trigger a function call
