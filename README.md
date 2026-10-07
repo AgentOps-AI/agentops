@@ -523,7 +523,7 @@ await main()
 
 Track agents built with the Mistral Python SDK (>=0.32.0).
 
-- [AgentOps integration example](./examples/mistral//mistral_example.ipynb)
+- [AgentOps integration example](docs/v1/integrations/mistral.mdx)
 - [Official Mistral documentation](https://docs.mistral.ai)
 
 <details>
@@ -696,7 +696,7 @@ agentops_api_key = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
 ```
 </details>
 
-[You can find usage examples here!](examples/camelai_examples/README.md).
+[You can find usage examples here!](docs/v1/integrations/camel.mdx).
 
 
 
