@@ -24,7 +24,7 @@ This directory contains comprehensive examples demonstrating how to integrate Ag
   - `job_posting` - Job posting automation workflow
   - `markdown_validator` - Markdown validation agent
 
-- **[`gemini/`](./gemini/)** - Google Gemini API integration
+- **[`google_genai/`](./google_genai/)** - Google Gemini API integration
   - `gemini_example` - Basic Gemini API usage with AgentOps
 
 - **[`google_adk/`](./google_adk/)** - Google AI Development Kit examples
