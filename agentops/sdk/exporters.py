@@ -66,7 +66,10 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         if compression is not None:
             parent_kwargs["compression"] = compression
 
-        super().__init__(endpoint=endpoint, **parent_kwargs)
+        # OpenTelemetry >=1.45 dropped the exporter's `_headers` and `_session` attributes, so keep our own session
+        # and hand it to the parent through its public `session` argument.
+        self._auth_session = requests.Session()
+        super().__init__(endpoint=endpoint, session=self._auth_session, **parent_kwargs)
 
     def _get_current_jwt(self) -> Optional[str]:
         """Get the current JWT token from the provider or stored JWT."""
@@ -104,7 +107,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
     def _prepare_headers(self, headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """Prepare headers with current JWT token."""
         # Start with base headers
-        prepared_headers = dict(self._headers)
+        prepared_headers = dict(self._auth_session.headers)
 
         # Add any additional headers, but only allow non-critical headers
         filtered_headers = self._filter_user_headers(headers)
@@ -137,8 +140,8 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
             current_headers = self._prepare_headers()
 
             # Temporarily update the session headers for this request
-            original_headers = dict(self._session.headers)
-            self._session.headers.update(current_headers)
+            original_headers = dict(self._auth_session.headers)
+            self._auth_session.headers.update(current_headers)
 
             try:
                 # Call parent export method
@@ -153,8 +156,8 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
 
             finally:
                 # Restore original headers
-                self._session.headers.clear()
-                self._session.headers.update(original_headers)
+                self._auth_session.headers.clear()
+                self._auth_session.headers.update(original_headers)
 
         except requests.exceptions.HTTPError as e:
             if e.response and e.response.status_code in (401, 403):
