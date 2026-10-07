@@ -6,8 +6,9 @@ import unittest
 from unittest.mock import Mock, patch
 
 import requests
-from opentelemetry.sdk.trace import ReadableSpan
-from opentelemetry.sdk.trace.export import SpanExportResult
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.exporter.otlp.proto.http import Compression
 
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
@@ -232,6 +233,38 @@ class TestAuthenticatedOTLPExporterIntegration(unittest.TestCase):
 
             # Test clear method
             exporter.clear()  # Should not raise any exception
+
+    def test_export_sends_jwt_and_custom_headers(self):
+        """The real parent export path must put the JWT and allowed custom headers on the request."""
+        memory_exporter = InMemorySpanExporter()
+        provider = TracerProvider()
+        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
+        with provider.get_tracer("test").start_as_current_span("span"):
+            pass
+
+        sent = []
+
+        def fake_send(session, request, **kwargs):
+            sent.append(request)
+            response = requests.Response()
+            response.status_code = 200
+            response._content = b""
+            response.request = request
+            return response
+
+        exporter = AuthenticatedOTLPExporter(
+            endpoint=self.endpoint,
+            jwt=self.jwt,
+            headers={"X-Custom-Header": "test-value", "Authorization": "Malicious-Auth malicious-token"},
+        )
+
+        with patch.object(requests.Session, "send", autospec=True, side_effect=fake_send):
+            result = exporter.export(memory_exporter.get_finished_spans())
+
+        self.assertEqual(result, SpanExportResult.SUCCESS)
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(sent[0].headers["Authorization"], f"Bearer {self.jwt}")
+        self.assertEqual(sent[0].headers["X-Custom-Header"], "test-value")
 
     def test_export_with_different_compression_types(self):
         """Test exporter with different compression types."""
