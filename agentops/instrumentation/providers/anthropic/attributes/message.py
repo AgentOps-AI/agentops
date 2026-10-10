@@ -30,9 +30,11 @@ def get_usage_attributes(usage: Any) -> AttributeMap:
     """Extract Anthropic token usage, including prompt-cache breakdowns.
 
     Anthropic reports cache read and cache creation tokens separately from
-    native ``input_tokens``. Keep the existing native total unchanged and
-    expose those fields independently so consumers can choose their accounting
-    policy without double-counting cache tokens.
+    native ``input_tokens``. Keep the native input and cache buckets as separate
+    attributes, and include all three input buckets in ``total_tokens`` so its
+    basis matches providers whose input count already includes cached tokens.
+    The cache bucket attributes are details of input usage and are already
+    included in ``total_tokens``.
     """
     attributes = {}
 
@@ -50,7 +52,14 @@ def get_usage_attributes(usage: Any) -> AttributeMap:
     input_tokens = getattr(usage, "input_tokens", None)
     output_tokens = getattr(usage, "output_tokens", None)
     if input_tokens is not None and output_tokens is not None:
-        attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = input_tokens + output_tokens
+        cache_read_tokens = getattr(usage, "cache_read_input_tokens", None)
+        cache_creation_tokens = getattr(usage, "cache_creation_input_tokens", None)
+        total_tokens = input_tokens + output_tokens
+        if cache_read_tokens is not None:
+            total_tokens += cache_read_tokens
+        if cache_creation_tokens is not None:
+            total_tokens += cache_creation_tokens
+        attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
 
     return attributes
 

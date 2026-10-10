@@ -128,7 +128,7 @@ def test_stream_final_message_attributes(mock_tracer, mock_stream_manager):
     span.set_attribute.assert_any_call(MessageAttributes.COMPLETION_CONTENT.format(i=0), "Final response")
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, 10)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, 20)
-    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 30)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 100)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, 40)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, 30)
 
@@ -160,6 +160,6 @@ async def test_async_stream_final_message_attributes_include_cache_usage(mock_tr
     span = mock_tracer.start_span.return_value
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, 10)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, 20)
-    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 30)
+    span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 100)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, 40)
     span.set_attribute.assert_any_call(SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, 30)
