@@ -17,6 +17,7 @@ from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
 from agentops.instrumentation.providers.anthropic.attributes.message import (
     get_message_request_attributes,
     get_stream_attributes,
+    get_usage_attributes,
 )
 from agentops.instrumentation.providers.anthropic.event_handler_wrapper import EventHandleWrapper
 
@@ -165,16 +166,8 @@ def messages_stream_wrapper(tracer, wrapped, instance, args, kwargs):
                                     span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), content_text)
 
                             if hasattr(final_message, "usage"):
-                                usage = final_message.usage
-                                if hasattr(usage, "input_tokens"):
-                                    span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.input_tokens)
-
-                                if hasattr(usage, "output_tokens"):
-                                    span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, usage.output_tokens)
-
-                                if hasattr(usage, "input_tokens") and hasattr(usage, "output_tokens"):
-                                    total_tokens = usage.input_tokens + usage.output_tokens
-                                    span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
+                                for key, value in get_usage_attributes(final_message.usage).items():
+                                    span.set_attribute(key, value)
                     except Exception as e:
                         logger.debug(f"Failed to extract final message data: {e}")
                 finally:
@@ -404,18 +397,8 @@ def messages_stream_async_wrapper(tracer, wrapped, instance, args, kwargs):
                                         )
 
                                 if hasattr(final_message, "usage"):
-                                    usage = final_message.usage
-                                    if hasattr(usage, "input_tokens"):
-                                        span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.input_tokens)
-
-                                    if hasattr(usage, "output_tokens"):
-                                        span.set_attribute(
-                                            SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, usage.output_tokens
-                                        )
-
-                                    if hasattr(usage, "input_tokens") and hasattr(usage, "output_tokens"):
-                                        total_tokens = usage.input_tokens + usage.output_tokens
-                                        span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
+                                    for key, value in get_usage_attributes(final_message.usage).items():
+                                        span.set_attribute(key, value)
                         except Exception as e:
                             logger.debug(f"Failed to extract final async message data: {e}")
                     finally:

@@ -1,5 +1,7 @@
 """Tests for Anthropic attribute extraction functionality."""
 
+from types import SimpleNamespace
+
 from agentops.semconv import (
     InstrumentationAttributes,
     SpanAttributes,
@@ -12,6 +14,7 @@ from agentops.instrumentation.providers.anthropic.attributes.common import (
     extract_request_attributes,
 )
 from agentops.instrumentation.providers.anthropic.attributes.message import (
+    get_message_response_attributes,
     get_message_request_attributes,
     get_stream_attributes,
     get_stream_event_attributes,
@@ -72,6 +75,29 @@ def test_get_message_request_attributes():
     assert MessageAttributes.PROMPT_CONTENT.format(i=1) in attributes
 
 
+def test_get_message_response_attributes_exposes_cache_usage_separately():
+    """Cache buckets remain separate attributes and are included in the total."""
+    response = SimpleNamespace(
+        id="msg_cache",
+        model="claude-sonnet",
+        content=[],
+        usage=SimpleNamespace(
+            input_tokens=100,
+            output_tokens=20,
+            cache_read_input_tokens=500,
+            cache_creation_input_tokens=50,
+        ),
+    )
+
+    attributes = get_message_response_attributes(response)
+
+    assert attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 100
+    assert attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 20
+    assert attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 670
+    assert attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] == 500
+    assert attributes[SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS] == 50
+
+
 # Stream Attributes Tests
 def test_get_stream_attributes():
     """Test extraction of stream attributes."""
@@ -108,6 +134,8 @@ def test_get_stream_event_attributes_raw_message_start():
         def __init__(self):
             self.input_tokens = 10
             self.output_tokens = 5
+            self.cache_read_input_tokens = 40
+            self.cache_creation_input_tokens = 30
 
     class MockMessage:
         def __init__(self):
@@ -123,7 +151,9 @@ def test_get_stream_event_attributes_raw_message_start():
 
     assert attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 10
     assert attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 5
-    assert attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 15
+    assert attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 85
+    assert attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] == 40
+    assert attributes[SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS] == 30
 
 
 def test_get_stream_event_attributes_raw_message_delta():
