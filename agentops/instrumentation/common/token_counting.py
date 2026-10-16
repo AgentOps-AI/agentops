@@ -32,9 +32,15 @@ class TokenUsage:
 
         if self.prompt_tokens:
             attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = self.prompt_tokens
+            # Legacy names are compatibility aliases: consumers should prefer the current OTel
+            # GenAI names; summing both families double-counts the same usage.
+            attributes[SpanAttributes.LLM_USAGE_INPUT_TOKENS] = self.prompt_tokens
 
         if self.completion_tokens:
             attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = self.completion_tokens
+            # Legacy names are compatibility aliases: consumers should prefer the current OTel
+            # GenAI names; summing both families double-counts the same usage.
+            attributes[SpanAttributes.LLM_USAGE_OUTPUT_TOKENS] = self.completion_tokens
 
         if self.total_tokens:
             attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = self.total_tokens

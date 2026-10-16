@@ -21,6 +21,18 @@ class TestTokenUsageToAttributes:
         attrs = usage.to_attributes()
         assert SpanAttributes.LLM_USAGE_PROMPT_TOKENS in attrs
         assert attrs[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 5
+        assert SpanAttributes.LLM_USAGE_INPUT_TOKENS in attrs
+        assert attrs[SpanAttributes.LLM_USAGE_INPUT_TOKENS] == 5
         assert SpanAttributes.LLM_USAGE_COMPLETION_TOKENS not in attrs
+        assert SpanAttributes.LLM_USAGE_OUTPUT_TOKENS not in attrs
         assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in attrs
         assert attrs[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 5
+
+    def test_dual_emits_current_otel_genai_names(self):
+        usage = TokenUsage(prompt_tokens=10, completion_tokens=4, total_tokens=14)
+        attrs = usage.to_attributes()
+        assert attrs[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 10
+        assert attrs[SpanAttributes.LLM_USAGE_INPUT_TOKENS] == 10
+        assert attrs[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 4
+        assert attrs[SpanAttributes.LLM_USAGE_OUTPUT_TOKENS] == 4
+        assert attrs[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 14

@@ -58,8 +58,12 @@ class SpanAttributes:
     LLM_RESPONSE_ID = "gen_ai.response.id"
 
     # Usage metrics
+    # Legacy GenAI names still emitted by AgentOps; current OTel GenAI names are
+    # dual-emitted during the transition (#1447).
     LLM_USAGE_COMPLETION_TOKENS = "gen_ai.usage.completion_tokens"
     LLM_USAGE_PROMPT_TOKENS = "gen_ai.usage.prompt_tokens"
+    LLM_USAGE_INPUT_TOKENS = "gen_ai.usage.input_tokens"
+    LLM_USAGE_OUTPUT_TOKENS = "gen_ai.usage.output_tokens"
     LLM_USAGE_TOTAL_TOKENS = "gen_ai.usage.total_tokens"
     LLM_USAGE_CACHE_CREATION_INPUT_TOKENS = "gen_ai.usage.cache_creation_input_tokens"
     LLM_USAGE_CACHE_READ_INPUT_TOKENS = "gen_ai.usage.cache_read_input_tokens"
