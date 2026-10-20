@@ -116,6 +116,7 @@ def load_model_costs() -> list[ModelCost]:
             cost = ModelCost.from_tokencost_json(model_name, model_data)
         except pydantic.ValidationError:
             print(f"Model {model_name} has invalid data. Skipping.")
+            continue
         costs.append(cost)
 
     print(f"Loaded {len(costs)} model costs from {json_path}")
