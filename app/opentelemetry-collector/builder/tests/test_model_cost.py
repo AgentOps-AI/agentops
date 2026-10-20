@@ -1,3 +1,4 @@
+import json
 import pytest
 from decimal import Decimal
 from pathlib import Path
@@ -219,3 +220,36 @@ class TestTokenCostFunctions:
         # At least one of these common models should be present
         assert any(model in model_names for model in common_models), \
             f"None of the common models {common_models} found in {model_names[:5]}..."
+
+class TestLoadModelCostsInvalidRows:
+    """Regression tests for skipping invalid rows in load_model_costs (issue #1460)."""
+
+    VALID_A = {"litellm_provider": "openai", "input_cost_per_token": 0.00001, "output_cost_per_token": 0.00003}
+    VALID_B = {"litellm_provider": "anthropic", "input_cost_per_token": 0.000015, "output_cost_per_token": 0.000075}
+    # zero input cost is converted to None by the validator, which fails the required Decimal field
+    INVALID = {"litellm_provider": "openai", "input_cost_per_token": 0, "output_cost_per_token": 0.00003}
+
+    def _load(self, tmp_path, monkeypatch, data):
+        (tmp_path / "model_prices.json").write_text(json.dumps(data))
+        monkeypatch.setattr("builder.costs.get_tokencost_path", lambda: tmp_path)
+        return load_model_costs()
+
+    def test_invalid_first_row_is_skipped(self, tmp_path, monkeypatch):
+        """An invalid first row must not raise UnboundLocalError and must be omitted."""
+        costs = self._load(tmp_path, monkeypatch, {
+            "bad-model": self.INVALID,
+            "gpt-4": self.VALID_A,
+            "claude-3-opus": self.VALID_B,
+        })
+
+        assert [cost.model for cost in costs] == ["gpt-4", "claude-3-opus"]
+
+    def test_invalid_middle_row_does_not_duplicate_previous(self, tmp_path, monkeypatch):
+        """An invalid row after a valid one must not re-append the previous model."""
+        costs = self._load(tmp_path, monkeypatch, {
+            "gpt-4": self.VALID_A,
+            "bad-model": self.INVALID,
+            "claude-3-opus": self.VALID_B,
+        })
+
+        assert [cost.model for cost in costs] == ["gpt-4", "claude-3-opus"]
