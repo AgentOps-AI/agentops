@@ -40,11 +40,11 @@ def _process_sync_generator(span: trace.Span, generator: types.GeneratorType):
     # Ensure span context is attached to the generator context
     context_api.attach(trace.set_span_in_context(span))
 
-    # Yield from the generator while maintaining span context
-    yield from generator
-
-    # End the span when generator is exhausted
-    span.end()
+    try:
+        yield from generator
+    finally:
+        # End the span on exhaustion, errors, and explicit generator.close().
+        span.end()
     # No detach because of OpenTelemetry issue #2606
     # Context will be detached during garbage collection
 

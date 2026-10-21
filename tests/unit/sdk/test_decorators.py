@@ -1,12 +1,52 @@
 from typing import AsyncGenerator
 import asyncio
 import pytest
+from opentelemetry import context as context_api
 
 from agentops.sdk.decorators import agent, operation, session, workflow, task, tool
 from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 from agentops.sdk.decorators.factory import create_entity_decorator
+
+
+@pytest.fixture
+def isolated_generator_context():
+    token = context_api.attach(context_api.get_current())
+    yield
+    context_api.detach(token)
+
+
+@pytest.mark.usefixtures("isolated_generator_context")
+@pytest.mark.parametrize("entity_kind", [SpanKind.TASK, SpanKind.SESSION])
+@pytest.mark.parametrize("termination", ["error", "close"])
+def test_sync_generator_span_ends_on_early_exit(instrumentation: InstrumentationTester, entity_kind, termination):
+    error = ValueError("stream failed")
+    cleanup = []
+
+    @create_entity_decorator(entity_kind)
+    def stream():
+        try:
+            yield "first"
+            raise error
+        finally:
+            cleanup.append("closed")
+
+    result = stream()
+    assert next(result) == "first"
+    assert instrumentation.get_finished_spans() == []
+
+    if termination == "error":
+        with pytest.raises(ValueError) as caught:
+            next(result)
+        assert caught.value is error
+    else:
+        result.close()
+
+    assert cleanup == ["closed"]
+    spans = instrumentation.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].name == f"stream.{entity_kind}"
 
 
 class TestSpanNesting:
