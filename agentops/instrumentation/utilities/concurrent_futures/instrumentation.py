@@ -82,9 +82,9 @@ def _context_propagating_submit(original_submit: Callable) -> Callable:
         # Log the submission
         func_name = getattr(func, "__name__", str(func))  # noqa: F841
 
-        # The context propagation is handled by the initializer, so we can submit normally
-        # But we can add additional logging or monitoring here if needed
-        return original_submit(self, func, *args, **kwargs)
+        # Capture each caller's context even when the executor is reused.
+        context = contextvars.copy_context()
+        return original_submit(self, context.run, func, *args, **kwargs)
 
     return wrapped_submit
 
