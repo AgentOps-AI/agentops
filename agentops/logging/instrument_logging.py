@@ -88,7 +88,10 @@ def upload_logfile(trace_id: int) -> None:
         return
 
     client = get_client()
-    client.api.v4.upload_logfile(log_content, trace_id)
+    if hasattr(client, "wait_for_auth"):
+        client.wait_for_auth()
+    if getattr(client.api.v4, "auth_token", None):
+        client.api.v4.upload_logfile(log_content, trace_id)
 
     # Clear the buffer after upload
     _log_buffer.seek(0)

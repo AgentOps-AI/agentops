@@ -67,6 +67,11 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
             parent_kwargs["compression"] = compression
 
         super().__init__(endpoint=endpoint, **parent_kwargs)
+        if not hasattr(self, "_headers"):
+            self._headers = getattr(getattr(self, "_client", None), "_headers", None) or (filtered_headers or {})
+        if not hasattr(self, "_session"):
+            transport = getattr(getattr(self, "_client", None), "_transport", None)
+            self._session = getattr(transport, "_session", None) or requests.Session()
 
     def _get_current_jwt(self) -> Optional[str]:
         """Get the current JWT token from the provider or stored JWT."""
@@ -139,6 +144,8 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
             # Temporarily update the session headers for this request
             original_headers = dict(self._session.headers)
             self._session.headers.update(current_headers)
+            if hasattr(self, "_client") and hasattr(self._client, "_headers"):
+                self._client._headers.update(current_headers)
 
             try:
                 # Call parent export method
