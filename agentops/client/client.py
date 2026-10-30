@@ -25,6 +25,8 @@ def _end_init_trace_atexit():
     if _client_init_trace_context is not None:
         logger.debug("Auto-ending client's init trace during shutdown.")
         try:
+            if Client._Client__instance is not None:
+                Client._Client__instance.wait_for_auth()
             # Use global tracer to end the trace directly
             if tracer.initialized and _client_init_trace_context.span.is_recording():
                 tracer.end_trace(_client_init_trace_context, end_state="Shutdown")
@@ -77,8 +79,16 @@ class Client:
             # self._init_trace_context = None # Already done in __new__
             # self._legacy_session_for_init_trace = None # Already done in __new__
 
+    def wait_for_auth(self, timeout: float = 10.0) -> None:
+        """Wait for any pending background authentication thread to complete."""
+        auth_thread = getattr(self, "_auth_thread", None)
+        if auth_thread is not None and auth_thread.is_alive():
+            auth_thread.join(timeout=timeout)
+
     def get_current_jwt(self) -> Optional[str]:
         """Get the current JWT token."""
+        if self._auth_token is None:
+            self.wait_for_auth()
         with self._auth_lock:
             return self._auth_token
 
@@ -114,6 +124,12 @@ class Client:
                 return None
         except Exception:
             return None
+        finally:
+            try:
+                from agentops.client.http.http_client import HttpClient
+                await HttpClient.close_async_session()
+            except Exception:
+                pass
 
     def _start_auth_task(self, api_key: str):
         """Start the async authentication task."""
@@ -133,7 +149,9 @@ class Client:
                 import threading
 
                 auth_thread = threading.Thread(target=run_async_auth, daemon=True)
+                self._auth_thread = auth_thread
                 auth_thread.start()
+                self.wait_for_auth(timeout=15.0)
         except RuntimeError:
             # Create new event loop in background thread
             def run_async_auth():
@@ -142,7 +160,9 @@ class Client:
             import threading
 
             auth_thread = threading.Thread(target=run_async_auth, daemon=True)
+            self._auth_thread = auth_thread
             auth_thread.start()
+            self.wait_for_auth(timeout=15.0)
 
     def init(self, **kwargs: Any) -> None:  # Return type updated to None
         # Recreate the Config object to parse environment variables at the time of initialization
