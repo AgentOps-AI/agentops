@@ -51,6 +51,7 @@ class OpenaiStreamWrapper:
         self._usage = None
         self._tool_calls = {}
         self._current_tool_call_index = None
+        self._finished = False
 
         # Make sure the span is attached to the current context
         current_context = context_api.get_current()
@@ -62,12 +63,19 @@ class OpenaiStreamWrapper:
 
     def __next__(self) -> Any:
         """Process the next chunk from the stream."""
+        if self._finished:
+            raise StopIteration
         try:
             chunk = next(self._stream)
             self._process_chunk(chunk)
             return chunk
         except StopIteration:
             self._finalize_stream()
+            raise
+        except Exception as e:
+            self._span.record_exception(e)
+            self._span.set_status(Status(StatusCode.ERROR, str(e)))
+            self._end_stream()
             raise
 
     def __enter__(self):
@@ -76,13 +84,22 @@ class OpenaiStreamWrapper:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Clean up on context manager exit."""
-        if exc_type is not None:
+        if not self._finished and exc_type is not None:
             self._span.record_exception(exc_val)
             self._span.set_status(Status(StatusCode.ERROR, str(exc_val)))
 
-        self._span.end()
-        context_api.detach(self._token)
+        self._end_stream()
         return False
+
+    def _end_stream(self) -> None:
+        """End the span and detach its context once across terminal paths."""
+        if self._finished:
+            return
+        self._finished = True
+        try:
+            self._span.end()
+        finally:
+            context_api.detach(self._token)
 
     def _process_chunk(self, chunk: Any) -> None:
         """Process a single chunk from the stream.
@@ -228,8 +245,7 @@ class OpenaiStreamWrapper:
 
         # Finalize span and context
         self._span.set_status(Status(StatusCode.OK))
-        self._span.end()
-        context_api.detach(self._token)
+        self._end_stream()
 
 
 class OpenAIAsyncStreamWrapper:
