@@ -5,6 +5,7 @@ from typing import Optional, Any
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
+from agentops.exceptions import ApiServerException, InvalidApiKeyException
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
 from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
@@ -93,7 +94,7 @@ class Client:
 
         HttpClient.set_project_id(project_id)
 
-    async def _fetch_auth_async(self, api_key: str) -> Optional[dict]:
+    async def _fetch_auth_async(self, api_key: str, raise_errors: bool = False) -> Optional[dict]:
         """Asynchronously fetch authentication token."""
         try:
             response = await self.api.v3.fetch_auth_token(api_key)
@@ -112,6 +113,10 @@ class Client:
             else:
                 logger.debug("Authentication failed - will continue without authentication")
                 return None
+        except (InvalidApiKeyException, ApiServerException):
+            if raise_errors:
+                raise
+            return None
         except Exception:
             return None
 
@@ -121,28 +126,15 @@ class Client:
             return  # Task already running
 
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Use existing event loop
-                self._auth_task = loop.create_task(self._fetch_auth_async(api_key))
-            else:
-                # Create new event loop in background thread
-                def run_async_auth():
-                    asyncio.run(self._fetch_auth_async(api_key))
-
-                import threading
-
-                auth_thread = threading.Thread(target=run_async_auth, daemon=True)
-                auth_thread.start()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
-            # Create new event loop in background thread
-            def run_async_auth():
-                asyncio.run(self._fetch_auth_async(api_key))
+            # No running loop means init() was called synchronously. Authenticate
+            # before returning so a bad key fails here instead of being swallowed
+            # in a daemon thread and only showing up later as silent 401 exports.
+            asyncio.run(self._fetch_auth_async(api_key, raise_errors=True))
+            return
 
-            import threading
-
-            auth_thread = threading.Thread(target=run_async_auth, daemon=True)
-            auth_thread.start()
+        self._auth_task = loop.create_task(self._fetch_auth_async(api_key))
 
     def init(self, **kwargs: Any) -> None:  # Return type updated to None
         # Recreate the Config object to parse environment variables at the time of initialization
