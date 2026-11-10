@@ -94,7 +94,7 @@ class V4Client(BaseApiClient):
                     error_data = response.json()
                     if "error" in error_data:
                         error_msg = error_data["error"]
-                except:
+                except Exception:
                     pass
                 raise ApiServerException(error_msg)
 
