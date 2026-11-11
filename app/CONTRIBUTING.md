@@ -2,8 +2,7 @@
 
 Thank you for your interest in contributing to AgentOps! We welcome contributions from the community and are excited to see what you'll build.
 
-## 📋 Table of Contents
-
+## Table of Contents
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
@@ -14,8 +13,7 @@ Thank you for your interest in contributing to AgentOps! We welcome contribution
 - [Documentation](#documentation)
 - [Community](#community)
 
-## 🤝 Code of Conduct
-
+## Code of Conduct
 This project and everyone participating in it is governed by our Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@agentops.ai](mailto:conduct@agentops.ai).
 
 ### Our Standards
@@ -25,8 +23,7 @@ This project and everyone participating in it is governed by our Code of Conduct
 - **Be constructive** when giving feedback
 - **Focus on what's best** for the community and project
 
-## 🚀 Getting Started
-
+## Getting Started
 ### Ways to Contribute
 
 There are many ways to contribute to AgentOps:
@@ -46,8 +43,7 @@ There are many ways to contribute to AgentOps:
 3. **Read this guide** to understand our development process
 4. **Set up your development environment** following the instructions below
 
-## 🛠️ Development Setup
-
+## Development Setup
 ### Prerequisites
 
 Make sure you have the following installed:
@@ -138,8 +134,7 @@ For caching (will fallback to SQLite for local development):
 2. Get test API keys from the dashboard
 3. Update `.env` files with your credentials
 
-## 🔄 Making Changes
-
+## Making Changes
 ### Branch Naming
 
 Use descriptive branch names that follow this pattern:
@@ -203,8 +198,7 @@ docs(readme): update installation instructions
 test(api): add integration tests for billing endpoints
 ```
 
-## 📤 Submitting Changes
-
+## Submitting Changes
 ### Pull Request Process
 
 1. **Update your branch** with the latest changes:
@@ -260,8 +254,7 @@ Add screenshots to help explain your changes.
 3. **Address feedback** and update your PR as needed
 4. **Final approval** and merge by maintainers
 
-## 🎨 Code Style
-
+## Code Style
 ### JavaScript/TypeScript
 
 We use **ESLint** and **Prettier** for consistent formatting:
@@ -311,8 +304,7 @@ bun run format:py
 - **Keep functions small and focused**
 - **Follow existing patterns in the codebase**
 
-## 🧪 Testing
-
+## Testing
 **Docker is required** to run tests since they create PostgreSQL & ClickHouse instances.
 
 ### Running Tests
@@ -367,8 +359,7 @@ test('displays user dashboard correctly', async () => {
 - Focus on **critical paths** and **business logic**
 - Include **edge cases** and **error scenarios**
 
-## 📚 Documentation
-
+## Documentation
 ### Types of Documentation
 
 1. **Code Comments**: Explain complex logic and decisions
@@ -395,8 +386,7 @@ docs/
 └── examples/         # Code examples
 ```
 
-## 👥 Community
-
+## Community
 ### Getting Help
 
 - **GitHub Issues**: For bugs and feature requests
@@ -419,8 +409,7 @@ We recognize contributors in several ways:
 - **Swag and rewards** for major contributions
 - **Maintainer status** for consistent, high-quality contributions
 
-## 🏷️ Issue Labels
-
+## Issue Labels
 We use labels to categorize and prioritize issues:
 
 - **`good first issue`**: Great for new contributors
@@ -432,8 +421,7 @@ We use labels to categorize and prioritize issues:
 - **`priority: high`**: Urgent issues
 - **`priority: low`**: Nice-to-have improvements
 
-## 🎯 Roadmap
-
+## Roadmap
 Check out our [public roadmap](https://github.com/AgentOps-AI/agentops/projects) to see what we're working on and where you can help.
 
 ### Current Focus Areas
@@ -444,8 +432,7 @@ Check out our [public roadmap](https://github.com/AgentOps-AI/agentops/projects)
 - **Developer experience** improvements
 - **Documentation** and **examples**
 
-## ❓ FAQ
-
+## FAQ
 ### How do I get started as a new contributor?
 
 1. Look for issues labeled `good first issue`
@@ -481,8 +468,7 @@ Absolutely! We welcome contributions in many forms:
 
 ---
 
-## 🙏 Thank You
-
+## Thank You
 Thank you for taking the time to contribute to AgentOps! Every contribution, no matter how small, helps make the project better for everyone.
 
 If you have any questions or need help getting started, don't hesitate to reach out. We're excited to see what you'll build with us!
