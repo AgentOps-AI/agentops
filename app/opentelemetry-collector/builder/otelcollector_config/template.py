@@ -58,8 +58,7 @@ def _render_template(template_name: str, context: Dict[str, Any], output_dir: st
     Args:
         template_name: Name of the template to render
         context: Dictionary of variables to pass to the template
-        output_path: Optional path to write the rendered template
-                     If None, the rendered template is only returned
+        output_dir: Directory to write the rendered template into
     """
     template = renderer.get_template(template_name)
     output_path = f"{output_dir}/{template_name.replace('.tpl', '')}"
@@ -76,8 +75,7 @@ def render_base_config(output_dir: Optional[str] = None) -> None:
     Render the base configuration template.
 
     Args:
-        output_path: Optional path to write the rendered template.
-                     If None, the rendered template is only returned.
+        output_dir: Directory to write base.yaml into.
     """
     # wee don't transform this file, so just copy it to the output path
     shutil.copy(
@@ -91,8 +89,7 @@ def render_processors_config(output_dir: Optional[str] = None) -> None:
     Render the processors.yaml.tpl template with model costs.
 
     Args:
-        output_path: Optional path to write the rendered template.
-                     If None, the rendered template is only returned.
+        output_dir: Directory to write the rendered template into.
     """
     model_costs: list[ModelCost] = load_model_costs()
     context = {
