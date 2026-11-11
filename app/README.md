@@ -348,7 +348,7 @@ Visit:
 - Dashboard: http://localhost:3000
 - API Docs: http://localhost:8000/redoc
 
-## 🔧 External Services Setup
+## External Services Setup
 
 AgentOps requires several external services. Here's how to set them up:
 

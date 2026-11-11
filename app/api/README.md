@@ -1,6 +1,6 @@
 # AgentOps Next API Server
 
-> **Note:** This project uses shared development configurations (linting, formatting) defined in the repository root. Please see the [root README.md](../../README.md#development-setup) for initial setup instructions and tooling details (Ruff).
+> **Note:** This project uses shared development configurations (linting, formatting) defined in the repository root. Please see the [CONTRIBUTING.md](../../CONTRIBUTING.md#development-environment) for initial setup instructions and tooling details (Ruff).
 
 ## Authentication
 
