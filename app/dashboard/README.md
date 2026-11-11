@@ -1,4 +1,4 @@
-> **Note:** This project uses shared development configurations (linting, formatting) defined in the repository root. Please see the [root README.md](../../README.md#development-setup) for initial setup instructions and tooling details (ESLint, Prettier).
+> **Note:** This project uses shared development configurations (linting, formatting) defined in the repository root. Please see the [CONTRIBUTING.md](../../CONTRIBUTING.md#development-environment) for initial setup instructions and tooling details (ESLint, Prettier).
 
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
