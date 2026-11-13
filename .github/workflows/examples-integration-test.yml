@@ -108,10 +108,10 @@ jobs:
 
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4.4.0
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v4.9.1
       with:
         python-version: ${{ env.PYTHON_VERSION }}
     
