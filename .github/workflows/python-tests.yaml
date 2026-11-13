@@ -49,10 +49,10 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
 
       - name: Setup UV
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v5.4.2
         continue-on-error: true
         with:
           python-version: ${{ matrix.python-version }}
@@ -72,7 +72,7 @@ jobs:
       # Only upload coverage report for python3.11
       - name: Upload coverage to Codecov
         if: ${{matrix.python-version == '3.11'}}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.5.5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
@@ -88,10 +88,10 @@ jobs:
       PYTHONUNBUFFERED: "1"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.4.0
 
       - name: Setup UV
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v5.4.2
         continue-on-error: true
         with:
           python-version: "3.12"

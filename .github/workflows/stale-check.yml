@@ -12,7 +12,7 @@ jobs:
   stale-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v9.1.0
         with:
           # Only process pull requests (not issues)
           days-before-stale: 14
