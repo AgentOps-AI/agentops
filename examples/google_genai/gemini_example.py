@@ -20,13 +20,13 @@ client = genai.Client()
 
 # Test synchronous generation
 print("Testing synchronous generation:")
-response = client.models.generate_content(model="gemini-1.5-flash", contents="What are the three laws of robotics?")
+response = client.models.generate_content(model="gemini-3.5-flash-lite", contents="What are the three laws of robotics?")
 print(response.text)
 
 # Test streaming generation
 print("\nTesting streaming generation:")
 response_stream = client.models.generate_content_stream(
-    model="gemini-1.5-flash", contents="Explain the concept of machine learning in simple terms."
+    model="gemini-3.5-flash-lite", contents="Explain the concept of machine learning in simple terms."
 )
 
 for chunk in response_stream:
@@ -36,14 +36,14 @@ print()  # Add newline after streaming output
 # Test another synchronous generation
 print("\nTesting another synchronous generation:")
 response = client.models.generate_content(
-    model="gemini-1.5-flash", contents="What is the difference between supervised and unsupervised learning?"
+    model="gemini-3.5-flash-lite", contents="What is the difference between supervised and unsupervised learning?"
 )
 print(response.text)
 
 # Example of token counting
 print("\nTesting token counting:")
 token_response = client.models.count_tokens(
-    model="gemini-1.5-flash", contents="This is a test sentence to count tokens."
+    model="gemini-3.5-flash-lite", contents="This is a test sentence to count tokens."
 )
 print(f"Token count: {token_response.total_tokens}")
 
