@@ -1,6 +1,7 @@
 from typing import ClassVar, Type, Any, Optional, Literal
 from decimal import Decimal
 from functools import cached_property
+import llm_prices
 import pydantic
 from tokencost import costs  # type: ignore
 from agentops.api.db.clickhouse.models import (
@@ -22,6 +23,22 @@ MODEL_LOOKUP_ALIASES = {
     "sonar-pro": "perplexity/sonar-pro",
     "sonar": "perplexity/sonar",
 }
+
+
+def _llm_prices_rate(model: str, direction: Literal["input", "output"]) -> Optional[Decimal]:
+    """USD per token for `model` from llm-prices, or None when it has no price for that direction.
+
+    tokencost's table stops at its last release, so models released after it (gpt-5.x, gpt-6.x,
+    Claude Opus 4.6+, Gemini 3.x, ...) are missing from it. llm-prices keeps dated list prices
+    for them and resolves provider prefixes and dated snapshot ids.
+    """
+    price = llm_prices.lookup(model)
+    if price is None:
+        return None
+    rate = price.input if direction == "input" else price.output
+    if rate is None:
+        return None
+    return Decimal(str(rate)) / Decimal(1_000_000)
 
 
 def _format_cost(value: Decimal) -> str:
@@ -276,7 +293,9 @@ class SpanMetricsMixin(ClickhouseModel):
         try:
             completion_cost = costs.calculate_cost_by_tokens(tokens, self.model_for_cost, direction)
         except Exception:
-            return Decimal(0)
+            # tokencost has no row for this model; without a fallback the span was booked at $0.
+            rate = _llm_prices_rate(self.model_for_cost, direction)
+            return rate * tokens if rate is not None else Decimal(0)
 
         if not completion_cost:
             return Decimal(0)

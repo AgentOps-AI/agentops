@@ -23,6 +23,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "jockey" },
     { name = "jsonschema" },
+    { name = "llm-prices" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-sdk" },
     { name = "opentelemetry-semantic-conventions" },
@@ -74,6 +75,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jockey", editable = "jockey" },
     { name = "jsonschema" },
+    { name = "llm-prices", specifier = ">=1.8.0" },
     { name = "opentelemetry-api", specifier = ">=1.30.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0" },
     { name = "opentelemetry-semantic-conventions", specifier = ">=0.43b0" },
@@ -827,6 +829,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ae/52/19ebe8004c243fdfa78268a96727c71e08f00ff6fe69a301d0b7fcbce3c2/kubernetes-33.1.0.tar.gz", hash = "sha256:f64d829843a54c251061a8e7a14523b521f2dc5c896cf6d65ccf348648a88993", size = 1036779, upload-time = "2025-06-09T21:57:58.521Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/89/43/d9bebfc3db7dea6ec80df5cb2aad8d274dd18ec2edd6c4f21f32c237cbbb/kubernetes-33.1.0-py2.py3-none-any.whl", hash = "sha256:544de42b24b64287f7e0aa9513c93cb503f7f40eea39b20f66810011a86eabc5", size = 1941335, upload-time = "2025-06-09T21:57:56.327Z" },
+]
+
+[[package]]
+name = "llm-prices"
+version = "1.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/08/f11310db506a4ce63e0ea220ede2a61980fd735ec0d232c14d7b9fc8810e/llm_prices-1.8.0.tar.gz", hash = "sha256:3212c251ee3ed66694b2c637dbb7fef4bd296958a3b33f8949a71e3ffe8865cd", size = 98387, upload-time = "2026-11-18T16:27:25.500Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3a/72/5211d6fa7715509835bbd1d498b0469bbe5db260da1394cdb2e54d6ee9aa/llm_prices-1.8.0-py3-none-any.whl", hash = "sha256:9bb73b94bf99a127e1eea60706b1c4672af6315b8980bd7e98bc354d80b6cebd", size = 82123, upload-time = "2026-11-18T16:27:24.079Z" },
 ]
 
 [[package]]
