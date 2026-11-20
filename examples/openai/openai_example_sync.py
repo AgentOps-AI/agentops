@@ -1,6 +1,6 @@
 # OpenAI Sync Example
 #
-# We are going to create a simple chatbot that creates stories based on a prompt. The chatbot will use the gpt-4o-mini LLM to generate the story using a user prompt.
+# We are going to create a simple chatbot that creates stories based on a prompt. The chatbot will use the GPT-6 Luna LLM to generate the story using a user prompt.
 #
 # We will track the chatbot with AgentOps and see how it performs!
 # First let's install the required packages
@@ -43,7 +43,8 @@ messages = [
 ]
 
 response = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-6-luna",
+    reasoning_effort="none",
     messages=messages,
 )
 
@@ -53,7 +54,8 @@ print(response.choices[0].message.content)
 # ## Streaming Version
 # We will demonstrate the streaming version of the API.
 stream = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-6-luna",
+    reasoning_effort="none",
     messages=messages,
     stream=True,
 )
