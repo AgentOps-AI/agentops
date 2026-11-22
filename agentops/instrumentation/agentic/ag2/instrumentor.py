@@ -268,6 +268,7 @@ class AG2Instrumentor(CommonInstrumentor):
                                     span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, str(total_tokens))
                                 if cost > 0:
                                     span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, str(cost))
+                                    span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST_CURRENCY, "USD")
 
                                 # Set request/response model
                                 span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model)

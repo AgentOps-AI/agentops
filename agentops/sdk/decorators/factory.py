@@ -390,6 +390,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     # Set cost attribute if tool
                     if entity_kind == "tool" and cost is not None:
                         span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
+                        span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST_CURRENCY, "USD")
                     # Set spec attribute if guardrail
                     if entity_kind == "guardrail" and (spec == "input" or spec == "output"):
                         span.set_attribute(SpanAttributes.AGENTOPS_DECORATOR_SPEC.format(entity_kind=entity_kind), spec)
@@ -409,6 +410,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     # Set cost attribute if tool
                     if entity_kind == "tool" and cost is not None:
                         span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
+                        span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST_CURRENCY, "USD")
                     # Set spec attribute if guardrail
                     if entity_kind == "guardrail" and (spec == "input" or spec == "output"):
                         span.set_attribute(SpanAttributes.AGENTOPS_DECORATOR_SPEC.format(entity_kind=entity_kind), spec)
@@ -430,6 +432,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                             # Set cost attribute if tool
                             if entity_kind == "tool" and cost is not None:
                                 span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
+                                span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST_CURRENCY, "USD")
                             # Set spec attribute if guardrail
                             if entity_kind == "guardrail" and (spec == "input" or spec == "output"):
                                 span.set_attribute(
